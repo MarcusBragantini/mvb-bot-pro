@@ -15,6 +15,7 @@ interface AuthContextType {
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
+  isLoading: boolean; // Added this property
   isAuthenticated: boolean;
   isAdmin: boolean;
 }
@@ -115,6 +116,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     register,
     logout,
     loading,
+    isLoading: loading, // Added this property
     isAuthenticated,
     isAdmin,
   };

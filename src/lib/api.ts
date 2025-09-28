@@ -5,16 +5,24 @@ interface User {
   email: string;
   name: string;
   role: string;
+  status: string;
+  created_at: string;
+  license_count: number;
+  latest_license_expiry: string | null;
 }
 
 interface License {
   id: number;
+  user_id: number;
   license_key: string;
   license_type: string;
   expires_at: string;
-  days_remaining: number;
-  active_devices: number;
   max_devices: number;
+  is_active: boolean;
+  email: string;
+  name: string;
+  active_devices: number;
+  days_remaining: number;
 }
 
 interface LoginResponse {
@@ -33,7 +41,15 @@ interface ProfileResponse {
   licenses: License[];
 }
 
+interface DashboardStats {
+  totalUsers: number;
+  totalLicenses: number;
+  activeLicenses: number;
+  expiredLicenses: number;
+}
+
 interface AdminDashboardResponse {
+  stats: DashboardStats;
   totalUsers: number;
   activeLicenses: number;
   totalRevenue: number;

@@ -204,15 +204,15 @@ export default function Admin() {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants = {
+    const variants: Record<string, "default" | "destructive" | "outline" | "secondary"> = {
       active: 'default',
       suspended: 'destructive',
       expired: 'secondary'
     };
-    return <Badge variant={variants[status as keyof typeof variants] || 'secondary'}>{status}</Badge>;
+    return <Badge variant={variants[status] || 'secondary'}>{status}</Badge>;
   };
 
-  const getLicenseStatusColor = (license: License) => {
+  const getLicenseStatusColor = (license: License): "default" | "destructive" | "outline" | "secondary" => {
     if (license.days_remaining <= 0) return 'destructive';
     if (license.days_remaining <= 7) return 'secondary';
     return 'default';
