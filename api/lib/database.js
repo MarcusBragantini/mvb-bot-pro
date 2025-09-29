@@ -1,16 +1,18 @@
 import mysql from 'mysql2/promise';
 
-// Database configuration - you'll need to set these environment variables in Vercel
-const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'mvb_bot',
+// Hostinger Database Configuration
+const DB_CONFIG = {
+  host: process.env.DB_HOST || 'srv806.hstgr.io',
+  user: process.env.DB_USER || 'u950457610_bot_mvb_saas',
+  password: process.env.DB_PASSWORD || 'Mvb985674',
+  database: process.env.DB_NAME || 'u950457610_bot_mvb_saas',
   port: process.env.DB_PORT || 3306,
-  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
-  connectionLimit: 10,
+  ssl: {
+    rejectUnauthorized: false
+  },
+  connectTimeout: 60000,
   acquireTimeout: 60000,
-  timeout: 60000,
+  timeout: 60000
 };
 
 let pool = null;
@@ -18,7 +20,12 @@ let pool = null;
 export async function openDb() {
   try {
     if (!pool) {
-      pool = mysql.createPool(dbConfig);
+      pool = mysql.createPool({
+        ...DB_CONFIG,
+        connectionLimit: 10,
+        queueLimit: 0
+      });
+      console.log('✅ Database pool created successfully');
     }
     
     return {
@@ -41,8 +48,8 @@ export async function openDb() {
       }
     };
   } catch (error) {
-    console.error('Database connection error:', error);
-    throw new Error('Failed to connect to database');
+    console.error('❌ Database connection error:', error);
+    throw new Error(`Failed to connect to database: ${error.message}`);
   }
 }
 
@@ -62,7 +69,7 @@ export async function initializeDatabase() {
         status ENUM('active', 'inactive', 'suspended') DEFAULT 'active',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      )
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
     
     // Create licenses table
@@ -78,26 +85,25 @@ export async function initializeDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      )
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
     
-    // Create device_registrations table
+    // Create device_sessions table
     await db.run(`
-      CREATE TABLE IF NOT EXISTS device_registrations (
+      CREATE TABLE IF NOT EXISTS device_sessions (
         id INT AUTO_INCREMENT PRIMARY KEY,
         license_id INT NOT NULL,
         device_fingerprint VARCHAR(255) NOT NULL,
-        device_info TEXT,
-        registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (license_id) REFERENCES licenses(id) ON DELETE CASCADE,
         UNIQUE KEY unique_license_device (license_id, device_fingerprint)
-      )
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
-    
-    console.log('Database tables initialized successfully');
+
+    console.log('✅ Database tables initialized successfully');
   } catch (error) {
-    console.error('Database initialization error:', error);
+    console.error('❌ Database initialization failed:', error);
     throw error;
   }
 }
