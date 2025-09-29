@@ -7,6 +7,9 @@ const DB_CONFIG = {
   password: process.env.DB_PASSWORD || 'Mvb985674',
   database: process.env.DB_NAME || 'u950457610_bot_mvb_saas',
   port: process.env.DB_PORT || 3306,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
   ssl: {
     rejectUnauthorized: false
   },
@@ -27,13 +30,15 @@ async function openDb() {
     });
     
     if (!pool) {
-      pool = mysql.createPool({
-        ...DB_CONFIG,
-        connectionLimit: 10,
-        queueLimit: 0
-      });
+      pool = mysql.createPool(DB_CONFIG);
       console.log('✅ Database pool created successfully');
     }
+    
+    // Test connection
+    const connection = await pool.getConnection();
+    await connection.ping();
+    connection.release();
+    console.log('✅ Database connection test successful');
     
     return {
       async get(query, params = []) {
@@ -56,6 +61,12 @@ async function openDb() {
     };
   } catch (error) {
     console.error('❌ Database connection error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      errno: error.errno,
+      sqlState: error.sqlState
+    });
     throw new Error(`Failed to connect to database: ${error.message}`);
   }
 }
