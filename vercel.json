@@ -1,11 +1,9 @@
 {
   "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
   "builds": [
-    {
-      "src": "index.html",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "dist" }
-    },
     {
       "src": "api/**/*.js",
       "use": "@vercel/node"
@@ -20,5 +18,13 @@
       "src": "/(.*)",
       "dest": "/index.html"
     }
-  ]
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "functions": {
+    "api/**/*.js": {
+      "maxDuration": 30
+    }
+  }
 }
