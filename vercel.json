@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "name": "bot-mvb-pro",
   "builds": [
     {
       "src": "package.json",
@@ -24,12 +23,5 @@
       "src": "/(.*)",
       "dest": "/index.html"
     }
-  ],
-  "env": {
-    "DB_HOST": "srv806.hstgr.io",
-    "DB_USER": "u950457610_bot_mvb_saas",
-    "DB_PASSWORD": "Mvb985674",
-    "DB_NAME": "u950457610_bot_mvb_saas",
-    "JWT_SECRET": "mvb-bot-secret-key-2025-hostinger"
-  }
+  ]
 }
