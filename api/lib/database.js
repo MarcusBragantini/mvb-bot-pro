@@ -1,4 +1,4 @@
-import mysql from 'mysql2/promise';
+const mysql = require('mysql2/promise');
 
 // Hostinger Database Configuration
 const DB_CONFIG = {
@@ -17,7 +17,7 @@ const DB_CONFIG = {
 
 let pool = null;
 
-export async function openDb() {
+async function openDb() {
   try {
     if (!pool) {
       pool = mysql.createPool({
@@ -54,7 +54,7 @@ export async function openDb() {
 }
 
 // Initialize database tables if they don't exist
-export async function initializeDatabase() {
+async function initializeDatabase() {
   try {
     const db = await openDb();
     
@@ -107,3 +107,8 @@ export async function initializeDatabase() {
     throw error;
   }
 }
+
+module.exports = {
+  openDb,
+  initializeDatabase
+};

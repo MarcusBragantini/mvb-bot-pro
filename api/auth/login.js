@@ -1,10 +1,10 @@
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
-import { openDb } from '../lib/database.js';
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const { openDb } = require('../lib/database.js');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'mvb-bot-secret-key-2025';
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // Configure CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
