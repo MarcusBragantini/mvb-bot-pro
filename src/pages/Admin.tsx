@@ -13,16 +13,12 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Users, 
   Key, 
-  BarChart3, 
   Plus, 
-  Edit, 
   Trash2, 
-  Calendar,
   Monitor,
   Shield,
   CheckCircle,
-  XCircle,
-  AlertTriangle
+  XCircle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -73,7 +69,6 @@ export default function Admin() {
   const [licenses, setLicenses] = useState<License[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // New License Form
   const [newLicense, setNewLicense] = useState({
     user_id: '',
     license_type: 'basic',
@@ -244,7 +239,6 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -263,7 +257,6 @@ export default function Admin() {
       </header>
 
       <main className="max-w-7xl mx-auto p-6">
-        {/* Dashboard Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

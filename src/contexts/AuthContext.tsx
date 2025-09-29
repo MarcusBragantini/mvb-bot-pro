@@ -15,7 +15,7 @@ interface AuthContextType {
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
-  isLoading: boolean; // Added this property
+  isLoading: boolean;
   isAuthenticated: boolean;
   isAdmin: boolean;
 }
@@ -88,7 +88,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setLoading(true);
       await apiClient.register(email, password, name);
-      // After registration, automatically log in
       await login(email, password);
     } catch (error) {
       console.error('Registration error:', error);
@@ -116,7 +115,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     register,
     logout,
     loading,
-    isLoading: loading, // Added this property
+    isLoading: loading,
     isAuthenticated,
     isAdmin,
   };

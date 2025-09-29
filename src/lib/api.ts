@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 interface User {
   id: number;
@@ -107,7 +107,6 @@ class ApiClient {
     localStorage.removeItem('auth_token');
   }
 
-  // Auth endpoints
   async login(email: string, password: string): Promise<LoginResponse> {
     const response = await this.request<LoginResponse>('/auth/login', {
       method: 'POST',
@@ -139,7 +138,6 @@ class ApiClient {
     return this.request<ProfileResponse>('/auth/profile');
   }
 
-  // Admin endpoints
   async getAdminDashboard(): Promise<AdminDashboardResponse> {
     return this.request<AdminDashboardResponse>('/admin/dashboard');
   }
