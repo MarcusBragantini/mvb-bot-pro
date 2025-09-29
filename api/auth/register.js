@@ -16,6 +16,9 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  console.log('Register API called with method:', req.method);
+  console.log('Request body:', req.body);
+
   try {
     const { name, email, password } = req.body;
 
@@ -27,13 +30,17 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Senha deve ter pelo menos 6 caracteres' });
     }
 
+    console.log('Attempting to connect to database...');
     const db = await openDb();
+    console.log('Database connection successful');
     
     // Check if user already exists
+    console.log('Checking if user exists for email:', email);
     const existingUser = await db.get(
       'SELECT id FROM users WHERE email = ?',
       [email]
     );
+    console.log('Existing user check result:', existingUser);
 
     if (existingUser) {
       return res.status(400).json({ error: 'Email já está em uso' });
@@ -76,6 +83,16 @@ module.exports = async function handler(req, res) {
 
   } catch (error) {
     console.error('Register error:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    console.error('Error stack:', error.stack);
+    console.error('Error message:', error.message);
+    
+    // Return more detailed error information in development
+    const errorResponse = {
+      error: 'Erro interno do servidor',
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    };
+    
+    res.status(500).json(errorResponse);
   }
 }

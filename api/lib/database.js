@@ -19,6 +19,13 @@ let pool = null;
 
 async function openDb() {
   try {
+    console.log('Database config:', {
+      host: DB_CONFIG.host,
+      user: DB_CONFIG.user,
+      database: DB_CONFIG.database,
+      port: DB_CONFIG.port
+    });
+    
     if (!pool) {
       pool = mysql.createPool({
         ...DB_CONFIG,
