@@ -97,32 +97,82 @@ export default function BotInterface() {
   const isInitialized = useRef(false);
 
   // ===== FUNÇÕES DE CONFIGURAÇÃO =====
-  const loadSettings = () => {
-    const savedSettings = localStorage.getItem('mvb_bot_settings');
-    if (savedSettings) {
+  const loadSettings = async () => {
+    try {
+      if (!user?.id) return;
+      
+      const response = await fetch(`/api/user/settings?user_id=${user.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.settings) {
+          setSettings(prev => ({ ...prev, ...data.settings }));
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar configurações:', error);
+      // Fallback para localStorage se a API falhar
       try {
-        const parsed = JSON.parse(savedSettings);
-        setSettings(parsed);
-      } catch (error) {
-        console.error('Erro ao carregar configurações:', error);
+        const savedSettings = localStorage.getItem('mvb_bot_settings');
+        if (savedSettings) {
+          const parsed = JSON.parse(savedSettings);
+          setSettings(parsed);
+        }
+      } catch (localError) {
+        console.error('Erro ao carregar do localStorage:', localError);
       }
     }
   };
 
-  const saveSettings = () => {
+  const saveSettings = async () => {
     try {
-      localStorage.setItem('mvb_bot_settings', JSON.stringify(settings));
-      toast({
-        title: "✅ Configurações salvas!",
-        description: "Suas configurações foram salvas com sucesso.",
+      if (!user?.id) {
+        toast({
+          title: "❌ Erro ao salvar",
+          description: "Usuário não autenticado.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const response = await fetch('/api/user/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: user.id,
+          settings: settings
+        }),
       });
+
+      if (response.ok) {
+        // Também salvar no localStorage como backup
+        localStorage.setItem('mvb_bot_settings', JSON.stringify(settings));
+        
+        toast({
+          title: "✅ Configurações salvas!",
+          description: "Suas configurações foram sincronizadas em todos os dispositivos!",
+        });
+      } else {
+        throw new Error('Erro na API');
+      }
     } catch (error) {
       console.error('Erro ao salvar configurações:', error);
-      toast({
-        title: "❌ Erro ao salvar",
-        description: "Não foi possível salvar as configurações.",
-        variant: "destructive"
-      });
+      // Fallback para localStorage se a API falhar
+      try {
+        localStorage.setItem('mvb_bot_settings', JSON.stringify(settings));
+        toast({
+          title: "⚠️ Configurações salvas localmente",
+          description: "Salvas apenas neste dispositivo (sem sincronização).",
+          variant: "destructive",
+        });
+      } catch (localError) {
+        toast({
+          title: "❌ Erro ao salvar",
+          description: "Não foi possível salvar as configurações.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -258,8 +308,10 @@ export default function BotInterface() {
 
   // ===== CARREGAR CONFIGURAÇÕES =====
   useEffect(() => {
-    loadSettings();
-  }, []);
+    if (user?.id) {
+      loadSettings();
+    }
+  }, [user?.id]);
 
   // ===== INICIALIZAR BOT ORIGINAL QUANDO LICENÇA FOR VÁLIDA =====
   useEffect(() => {
@@ -1050,11 +1102,17 @@ export default function BotInterface() {
     setTimeout(() => {
       const tokenInput = document.getElementById('token') as HTMLInputElement;
       if (tokenInput) {
-        const selectedToken = settings.selectedTokenType === 'demo' 
-          ? settings.derivTokenDemo 
-          : settings.derivTokenReal;
+        // Buscar settings atuais do localStorage
+        const currentSettings = JSON.parse(localStorage.getItem('mvb_bot_settings') || '{}');
+        const selectedToken = currentSettings.selectedTokenType === 'demo' 
+          ? currentSettings.derivTokenDemo 
+          : currentSettings.derivTokenReal;
         tokenInput.value = selectedToken || '';
-        console.log('Token preenchido automaticamente:', selectedToken ? 'Token configurado' : 'Token não configurado');
+        console.log('Token preenchido automaticamente:', {
+          selectedType: currentSettings.selectedTokenType,
+          hasToken: !!selectedToken,
+          token: selectedToken ? 'Token configurado' : 'Token não configurado'
+        });
       }
     }, 100);
   };
