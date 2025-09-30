@@ -273,8 +273,7 @@ export default function BotInterface() {
 
   // ===== INICIALIZAR BOT QUANDO A ABA TRADING FOR ATIVADA =====
   useEffect(() => {
-    if (activeTab === 'trading' && !isInitialized.current && botContainerRef.current) {
-      isInitialized.current = true;
+    if (activeTab === 'trading' && botContainerRef.current) {
       console.log('Initializing bot from tab change...');
       initializeOriginalBot();
     }
@@ -322,10 +321,8 @@ export default function BotInterface() {
         <!-- Controles Principais - Simplified for Mobile -->
         <div class="main-controls" style="background: white; border-radius: 16px; padding: 20px; margin: 16px 0; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
           <div class="control-grid" style="display: grid; gap: 16px;">
-            <div class="form-group">
-              <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 0.9rem;">🔑 Token API Deriv:</label>
-              <input type="text" id="token" placeholder="Cole seu token da Deriv" style="width: 100%; padding: 14px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 16px; transition: border-color 0.2s;">
-            </div>
+            <!-- Token oculto - será preenchido automaticamente -->
+            <input type="hidden" id="token" value="">
             <div class="form-group">
               <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 0.9rem;">📈 Símbolo:</label>
               <select id="symbol" style="width: 100%; padding: 14px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 16px; background: white;">
@@ -1048,6 +1045,18 @@ export default function BotInterface() {
     `;
     
     document.head.appendChild(script);
+    
+    // Preencher automaticamente o token baseado na seleção
+    setTimeout(() => {
+      const tokenInput = document.getElementById('token') as HTMLInputElement;
+      if (tokenInput) {
+        const selectedToken = settings.selectedTokenType === 'demo' 
+          ? settings.derivTokenDemo 
+          : settings.derivTokenReal;
+        tokenInput.value = selectedToken || '';
+        console.log('Token preenchido automaticamente:', selectedToken ? 'Token configurado' : 'Token não configurado');
+      }
+    }, 100);
   };
 
   // ===== RENDER =====
@@ -1225,36 +1234,36 @@ export default function BotInterface() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex gap-4">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-4">
                     <Button
                       variant={settings.selectedTokenType === 'demo' ? 'default' : 'outline'}
                       onClick={() => updateSetting('selectedTokenType', 'demo')}
-                      className={`flex-1 ${
+                      className={`h-auto py-3 px-2 sm:px-4 ${
                         settings.selectedTokenType === 'demo' 
                           ? 'bg-blue-600 hover:bg-blue-700' 
                           : 'border-blue-300 text-blue-600 hover:bg-blue-50'
                       }`}
                     >
-                      <div className="text-center">
-                        <div className="font-semibold">Demo</div>
-                        <div className="text-xs opacity-75">
-                          {settings.derivTokenDemo ? '✅ Token configurado' : '❌ Token não configurado'}
+                      <div className="text-center w-full">
+                        <div className="font-semibold text-sm sm:text-base">Demo</div>
+                        <div className="text-xs opacity-75 mt-1">
+                          {settings.derivTokenDemo ? '✅ Configurado' : '❌ Não configurado'}
                         </div>
                       </div>
                     </Button>
                     <Button
                       variant={settings.selectedTokenType === 'real' ? 'default' : 'outline'}
                       onClick={() => updateSetting('selectedTokenType', 'real')}
-                      className={`flex-1 ${
+                      className={`h-auto py-3 px-2 sm:px-4 ${
                         settings.selectedTokenType === 'real' 
                           ? 'bg-red-600 hover:bg-red-700' 
                           : 'border-red-300 text-red-600 hover:bg-red-50'
                       }`}
                     >
-                      <div className="text-center">
-                        <div className="font-semibold">Real</div>
-                        <div className="text-xs opacity-75">
-                          {settings.derivTokenReal ? '✅ Token configurado' : '❌ Token não configurado'}
+                      <div className="text-center w-full">
+                        <div className="font-semibold text-sm sm:text-base">Real</div>
+                        <div className="text-xs opacity-75 mt-1">
+                          {settings.derivTokenReal ? '✅ Configurado' : '❌ Não configurado'}
                         </div>
                       </div>
                     </Button>
