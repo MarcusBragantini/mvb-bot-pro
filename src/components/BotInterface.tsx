@@ -263,11 +263,22 @@ export default function BotInterface() {
 
   // ===== INICIALIZAR BOT ORIGINAL QUANDO LICENÇA FOR VÁLIDA =====
   useEffect(() => {
+    console.log('Bot initialization check:', { isLicenseValid, isInitialized: isInitialized.current, hasContainer: !!botContainerRef.current });
     if (isLicenseValid && !isInitialized.current && botContainerRef.current) {
       isInitialized.current = true;
+      console.log('Initializing bot...');
       initializeOriginalBot();
     }
   }, [isLicenseValid]);
+
+  // ===== INICIALIZAR BOT QUANDO A ABA TRADING FOR ATIVADA =====
+  useEffect(() => {
+    if (activeTab === 'trading' && !isInitialized.current && botContainerRef.current) {
+      isInitialized.current = true;
+      console.log('Initializing bot from tab change...');
+      initializeOriginalBot();
+    }
+  }, [activeTab]);
 
   // ===== FUNÇÃO PARA INICIALIZAR O BOT ORIGINAL =====
   const initializeOriginalBot = () => {
