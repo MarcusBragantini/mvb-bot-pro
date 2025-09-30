@@ -99,77 +99,80 @@ export default function BotInterface() {
   // ===== FUNÇÕES DE CONFIGURAÇÃO =====
   const loadSettings = async () => {
     try {
-      // Por enquanto, usar apenas localStorage até a API estar funcionando
+      // Primeiro, carregar do localStorage (rápido)
       const savedSettings = localStorage.getItem('mvb_bot_settings');
       if (savedSettings) {
         const parsed = JSON.parse(savedSettings);
         setSettings(parsed);
-        console.log('Configurações carregadas do localStorage:', parsed);
+        console.log('✅ Configurações carregadas do localStorage:', parsed);
       }
       
-      // TODO: Implementar sincronização com servidor quando API estiver funcionando
-      /*
-      if (!user?.id) return;
-      
-      const response = await fetch(`/api/user/settings?user_id=${user.id}`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.settings) {
-          setSettings(prev => ({ ...prev, ...data.settings }));
+      // Depois, tentar carregar do servidor (sincronização)
+      if (user?.id) {
+        try {
+          const response = await fetch(`/api/user/settings?user_id=${user.id}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.settings && Object.keys(data.settings).length > 0) {
+              setSettings(prev => ({ ...prev, ...data.settings }));
+              // Atualizar localStorage com dados do servidor
+              localStorage.setItem('mvb_bot_settings', JSON.stringify(data.settings));
+              console.log('✅ Configurações sincronizadas do servidor:', data.settings);
+            }
+          }
+        } catch (serverError) {
+          console.log('⚠️ Servidor indisponível, usando localStorage');
         }
       }
-      */
     } catch (error) {
-      console.error('Erro ao carregar configurações:', error);
+      console.error('❌ Erro ao carregar configurações:', error);
     }
   };
 
   const saveSettings = async () => {
     try {
-      // Por enquanto, usar apenas localStorage até a API estar funcionando
+      // Sempre salvar no localStorage primeiro (backup)
       localStorage.setItem('mvb_bot_settings', JSON.stringify(settings));
+      console.log('✅ Configurações salvas no localStorage:', settings);
       
-      toast({
-        title: "✅ Configurações salvas!",
-        description: "Salvas neste dispositivo. Sincronização entre dispositivos será implementada em breve.",
-      });
-      
-      console.log('Configurações salvas no localStorage:', settings);
-      
-      // TODO: Implementar sincronização com servidor quando API estiver funcionando
-      /*
-      if (!user?.id) {
-        toast({
-          title: "❌ Erro ao salvar",
-          description: "Usuário não autenticado.",
-          variant: "destructive",
-        });
-        return;
-      }
+      // Tentar salvar no servidor (sincronização)
+      if (user?.id) {
+        try {
+          const response = await fetch('/api/user/settings', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              user_id: user.id,
+              settings: settings
+            }),
+          });
 
-      const response = await fetch('/api/user/settings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          user_id: user.id,
-          settings: settings
-        }),
-      });
-
-      if (response.ok) {
-        localStorage.setItem('mvb_bot_settings', JSON.stringify(settings));
+          if (response.ok) {
+            toast({
+              title: "✅ Configurações salvas!",
+              description: "Sincronizadas em todos os dispositivos!",
+            });
+            console.log('✅ Configurações sincronizadas no servidor');
+          } else {
+            throw new Error('Erro na API');
+          }
+        } catch (serverError) {
+          console.log('⚠️ Servidor indisponível, salvo apenas localmente');
+          toast({
+            title: "✅ Configurações salvas localmente",
+            description: "Sincronização com servidor indisponível no momento.",
+          });
+        }
+      } else {
         toast({
           title: "✅ Configurações salvas!",
-          description: "Suas configurações foram sincronizadas em todos os dispositivos!",
+          description: "Faça login para sincronizar entre dispositivos.",
         });
-      } else {
-        throw new Error('Erro na API');
       }
-      */
     } catch (error) {
-      console.error('Erro ao salvar configurações:', error);
+      console.error('❌ Erro ao salvar configurações:', error);
       toast({
         title: "❌ Erro ao salvar",
         description: "Não foi possível salvar as configurações.",
