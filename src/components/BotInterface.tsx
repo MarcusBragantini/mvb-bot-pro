@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   Shield, 
   CheckCircle, 
@@ -65,6 +66,7 @@ const LICENSE_KEYS: Record<string, LicenseInfo> = {
 
 export default function BotInterface() {
   const { toast } = useToast();
+  const { user, isAuthenticated } = useAuth();
   
   // ===== ESTADOS DE LICENÇA =====
   const [isLicenseValid, setIsLicenseValid] = useState(false);
@@ -72,6 +74,8 @@ export default function BotInterface() {
   const [licenseInfo, setLicenseInfo] = useState<LicenseInfo | null>(null);
   const [deviceId, setDeviceId] = useState('');
   const [licenseStatus, setLicenseStatus] = useState('');
+  const [userLicenses, setUserLicenses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   
   // ===== REFS PARA INTEGRAÇÃO COM CÓDIGO ORIGINAL =====
   const botContainerRef = useRef<HTMLDivElement>(null);
@@ -140,25 +144,65 @@ export default function BotInterface() {
     });
   };
 
-  // ===== VERIFICAR SESSÃO EXISTENTE =====
+  // ===== CARREGAR LICENÇAS DO USUÁRIO =====
   useEffect(() => {
-    const savedSession = localStorage.getItem('mvb_session_2025');
-    if (savedSession) {
+    const loadUserLicenses = async () => {
+      if (!isAuthenticated || !user) {
+        setLoading(false);
+        return;
+      }
+
       try {
-        const sessionData = JSON.parse(atob(savedSession));
-        if (sessionData.expires > Date.now()) {
-          setLicenseInfo(sessionData.license);
-          setDeviceId(sessionData.deviceId);
+        setLoading(true);
+        // Simular carregamento das licenças do usuário
+        // Em uma implementação real, você faria uma chamada para a API
+        const mockUserLicenses = [
+          {
+            id: 1,
+            license_key: 'FREE-MG5TKQHT-A7LGSL', // Usar a licença real do usuário
+            license_type: 'free',
+            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 dias
+            max_devices: 1,
+            is_active: true
+          }
+        ];
+
+        setUserLicenses(mockUserLicenses);
+        
+        // Verificar se o usuário tem uma licença válida
+        const activeLicense = mockUserLicenses.find(license => 
+          license.is_active && new Date(license.expires_at) > new Date()
+        );
+
+        if (activeLicense) {
+          // Usuário tem licença válida, pular validação
+          const licenseInfo: LicenseInfo = {
+            type: activeLicense.license_type,
+            days: Math.ceil((new Date(activeLicense.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
+            features: activeLicense.license_type === 'free' ? ['limited_features'] : ['all_features'],
+            maxDevices: activeLicense.max_devices
+          };
+          
+          setLicenseInfo(licenseInfo);
+          setLicenseKey(activeLicense.license_key);
           setIsLicenseValid(true);
-          setLicenseStatus('Sessão restaurada com sucesso!');
-        } else {
-          localStorage.removeItem('mvb_session_2025');
+          setLicenseStatus('Licença válida encontrada! Acesso liberado.');
+          
+          toast({
+            title: "✅ Acesso liberado!",
+            description: `Bem-vindo ao Bot Trading, ${user.name}!`,
+          });
         }
       } catch (error) {
-        localStorage.removeItem('mvb_session_2025');
+        console.error('Erro ao carregar licenças:', error);
+        setLicenseStatus('Erro ao carregar licenças do usuário.');
+      } finally {
+        setLoading(false);
       }
-    }
-  }, []);
+    };
+
+    loadUserLicenses();
+  }, [isAuthenticated, user, toast]);
 
   // ===== INICIALIZAR BOT ORIGINAL QUANDO LICENÇA FOR VÁLIDA =====
   useEffect(() => {
@@ -1013,6 +1057,31 @@ export default function BotInterface() {
                 </div>
               </CardContent>
             </Card>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // ===== TELA DE LOADING =====
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <Card className="w-full max-w-md shadow-2xl border-0">
+          <CardHeader className="text-center pb-8">
+            <div className="text-6xl mb-4">🤖</div>
+            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Carregando Bot Trading
+            </CardTitle>
+            <CardDescription className="text-gray-600 mt-2">
+              Verificando suas licenças...
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="text-sm text-gray-500 mt-4">
+              Aguarde enquanto verificamos seu acesso
+            </p>
           </CardContent>
         </Card>
       </div>
