@@ -54,7 +54,7 @@ export default function Login() {
     }
 
     try {
-      await register(registerForm.email, registerForm.password, registerForm.name);
+      await register(registerForm.name, registerForm.email, registerForm.password);
       setSuccess('Conta criada com sucesso! Você recebeu uma licença gratuita de 7 dias. Faça login para continuar.');
       setRegisterForm({ name: '', email: '', password: '', confirmPassword: '' });
     } catch (error) {
