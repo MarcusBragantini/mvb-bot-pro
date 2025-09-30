@@ -325,18 +325,19 @@ export default function BotInterface() {
     }
   }, [isLicenseValid]);
 
-  // ===== INICIALIZAR BOT QUANDO A ABA TRADING FOR ATIVADA =====
+  // ===== INICIALIZAR BOT UMA ÚNICA VEZ =====
   useEffect(() => {
-    if (activeTab === 'trading' && botContainerRef.current) {
-      // Verificar se o bot já foi inicializado verificando se existe conteúdo
-      if (!botContainerRef.current.innerHTML || botContainerRef.current.innerHTML.trim() === '') {
-        console.log('Initializing bot from tab change...');
-        initializeOriginalBot();
-      } else {
-        console.log('Bot já inicializado, apenas mostrando...');
-      }
+    if (botContainerRef.current && !isInitialized.current) {
+      // Aguardar um pouco para garantir que o DOM está pronto
+      setTimeout(() => {
+        if (botContainerRef.current && !botContainerRef.current.innerHTML.trim()) {
+          console.log('Initializing bot (one time only)...');
+          isInitialized.current = true;
+          initializeOriginalBot();
+        }
+      }, 500);
     }
-  }, [activeTab]);
+  }, []);
 
   // ===== ATUALIZAR TOKEN QUANDO SELEÇÃO MUDAR =====
   useEffect(() => {
@@ -1325,7 +1326,7 @@ export default function BotInterface() {
               </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="trading" className="space-y-4">
+            <TabsContent value="trading" className="space-y-4" forceMount style={{ display: activeTab === 'trading' ? 'block' : 'none' }}>
               {/* Seletor de Token */}
               <Card className="border-blue-200">
                 <CardHeader className="pb-3">
