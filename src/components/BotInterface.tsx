@@ -76,6 +76,7 @@ export default function BotInterface() {
   const [licenseStatus, setLicenseStatus] = useState('');
   const [userLicenses, setUserLicenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('trading');
   
   // ===== ESTADOS DAS CONFIGURAÇÕES =====
   const [settings, setSettings] = useState({
@@ -85,7 +86,10 @@ export default function BotInterface() {
     stopWin: 3,
     stopLoss: -5,
     confidence: 70,
-    strategy: 'martingale'
+    strategy: 'martingale',
+    derivTokenDemo: '',
+    derivTokenReal: '',
+    selectedTokenType: 'demo' // 'demo' ou 'real'
   });
   
   // ===== REFS PARA INTEGRAÇÃO COM CÓDIGO ORIGINAL =====
@@ -1178,7 +1182,7 @@ export default function BotInterface() {
       {/* Container Principal com 3 Abas React - Mobile Optimized */}
       <Card className="shadow-2xl border-0">
         <CardContent className="p-2 sm:p-6">
-          <Tabs defaultValue="trading" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-3 mb-4 sm:mb-6 h-10 sm:h-12">
               <TabsTrigger value="trading" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2">
                 <Play className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
@@ -1198,6 +1202,64 @@ export default function BotInterface() {
             </TabsList>
             
             <TabsContent value="trading" className="space-y-4">
+              {/* Seletor de Token */}
+              <Card className="border-blue-200">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg text-blue-600 flex items-center gap-2">
+                    <Key className="h-5 w-5" />
+                    Conta Deriv
+                  </CardTitle>
+                  <CardDescription>
+                    Selecione qual conta usar para o trading
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-4">
+                    <Button
+                      variant={settings.selectedTokenType === 'demo' ? 'default' : 'outline'}
+                      onClick={() => updateSetting('selectedTokenType', 'demo')}
+                      className={`flex-1 ${
+                        settings.selectedTokenType === 'demo' 
+                          ? 'bg-blue-600 hover:bg-blue-700' 
+                          : 'border-blue-300 text-blue-600 hover:bg-blue-50'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="font-semibold">Demo</div>
+                        <div className="text-xs opacity-75">
+                          {settings.derivTokenDemo ? '✅ Token configurado' : '❌ Token não configurado'}
+                        </div>
+                      </div>
+                    </Button>
+                    <Button
+                      variant={settings.selectedTokenType === 'real' ? 'default' : 'outline'}
+                      onClick={() => updateSetting('selectedTokenType', 'real')}
+                      className={`flex-1 ${
+                        settings.selectedTokenType === 'real' 
+                          ? 'bg-red-600 hover:bg-red-700' 
+                          : 'border-red-300 text-red-600 hover:bg-red-50'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="font-semibold">Real</div>
+                        <div className="text-xs opacity-75">
+                          {settings.derivTokenReal ? '✅ Token configurado' : '❌ Token não configurado'}
+                        </div>
+                      </div>
+                    </Button>
+                  </div>
+                  {(!settings.derivTokenDemo && settings.selectedTokenType === 'demo') || 
+                   (!settings.derivTokenReal && settings.selectedTokenType === 'real') ? (
+                    <Alert className="mt-4">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        Configure o token da conta {settings.selectedTokenType === 'demo' ? 'Demo' : 'Real'} na aba Configurações.
+                      </AlertDescription>
+                    </Alert>
+                  ) : null}
+                </CardContent>
+              </Card>
+
               <div ref={botContainerRef} className="w-full">
                 {/* O bot original será inserido aqui */}
               </div>
@@ -1293,13 +1355,14 @@ export default function BotInterface() {
                             id="duration-setting"
                             type="number"
                             min="1"
-                            max="5"
+                            max="15"
                             value={settings.duration}
                             className="mt-1"
                             onChange={(e) => {
-                              const value = parseFloat(e.target.value) || 2;
+                              const value = e.target.value === '' ? 1 : parseFloat(e.target.value) || 1;
                               updateSetting('duration', value);
                             }}
+                            onFocus={(e) => e.target.select()}
                           />
                         </div>
                       </CardContent>
@@ -1360,6 +1423,54 @@ export default function BotInterface() {
                               updateSetting('confidence', value);
                             }}
                           />
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Configurações da Deriv */}
+                    <Card className="border-purple-200">
+                      <CardHeader className="pb-4">
+                        <CardTitle className="text-lg text-purple-600 flex items-center gap-2">
+                          <Key className="h-5 w-5" />
+                          Tokens Deriv
+                        </CardTitle>
+                        <CardDescription>
+                          Configure seus tokens de acesso para conta Demo e Real
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div>
+                          <Label htmlFor="deriv-token-demo" className="text-sm font-medium">Token Demo</Label>
+                          <Input
+                            id="deriv-token-demo"
+                            type="password"
+                            placeholder="Cole aqui seu token da conta Demo"
+                            value={settings.derivTokenDemo}
+                            className="mt-1"
+                            onChange={(e) => {
+                              updateSetting('derivTokenDemo', e.target.value);
+                            }}
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Token da sua conta Demo na Deriv
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="deriv-token-real" className="text-sm font-medium">Token Real</Label>
+                          <Input
+                            id="deriv-token-real"
+                            type="password"
+                            placeholder="Cole aqui seu token da conta Real"
+                            value={settings.derivTokenReal}
+                            className="mt-1"
+                            onChange={(e) => {
+                              updateSetting('derivTokenReal', e.target.value);
+                            }}
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Token da sua conta Real na Deriv
+                          </p>
                         </div>
                       </CardContent>
                     </Card>
