@@ -139,10 +139,9 @@ export default function Dashboard() {
         )}
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
             <TabsTrigger value="bot">Bot Trading</TabsTrigger>
-            <TabsTrigger value="settings">Configurações</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -309,26 +308,6 @@ export default function Dashboard() {
             <BotInterface />
           </TabsContent>
 
-          <TabsContent value="settings">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Settings className="h-5 w-5" />
-                  <span>Configurações</span>
-                </CardTitle>
-                <CardDescription>
-                  Gerencie as configurações do seu bot
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">Configurações em desenvolvimento</p>
-                  <p className="text-sm text-gray-500">Em breve você poderá personalizar todas as configurações do bot</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
       </div>
     </div>

@@ -77,9 +77,57 @@ export default function BotInterface() {
   const [userLicenses, setUserLicenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
+  // ===== ESTADOS DAS CONFIGURAÇÕES =====
+  const [settings, setSettings] = useState({
+    stake: 1,
+    martingale: 2,
+    duration: 2,
+    stopWin: 3,
+    stopLoss: -5,
+    confidence: 70,
+    strategy: 'martingale'
+  });
+  
   // ===== REFS PARA INTEGRAÇÃO COM CÓDIGO ORIGINAL =====
   const botContainerRef = useRef<HTMLDivElement>(null);
   const isInitialized = useRef(false);
+
+  // ===== FUNÇÕES DE CONFIGURAÇÃO =====
+  const loadSettings = () => {
+    const savedSettings = localStorage.getItem('mvb_bot_settings');
+    if (savedSettings) {
+      try {
+        const parsed = JSON.parse(savedSettings);
+        setSettings(parsed);
+      } catch (error) {
+        console.error('Erro ao carregar configurações:', error);
+      }
+    }
+  };
+
+  const saveSettings = () => {
+    try {
+      localStorage.setItem('mvb_bot_settings', JSON.stringify(settings));
+      toast({
+        title: "✅ Configurações salvas!",
+        description: "Suas configurações foram salvas com sucesso.",
+      });
+    } catch (error) {
+      console.error('Erro ao salvar configurações:', error);
+      toast({
+        title: "❌ Erro ao salvar",
+        description: "Não foi possível salvar as configurações.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const updateSetting = (key: string, value: any) => {
+    setSettings(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
 
   // ===== FUNÇÕES DE LICENÇA =====
   const generateDeviceId = () => {
@@ -203,6 +251,11 @@ export default function BotInterface() {
 
     loadUserLicenses();
   }, [isAuthenticated, user, toast]);
+
+  // ===== CARREGAR CONFIGURAÇÕES =====
+  useEffect(() => {
+    loadSettings();
+  }, []);
 
   // ===== INICIALIZAR BOT ORIGINAL QUANDO LICENÇA FOR VÁLIDA =====
   useEffect(() => {
@@ -1208,11 +1261,11 @@ export default function BotInterface() {
                             min="1"
                             max="1000"
                             step="1"
-                            defaultValue="1"
+                            value={settings.stake}
                             className="mt-1"
                             onChange={(e) => {
-                              const hiddenInput = document.getElementById('stake');
-                              if (hiddenInput) (hiddenInput as HTMLInputElement).value = e.target.value;
+                              const value = parseFloat(e.target.value) || 1;
+                              updateSetting('stake', value);
                             }}
                           />
                         </div>
@@ -1225,11 +1278,11 @@ export default function BotInterface() {
                             min="2"
                             max="5"
                             step="1"
-                            defaultValue="2"
+                            value={settings.martingale}
                             className="mt-1"
                             onChange={(e) => {
-                              const hiddenInput = document.getElementById('martingale');
-                              if (hiddenInput) (hiddenInput as HTMLInputElement).value = e.target.value;
+                              const value = parseFloat(e.target.value) || 2;
+                              updateSetting('martingale', value);
                             }}
                           />
                         </div>
@@ -1241,11 +1294,11 @@ export default function BotInterface() {
                             type="number"
                             min="1"
                             max="5"
-                            defaultValue="2"
+                            value={settings.duration}
                             className="mt-1"
                             onChange={(e) => {
-                              const hiddenInput = document.getElementById('duration');
-                              if (hiddenInput) (hiddenInput as HTMLInputElement).value = e.target.value;
+                              const value = parseFloat(e.target.value) || 2;
+                              updateSetting('duration', value);
                             }}
                           />
                         </div>
@@ -1268,11 +1321,11 @@ export default function BotInterface() {
                             type="number"
                             min="1"
                             max="1000"
-                            defaultValue="3"
+                            value={settings.stopWin}
                             className="mt-1"
                             onChange={(e) => {
-                              const hiddenInput = document.getElementById('stopWin');
-                              if (hiddenInput) (hiddenInput as HTMLInputElement).value = e.target.value;
+                              const value = parseFloat(e.target.value) || 3;
+                              updateSetting('stopWin', value);
                             }}
                           />
                         </div>
@@ -1284,11 +1337,11 @@ export default function BotInterface() {
                             type="number"
                             min="-1000"
                             max="-1"
-                            defaultValue="-5"
+                            value={settings.stopLoss}
                             className="mt-1"
                             onChange={(e) => {
-                              const hiddenInput = document.getElementById('stopLoss');
-                              if (hiddenInput) (hiddenInput as HTMLInputElement).value = e.target.value;
+                              const value = parseFloat(e.target.value) || -5;
+                              updateSetting('stopLoss', value);
                             }}
                           />
                         </div>
@@ -1300,11 +1353,11 @@ export default function BotInterface() {
                             type="number"
                             min="50"
                             max="90"
-                            defaultValue="75"
+                            value={settings.confidence}
                             className="mt-1"
                             onChange={(e) => {
-                              const hiddenInput = document.getElementById('minConfidence');
-                              if (hiddenInput) (hiddenInput as HTMLInputElement).value = e.target.value;
+                              const value = parseFloat(e.target.value) || 70;
+                              updateSetting('confidence', value);
                             }}
                           />
                         </div>
@@ -1390,11 +1443,7 @@ export default function BotInterface() {
                   {/* Botão para Salvar Configurações */}
                   <div className="text-center mt-8">
                     <Button 
-                      onClick={() => {
-                        if (typeof window !== 'undefined' && (window as unknown as { saveSettings: () => void }).saveSettings) {
-                          (window as unknown as { saveSettings: () => void }).saveSettings();
-                        }
-                      }}
+                      onClick={saveSettings}
                       className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-8 py-3 text-lg"
                     >
                       <Zap className="mr-2 h-5 w-5" />
