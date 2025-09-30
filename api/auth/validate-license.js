@@ -71,16 +71,17 @@ module.exports = async function handler(req, res) {
     } else {
       // Register new device
       await db.run(
-        `INSERT OR REPLACE INTO device_sessions 
-         (license_id, device_fingerprint, last_seen, is_active, created_at)
-         VALUES (?, ?, datetime('now'), 1, datetime('now'))`,
+        `INSERT INTO device_sessions 
+         (license_id, device_fingerprint, last_activity, is_active, created_at)
+         VALUES (?, ?, NOW(), 1, NOW())
+         ON DUPLICATE KEY UPDATE last_activity = NOW(), is_active = 1`,
         [license.id, device_fingerprint]
       );
     }
 
     // Update last seen
     await db.run(
-      'UPDATE device_sessions SET last_seen = datetime(\'now\') WHERE license_id = ? AND device_fingerprint = ?',
+      'UPDATE device_sessions SET last_activity = NOW() WHERE license_id = ? AND device_fingerprint = ?',
       [license.id, device_fingerprint]
     );
 

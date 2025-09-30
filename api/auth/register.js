@@ -52,7 +52,7 @@ module.exports = async function handler(req, res) {
     // Create user
     const result = await db.run(
       `INSERT INTO users (name, email, password, role, status, created_at) 
-       VALUES (?, ?, ?, ?, ?, datetime('now'))`,
+       VALUES (?, ?, ?, ?, ?, NOW())`,
       [name, email, hashedPassword, 'user', 'active']
     );
 
@@ -65,7 +65,7 @@ module.exports = async function handler(req, res) {
 
     await db.run(
       `INSERT INTO licenses (user_id, license_key, license_type, expires_at, max_devices, is_active, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`,
+       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
       [userId, licenseKey, 'free', expiresAt.toISOString(), 1, 1]
     );
 
