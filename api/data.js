@@ -85,9 +85,36 @@ module.exports = async function handler(req, res) {
       }
 
       const [licenses] = await connection.execute(
-        'SELECT * FROM licenses WHERE user_id = ? ORDER BY created_at DESC',
+        `SELECT 
+          id,
+          license_key,
+          license_type,
+          expires_at,
+          max_devices,
+          is_active,
+          created_at,
+          DATEDIFF(expires_at, NOW()) as days_remaining,
+          CASE 
+            WHEN DATEDIFF(expires_at, NOW()) < 0 THEN 'expirada'
+            WHEN DATEDIFF(expires_at, NOW()) = 0 THEN 'expira hoje'
+            WHEN DATEDIFF(expires_at, NOW()) <= 7 THEN 'expirando'
+            WHEN is_active = 1 THEN 'ativa'
+            ELSE 'inativa'
+          END as status
+         FROM licenses 
+         WHERE user_id = ? 
+         ORDER BY is_active DESC, created_at DESC`,
         [user_id]
       );
+
+      // Adicionar contagem de dispositivos ativos
+      for (let license of licenses) {
+        const [devices] = await connection.execute(
+          'SELECT COUNT(*) as count FROM device_sessions WHERE license_id = ?',
+          [license.id]
+        );
+        license.active_devices = devices[0].count;
+      }
 
       return res.status(200).json({ licenses });
     }

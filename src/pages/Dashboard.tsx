@@ -29,6 +29,9 @@ interface License {
   days_remaining: number;
   active_devices: number;
   max_devices: number;
+  is_active: boolean;
+  status: string;
+  created_at: string;
 }
 
 export default function Dashboard() {
@@ -38,27 +41,20 @@ export default function Dashboard() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // Simulate loading licenses
     const loadLicenses = async () => {
+      if (!user?.id) return;
+      
       try {
         setLoading(true);
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        const response = await fetch(`/api/data?action=licenses&user_id=${user.id}`);
         
-        // Mock license data for demonstration
-        const mockLicenses: License[] = [
-          {
-            id: 1,
-            license_key: 'MVB-PRO-2024-DEMO',
-            license_type: 'premium',
-            expires_at: '2024-12-31T23:59:59Z',
-            days_remaining: 90,
-            active_devices: 1,
-            max_devices: 3
-          }
-        ];
-        
-        setLicenses(mockLicenses);
+        if (response.ok) {
+          const data = await response.json();
+          setLicenses(data.licenses || []);
+          console.log('✅ Licenças carregadas:', data.licenses);
+        } else {
+          throw new Error('Erro ao carregar licenças');
+        }
       } catch (err) {
         setError('Erro ao carregar licenças');
         console.error('Error loading licenses:', err);
@@ -68,7 +64,7 @@ export default function Dashboard() {
     };
 
     loadLicenses();
-  }, []);
+  }, [user?.id]);
 
   const getStatusColor = (daysRemaining: number) => {
     if (daysRemaining > 30) return 'bg-green-500';
@@ -82,7 +78,18 @@ export default function Dashboard() {
     return <AlertCircle className="h-4 w-4 text-red-600" />;
   };
 
-  const activeLicense = licenses.find(license => license.days_remaining > 0);
+  const activeLicense = licenses.find(license => license.is_active && license.days_remaining > 0);
+  
+  const getStatusBadge = (status: string) => {
+    const colors = {
+      'ativa': 'bg-green-100 text-green-800',
+      'expirando': 'bg-yellow-100 text-yellow-800',
+      'expira hoje': 'bg-orange-100 text-orange-800',
+      'expirada': 'bg-red-100 text-red-800',
+      'inativa': 'bg-gray-100 text-gray-800'
+    };
+    return colors[status as keyof typeof colors] || colors.inativa;
+  };
 
   if (loading) {
     return (
@@ -223,16 +230,28 @@ export default function Dashboard() {
                   {activeLicense ? (
                     <>
                       <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Status:</span>
+                        <Badge className={getStatusBadge(activeLicense.status)}>
+                          {activeLicense.status.toUpperCase()}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-600">Tipo:</span>
                         <Badge variant="secondary">
-                          {activeLicense.license_type.toUpperCase()}
+                          {activeLicense.license_type === 'free' ? 'TESTE' : activeLicense.license_type.toUpperCase()}
                         </Badge>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-600">Chave:</span>
-                        <code className="text-xs bg-gray-100 px-2 py-1 rounded">
+                        <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">
                           {activeLicense.license_key}
                         </code>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Criada em:</span>
+                        <span className="text-sm font-medium">
+                          {new Date(activeLicense.created_at).toLocaleDateString('pt-BR')}
+                        </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-600">Expira em:</span>
@@ -243,23 +262,37 @@ export default function Dashboard() {
                       <div className="space-y-2">
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-gray-600">Tempo restante:</span>
-                          <span className="text-sm font-medium">
-                            {activeLicense.days_remaining} dias
+                          <span className={`text-sm font-bold ${
+                            activeLicense.days_remaining > 7 ? 'text-green-600' : 
+                            activeLicense.days_remaining > 0 ? 'text-yellow-600' : 
+                            'text-red-600'
+                          }`}>
+                            {activeLicense.days_remaining} {activeLicense.days_remaining === 1 ? 'dia' : 'dias'}
                           </span>
                         </div>
                         <Progress 
-                          value={(activeLicense.days_remaining / 365) * 100} 
+                          value={Math.min((activeLicense.days_remaining / 30) * 100, 100)} 
                           className="h-2"
                         />
+                        <p className="text-xs text-gray-500 text-center">
+                          {activeLicense.days_remaining > 7 ? 
+                            'Licença ativa' : 
+                            activeLicense.days_remaining > 0 ? 
+                            '⚠️ Licença expirando em breve!' : 
+                            '❌ Licença expirada'}
+                        </p>
                       </div>
                     </>
                   ) : (
                     <div className="text-center py-8">
                       <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-600">Nenhuma licença ativa encontrada</p>
-                      <Button className="mt-4" size="sm">
-                        Adquirir Licença
-                      </Button>
+                      <p className="text-gray-600 mb-2">Nenhuma licença ativa encontrada</p>
+                      <p className="text-sm text-gray-500 mb-4">
+                        Entre em contato com o administrador para adquirir uma licença
+                      </p>
+                      <Badge variant="outline" className="text-xs">
+                        Total de licenças: {licenses.length}
+                      </Badge>
                     </div>
                   )}
                 </CardContent>

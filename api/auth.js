@@ -56,12 +56,50 @@ module.exports = async function handler(req, res) {
       const hashedPassword = await bcrypt.hash(password, 12);
 
       // Inserir usuário
-      await connection.execute(
+      const [userResult] = await connection.execute(
         'INSERT INTO users (name, email, password, role, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())',
         [name, email, hashedPassword, 'user', 'active']
       );
 
-      return res.status(201).json({ message: 'Usuário criado com sucesso' });
+      const userId = userResult.insertId;
+
+      // Gerar chave de licença única para teste
+      const generateLicenseKey = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let key = '';
+        for (let i = 0; i < 4; i++) {
+          let segment = '';
+          for (let j = 0; j < 4; j++) {
+            segment += chars.charAt(Math.floor(Math.random() * chars.length));
+          }
+          key += segment;
+          if (i < 3) key += '-';
+        }
+        return key;
+      };
+
+      const licenseKey = generateLicenseKey();
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7); // 7 dias de teste
+
+      // Criar licença de teste
+      await connection.execute(
+        `INSERT INTO licenses (user_id, license_key, license_type, expires_at, max_devices, is_active, created_at, updated_at)
+         VALUES (?, ?, 'free', ?, 1, 1, NOW(), NOW())`,
+        [userId, licenseKey, expiresAt]
+      );
+
+      console.log(`✅ Usuário ${userId} criado com licença de teste: ${licenseKey} (7 dias)`);
+
+      return res.status(201).json({ 
+        message: 'Usuário criado com sucesso',
+        license: {
+          key: licenseKey,
+          type: 'free',
+          days: 7,
+          expires_at: expiresAt
+        }
+      });
     }
 
     // ===== LOGIN =====
