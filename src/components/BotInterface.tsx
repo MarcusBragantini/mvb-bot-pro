@@ -110,7 +110,7 @@ export default function BotInterface() {
       // Depois, tentar carregar do servidor (sincronização)
       if (user?.id) {
         try {
-          const response = await fetch(`/api/user/settings?user_id=${user.id}`);
+          const response = await fetch(`/api/data?action=settings&user_id=${user.id}`);
           if (response.ok) {
             const data = await response.json();
             if (data.settings && Object.keys(data.settings).length > 0) {
@@ -138,7 +138,7 @@ export default function BotInterface() {
       // Tentar salvar no servidor (sincronização)
       if (user?.id) {
         try {
-          const response = await fetch('/api/user/settings', {
+          const response = await fetch('/api/data?action=settings', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

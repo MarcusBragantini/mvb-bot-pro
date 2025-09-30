@@ -59,7 +59,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const checkSession = async () => {
       try {
-        const response = await fetch(`/api/auth/check-session?user_id=${user.id}&session_token=${sessionToken}`);
+        const response = await fetch(`/api/auth?action=check-session&user_id=${user.id}&session_token=${sessionToken}`);
         const data = await response.json();
 
         if (!data.valid) {
@@ -120,7 +120,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Criar sessão no servidor (invalida sessões anteriores)
       try {
-        await fetch('/api/auth/check-session', {
+        await fetch('/api/auth?action=check-session', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
