@@ -120,10 +120,10 @@ class ApiClient {
     return response;
   }
 
-  async register(email: string, password: string, name: string): Promise<RegisterResponse> {
+  async register(name: string, email: string, password: string): Promise<RegisterResponse> {
     return this.request<RegisterResponse>('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password, name }),
+      body: JSON.stringify({ name, email, password }),
     });
   }
 
