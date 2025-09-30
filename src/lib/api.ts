@@ -1,4 +1,4 @@
-import { API_CONFIG, debugApiCall } from './config';
+import { API_CONFIG } from './config';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || API_CONFIG.BASE_URL;
 
@@ -124,7 +124,7 @@ class ApiClient {
 
   async register(name: string, email: string, password: string): Promise<RegisterResponse> {
     const data = { name, email, password };
-    debugApiCall('/auth/register', data);
+    console.log('Register API called with:', { name, email, password: '***' });
     
     return this.request<RegisterResponse>('/auth/register', {
       method: 'POST',
