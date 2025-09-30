@@ -328,10 +328,54 @@ export default function BotInterface() {
   // ===== INICIALIZAR BOT QUANDO A ABA TRADING FOR ATIVADA =====
   useEffect(() => {
     if (activeTab === 'trading' && botContainerRef.current) {
-      console.log('Initializing bot from tab change...');
-      initializeOriginalBot();
+      // Verificar se o bot já foi inicializado verificando se existe conteúdo
+      if (!botContainerRef.current.innerHTML || botContainerRef.current.innerHTML.trim() === '') {
+        console.log('Initializing bot from tab change...');
+        initializeOriginalBot();
+      } else {
+        console.log('Bot já inicializado, apenas mostrando...');
+      }
     }
   }, [activeTab]);
+
+  // ===== ATUALIZAR TOKEN QUANDO SELEÇÃO MUDAR =====
+  useEffect(() => {
+    const tokenInput = document.getElementById('token') as HTMLInputElement;
+    if (tokenInput) {
+      const selectedToken = settings.selectedTokenType === 'demo' 
+        ? settings.derivTokenDemo 
+        : settings.derivTokenReal;
+      tokenInput.value = selectedToken || '';
+      console.log('Token atualizado:', {
+        selectedType: settings.selectedTokenType,
+        hasToken: !!selectedToken,
+        tokenDemo: settings.derivTokenDemo ? 'Configurado' : 'Não configurado',
+        tokenReal: settings.derivTokenReal ? 'Configurado' : 'Não configurado'
+      });
+    }
+  }, [settings.selectedTokenType, settings.derivTokenDemo, settings.derivTokenReal]);
+
+  // ===== ATUALIZAR CAMPOS DO BOT QUANDO CONFIGURAÇÕES MUDAREM =====
+  useEffect(() => {
+    // Atualizar duração
+    const durationInput = document.getElementById('duration') as HTMLInputElement;
+    if (durationInput && settings.duration) {
+      durationInput.value = String(settings.duration);
+      console.log('Duração atualizada:', settings.duration);
+    }
+
+    // Atualizar stake
+    const stakeInput = document.getElementById('stake') as HTMLInputElement;
+    if (stakeInput && settings.stake) {
+      stakeInput.value = String(settings.stake);
+    }
+
+    // Atualizar martingale
+    const martingaleInput = document.getElementById('martingale') as HTMLInputElement;
+    if (martingaleInput && settings.martingale) {
+      martingaleInput.value = String(settings.martingale);
+    }
+  }, [settings.duration, settings.stake, settings.martingale]);
 
   // ===== FUNÇÃO PARA INICIALIZAR O BOT ORIGINAL =====
   const initializeOriginalBot = () => {
