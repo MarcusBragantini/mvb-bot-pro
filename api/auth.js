@@ -1,8 +1,9 @@
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const path = require('path');
 
-// Hostinger Database Configuration
+// Database configuration
 const DB_CONFIG = {
   host: process.env.DB_HOST || 'srv806.hstgr.io',
   user: process.env.DB_USER || 'u950457610_bot_mvb_saas',
