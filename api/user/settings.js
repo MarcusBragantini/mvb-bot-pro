@@ -1,4 +1,22 @@
-const { openDb } = require('../lib/database.js');
+const mysql = require('mysql2/promise');
+
+// Hostinger Database Configuration
+const DB_CONFIG = {
+  host: process.env.DB_HOST || 'srv806.hstgr.io',
+  user: process.env.DB_USER || 'u950457610_bot_mvb_saas',
+  password: process.env.DB_PASSWORD || 'Mvb985674',
+  database: process.env.DB_NAME || 'u950457610_bot_mvb_saas',
+  port: process.env.DB_PORT || 3306,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  ssl: {
+    rejectUnauthorized: false
+  },
+  connectTimeout: 60000,
+  acquireTimeout: 60000,
+  timeout: 60000
+};
 
 module.exports = async function handler(req, res) {
   // Configurar CORS
@@ -10,8 +28,9 @@ module.exports = async function handler(req, res) {
     return res.status(200).end();
   }
 
+  let connection;
   try {
-    const db = await openDb();
+    connection = await mysql.createConnection(DB_CONFIG);
     
     if (req.method === 'GET') {
       // Buscar configurações do usuário
@@ -21,7 +40,7 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ error: 'user_id é obrigatório' });
       }
 
-      const [rows] = await db.execute(
+      const [rows] = await connection.execute(
         'SELECT settings FROM user_settings WHERE user_id = ?',
         [user_id]
       );
@@ -44,7 +63,7 @@ module.exports = async function handler(req, res) {
       const settingsJson = JSON.stringify(settings);
       
       // Usar INSERT ... ON DUPLICATE KEY UPDATE para MySQL/MariaDB
-      await db.execute(
+      await connection.execute(
         `INSERT INTO user_settings (user_id, settings, updated_at) 
          VALUES (?, ?, NOW()) 
          ON DUPLICATE KEY UPDATE 
@@ -68,5 +87,9 @@ module.exports = async function handler(req, res) {
       error: 'Erro interno do servidor', 
       details: error.message 
     });
+  } finally {
+    if (connection) {
+      await connection.end();
+    }
   }
 };
