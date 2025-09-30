@@ -38,25 +38,68 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+
+  // Função para gerar token de sessão único
+  const generateSessionToken = () => {
+    return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  };
+
+  // Função para obter informações do dispositivo
+  const getDeviceInfo = () => {
+    const ua = navigator.userAgent;
+    const isMobile = /Mobile|Android|iPhone|iPad|iPod/i.test(ua);
+    const platform = navigator.platform || 'Unknown';
+    return `${isMobile ? 'Mobile' : 'Desktop'} - ${platform}`;
+  };
+
+  // Verificar sessão periodicamente
+  useEffect(() => {
+    if (!user || !sessionToken) return;
+
+    const checkSession = async () => {
+      try {
+        const response = await fetch(`/api/auth/check-session?user_id=${user.id}&session_token=${sessionToken}`);
+        const data = await response.json();
+
+        if (!data.valid) {
+          console.log('⚠️ Sessão invalidada em outro dispositivo');
+          alert('Sua sessão foi encerrada porque você fez login em outro dispositivo.');
+          logout();
+        }
+      } catch (error) {
+        console.error('Erro ao verificar sessão:', error);
+      }
+    };
+
+    // Verificar a cada 30 segundos
+    const interval = setInterval(checkSession, 30000);
+    
+    return () => clearInterval(interval);
+  }, [user, sessionToken]);
 
   useEffect(() => {
     const initAuth = () => {
       const storedToken = localStorage.getItem('auth_token');
       const storedUser = localStorage.getItem('auth_user');
+      const storedSessionToken = localStorage.getItem('session_token');
       
-      if (storedToken && storedUser) {
+      if (storedToken && storedUser && storedSessionToken) {
         try {
           const userData = JSON.parse(storedUser);
           setUser(userData);
           setToken(storedToken);
+          setSessionToken(storedSessionToken);
           apiClient.setToken(storedToken);
         } catch (error) {
           console.error('Error parsing stored user data:', error);
           localStorage.removeItem('auth_token');
           localStorage.removeItem('auth_user');
+          localStorage.removeItem('session_token');
           apiClient.clearToken();
           setToken(null);
           setUser(null);
+          setSessionToken(null);
         }
       }
       setLoading(false);
@@ -71,10 +114,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await apiClient.login(email, password);
       const { token: newToken, user: userData } = response;
       
+      // Gerar token de sessão único
+      const newSessionToken = generateSessionToken();
+      const deviceInfo = getDeviceInfo();
+
+      // Criar sessão no servidor (invalida sessões anteriores)
+      try {
+        await fetch('/api/auth/check-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user_id: userData.id,
+            session_token: newSessionToken,
+            device_info: deviceInfo
+          }),
+        });
+        console.log('✅ Sessão única criada, sessões anteriores invalidadas');
+      } catch (sessionError) {
+        console.error('Erro ao criar sessão:', sessionError);
+      }
+      
       localStorage.setItem('auth_token', newToken);
       localStorage.setItem('auth_user', JSON.stringify(userData));
+      localStorage.setItem('session_token', newSessionToken);
       setToken(newToken);
       setUser(userData);
+      setSessionToken(newSessionToken);
       apiClient.setToken(newToken);
     } catch (error) {
       console.error('Login error:', error);
@@ -100,9 +167,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
+    localStorage.removeItem('session_token');
     apiClient.clearToken();
     setToken(null);
     setUser(null);
+    setSessionToken(null);
   };
 
   const isAuthenticated = !!token && !!user;
