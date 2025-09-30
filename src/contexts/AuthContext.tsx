@@ -42,7 +42,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Função para gerar token de sessão único
   const generateSessionToken = () => {
-    return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${Math.random().toString(36).substr(2, 9)}`;
   };
 
   // Função para obter informações do dispositivo
@@ -50,7 +50,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const ua = navigator.userAgent;
     const isMobile = /Mobile|Android|iPhone|iPad|iPod/i.test(ua);
     const platform = navigator.platform || 'Unknown';
-    return `${isMobile ? 'Mobile' : 'Desktop'} - ${platform}`;
+    const browserName = ua.includes('Chrome') ? 'Chrome' : 
+                       ua.includes('Firefox') ? 'Firefox' : 
+                       ua.includes('Safari') ? 'Safari' : 'Other';
+    const timestamp = new Date().toLocaleString('pt-BR');
+    return `${isMobile ? 'Mobile' : 'Desktop'} - ${platform} - ${browserName} - ${timestamp}`;
   };
 
   // Verificar sessão periodicamente

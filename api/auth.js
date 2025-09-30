@@ -190,18 +190,20 @@ module.exports = async function handler(req, res) {
           return res.status(400).json({ error: 'user_id e session_token são obrigatórios' });
         }
 
-        // Invalidar sessões antigas
+        // PRIMEIRO: Deletar TODAS as sessões antigas deste usuário
         await connection.execute(
-          'UPDATE user_sessions SET is_active = 0, invalidated_at = NOW() WHERE user_id = ? AND is_active = 1',
+          'DELETE FROM user_sessions WHERE user_id = ?',
           [user_id]
         );
 
-        // Criar nova sessão
+        // DEPOIS: Criar a nova sessão (única)
         await connection.execute(
           `INSERT INTO user_sessions (user_id, session_token, device_info, is_active, created_at, last_activity)
            VALUES (?, ?, ?, 1, NOW(), NOW())`,
           [user_id, session_token, device_info || 'Unknown']
         );
+
+        console.log(`✅ Todas as sessões do usuário ${user_id} foram invalidadas. Nova sessão: ${session_token.substring(0, 20)}...`);
 
         return res.status(200).json({ 
           success: true,
