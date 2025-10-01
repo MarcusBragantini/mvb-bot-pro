@@ -77,6 +77,33 @@ export default function BotInterface() {
   const [userLicenses, setUserLicenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('trading');
+
+  // Função para verificar se bot está rodando
+  const isBotRunning = () => {
+    const statusElement = document.getElementById('status');
+    if (statusElement && statusElement.textContent) {
+      const statusText = statusElement.textContent.trim();
+      return !statusText.includes('⏸️') && !statusText.includes('Bot Parado') && statusText !== '';
+    }
+    return false;
+  };
+
+  // Handler para mudança de aba com verificação
+  const handleTabChange = (newTab: string) => {
+    if (activeTab === 'trading' && newTab !== 'trading' && isBotRunning()) {
+      const confirmed = window.confirm(
+        '⚠️ ATENÇÃO: O bot está em execução!\n\n' +
+        'Mudar de aba pode interromper o bot e você pode perder trades em andamento.\n\n' +
+        'Recomendamos PARAR o bot antes de navegar.\n\n' +
+        'Deseja continuar mesmo assim?'
+      );
+      
+      if (!confirmed) {
+        return; // Não muda de aba
+      }
+    }
+    setActiveTab(newTab);
+  };
   
   // ===== ESTADOS DAS CONFIGURAÇÕES =====
   const [settings, setSettings] = useState({
@@ -318,29 +345,19 @@ export default function BotInterface() {
     }
   }, [user?.id]);
 
-  // ===== INICIALIZAR BOT ORIGINAL QUANDO LICENÇA FOR VÁLIDA =====
+  // ===== INICIALIZAR BOT UMA ÚNICA VEZ (NUNCA REINICIALIZAR) =====
   useEffect(() => {
-    console.log('Bot initialization check:', { isLicenseValid, isInitialized: isInitialized.current, hasContainer: !!botContainerRef.current });
-    if (isLicenseValid && !isInitialized.current && botContainerRef.current) {
-      isInitialized.current = true;
-      console.log('Initializing bot...');
-      initializeOriginalBot();
-    }
-  }, [isLicenseValid]);
-
-  // ===== INICIALIZAR BOT UMA ÚNICA VEZ =====
-  useEffect(() => {
-    if (botContainerRef.current && !isInitialized.current) {
+    if (isLicenseValid && botContainerRef.current && !isInitialized.current) {
       // Aguardar um pouco para garantir que o DOM está pronto
       setTimeout(() => {
         if (botContainerRef.current && !botContainerRef.current.innerHTML.trim()) {
-          console.log('Initializing bot (one time only)...');
+          console.log('🤖 Inicializando bot pela primeira e única vez...');
           isInitialized.current = true;
           initializeOriginalBot();
         }
       }, 500);
     }
-  }, []);
+  }, [isLicenseValid]);
 
   // ===== ATUALIZAR TOKEN QUANDO SELEÇÃO MUDAR =====
   useEffect(() => {
@@ -615,11 +632,20 @@ export default function BotInterface() {
           martingaleLevel,
           profit,
           stats,
+          symbol,
+          duration,
           timestamp: Date.now()
         };
         localStorage.setItem('bot_state', JSON.stringify(botState));
-        console.log('💾 Estado do bot salvo');
+        console.log('💾 Estado do bot salvo:', { profit, martingaleLevel, currentStake });
       }
+
+      // Salvar estado periodicamente enquanto bot está rodando
+      setInterval(() => {
+        if (isRunning) {
+          saveBotState();
+        }
+      }, 5000); // Salva a cada 5 segundos quando bot está ativo
 
       function restoreBotState() {
         const savedState = localStorage.getItem('bot_state');
@@ -1372,7 +1398,7 @@ export default function BotInterface() {
       {/* Container Principal com 3 Abas React - Mobile Optimized */}
       <Card className="shadow-2xl border-0">
         <CardContent className="p-2 sm:p-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList className="grid w-full grid-cols-3 mb-4 sm:mb-6 h-10 sm:h-12">
               <TabsTrigger value="trading" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2">
                 <Play className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
