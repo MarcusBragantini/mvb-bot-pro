@@ -352,20 +352,21 @@ export default function BotInterface() {
     }
   }, [user?.id]);
 
-  // ===== LISTENER PARA TOASTS DO BOT =====
+  // ===== CRIAR FUNÇÃO TOAST GLOBAL ANTES DO BOT =====
   useEffect(() => {
-    const handleToast = (event: any) => {
-      const { title, description, variant } = event.detail;
+    // Criar função global para o bot usar
+    (window as any).showToast = (title: string, description: string, variant: 'default' | 'destructive' = 'default') => {
       toast({
         title,
         description,
-        variant: variant || 'default',
+        variant,
         duration: 3000,
       });
     };
 
-    window.addEventListener('show-toast', handleToast);
-    return () => window.removeEventListener('show-toast', handleToast);
+    return () => {
+      delete (window as any).showToast;
+    };
   }, [toast]);
 
   // ===== INICIALIZAR BOT UMA ÚNICA VEZ (NUNCA REINICIALIZAR) =====
