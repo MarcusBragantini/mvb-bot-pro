@@ -40,6 +40,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [botStatus, setBotStatus] = useState<'online' | 'offline'>('offline');
+  const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
     const loadLicenses = async () => {
@@ -213,13 +214,13 @@ export default function Dashboard() {
           </Alert>
         )}
 
-        <Tabs defaultValue="overview" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
             <TabsTrigger value="bot">Bot Trading</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-6">
+          <TabsContent value="overview" className="space-y-6" forceMount style={{ display: activeTab === 'overview' ? 'block' : 'none' }}>
             {/* Status Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
@@ -410,7 +411,7 @@ export default function Dashboard() {
             </div>
           </TabsContent>
 
-          <TabsContent value="bot">
+          <TabsContent value="bot" forceMount style={{ display: activeTab === 'bot' ? 'block' : 'none' }}>
             <BotInterface />
           </TabsContent>
 
