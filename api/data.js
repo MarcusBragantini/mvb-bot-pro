@@ -38,17 +38,26 @@ module.exports = async function handler(req, res) {
           return res.status(400).json({ error: 'user_id é obrigatório' });
         }
 
-        const [rows] = await connection.execute(
-          'SELECT settings FROM user_settings WHERE user_id = ?',
-          [user_id]
-        );
+      const [rows] = await connection.execute(
+        'SELECT settings, deriv_token_demo, deriv_token_real FROM user_settings WHERE user_id = ?',
+        [user_id]
+      );
 
-        if (rows.length === 0) {
-          return res.status(200).json({ settings: {} });
-        }
+      if (rows.length === 0) {
+        return res.status(200).json({ 
+          settings: {},
+          deriv_token_demo: '',
+          deriv_token_real: ''
+        });
+      }
 
-        const settings = JSON.parse(rows[0].settings || '{}');
-        return res.status(200).json({ settings });
+      const settings = JSON.parse(rows[0].settings || '{}');
+      
+      // Adicionar tokens ao objeto de settings
+      settings.derivTokenDemo = rows[0].deriv_token_demo || '';
+      settings.derivTokenReal = rows[0].deriv_token_real || '';
+      
+      return res.status(200).json({ settings });
       }
 
       if (req.method === 'POST' || req.method === 'PUT') {
@@ -58,16 +67,29 @@ module.exports = async function handler(req, res) {
           return res.status(400).json({ error: 'user_id e settings são obrigatórios' });
         }
 
-        const settingsJson = JSON.stringify(settings);
+        // Extrair tokens das settings
+        const derivTokenDemo = settings.derivTokenDemo || null;
+        const derivTokenReal = settings.derivTokenReal || null;
+        
+        // Remover tokens do objeto settings para salvar apenas configs do bot
+        const settingsWithoutTokens = { ...settings };
+        delete settingsWithoutTokens.derivTokenDemo;
+        delete settingsWithoutTokens.derivTokenReal;
+        
+        const settingsJson = JSON.stringify(settingsWithoutTokens);
         
         await connection.execute(
-          `INSERT INTO user_settings (user_id, settings, updated_at) 
-           VALUES (?, ?, NOW()) 
+          `INSERT INTO user_settings (user_id, settings, deriv_token_demo, deriv_token_real, updated_at) 
+           VALUES (?, ?, ?, ?, NOW()) 
            ON DUPLICATE KEY UPDATE 
-           settings = VALUES(settings), 
+           settings = VALUES(settings),
+           deriv_token_demo = VALUES(deriv_token_demo),
+           deriv_token_real = VALUES(deriv_token_real),
            updated_at = NOW()`,
-          [user_id, settingsJson]
+          [user_id, settingsJson, derivTokenDemo, derivTokenReal]
         );
+
+        console.log(`✅ Configurações salvas para usuário ${user_id} (tokens no banco)`);
 
         return res.status(200).json({ 
           message: 'Configurações salvas com sucesso',
@@ -127,6 +149,8 @@ module.exports = async function handler(req, res) {
           id INT AUTO_INCREMENT PRIMARY KEY,
           user_id INT NOT NULL,
           settings JSON,
+          deriv_token_demo TEXT,
+          deriv_token_real TEXT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
           UNIQUE KEY unique_user_settings (user_id),

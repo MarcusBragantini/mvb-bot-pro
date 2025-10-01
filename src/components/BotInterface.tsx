@@ -121,33 +121,34 @@ export default function BotInterface() {
   // ===== FUNÇÕES DE CONFIGURAÇÃO =====
   const loadSettings = async () => {
     try {
-      // Usar chave específica do usuário para evitar compartilhamento
-      const settingsKey = user?.id ? `mvb_bot_settings_${user.id}` : 'mvb_bot_settings_temp';
-      
-      // Primeiro, carregar do localStorage (rápido)
-      const savedSettings = localStorage.getItem(settingsKey);
-      if (savedSettings) {
-        const parsed = JSON.parse(savedSettings);
-        setSettings(parsed);
-        console.log('✅ Configurações carregadas do localStorage:', parsed);
-      }
-      
-      // Depois, tentar carregar do servidor (sincronização)
+      // SEMPRE tentar carregar do servidor primeiro (fonte da verdade)
       if (user?.id) {
         try {
           const response = await fetch(`/api/data?action=settings&user_id=${user.id}`);
           if (response.ok) {
             const data = await response.json();
-            if (data.settings && Object.keys(data.settings).length > 0) {
+            if (data.settings) {
               setSettings(prev => ({ ...prev, ...data.settings }));
-              // Atualizar localStorage com dados do servidor (chave específica do usuário)
-              localStorage.setItem(settingsKey, JSON.stringify(data.settings));
-              console.log('✅ Configurações sincronizadas do servidor:', data.settings);
+              console.log('✅ Configurações carregadas do SERVIDOR (seguro):', data.settings);
+              console.log('🔑 Tokens do servidor:', {
+                demo: data.settings.derivTokenDemo ? 'Configurado' : 'Vazio',
+                real: data.settings.derivTokenReal ? 'Configurado' : 'Vazio'
+              });
+              return; // Sucesso, não precisa carregar do localStorage
             }
           }
         } catch (serverError) {
-          console.log('⚠️ Servidor indisponível, usando localStorage');
+          console.error('⚠️ Erro ao carregar do servidor:', serverError);
         }
+      }
+      
+      // Fallback: carregar do localStorage apenas se servidor falhar
+      const settingsKey = user?.id ? `mvb_bot_settings_${user.id}` : 'mvb_bot_settings_temp';
+      const savedSettings = localStorage.getItem(settingsKey);
+      if (savedSettings) {
+        const parsed = JSON.parse(savedSettings);
+        setSettings(parsed);
+        console.log('⚠️ Carregado do localStorage (fallback):', parsed);
       }
     } catch (error) {
       console.error('❌ Erro ao carregar configurações:', error);

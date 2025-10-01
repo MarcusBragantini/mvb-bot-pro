@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS user_settings (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
   settings JSON,
+  deriv_token_demo TEXT,
+  deriv_token_real TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY unique_user_settings (user_id),
