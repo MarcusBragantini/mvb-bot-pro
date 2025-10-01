@@ -39,6 +39,7 @@ export default function Dashboard() {
   const [licenses, setLicenses] = useState<License[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [botStatus, setBotStatus] = useState<'online' | 'offline'>('offline');
 
   useEffect(() => {
     const loadLicenses = async () => {
@@ -65,6 +66,40 @@ export default function Dashboard() {
 
     loadLicenses();
   }, [user?.id]);
+
+  // Listener para status do bot
+  useEffect(() => {
+    const handleBotStart = () => {
+      setBotStatus('online');
+      console.log('🤖 Bot iniciado');
+    };
+
+    const handleBotStop = () => {
+      setBotStatus('offline');
+      console.log('🛑 Bot parado');
+    };
+
+    // Adicionar listeners
+    window.addEventListener('bot-started', handleBotStart);
+    window.addEventListener('bot-stopped', handleBotStop);
+
+    // Verificar status inicial do bot (se já está rodando)
+    const checkBotStatus = () => {
+      const statusElement = document.getElementById('status');
+      if (statusElement && statusElement.textContent && statusElement.textContent !== '⏸️ Bot Parado') {
+        setBotStatus('online');
+      }
+    };
+
+    // Verificar periodicamente
+    const interval = setInterval(checkBotStatus, 2000);
+
+    return () => {
+      window.removeEventListener('bot-started', handleBotStart);
+      window.removeEventListener('bot-stopped', handleBotStop);
+      clearInterval(interval);
+    };
+  }, []);
 
   const getStatusColor = (daysRemaining: number) => {
     if (daysRemaining > 30) return 'bg-green-500';
@@ -174,15 +209,15 @@ export default function Dashboard() {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Dispositivos</CardTitle>
+                  <CardTitle className="text-sm font-medium">Dispositivo</CardTitle>
                   <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">
-                    {activeLicense ? `${activeLicense.active_devices}/${activeLicense.max_devices}` : '0/0'}
+                  <div className="text-2xl font-bold text-blue-600">
+                    1/1
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Dispositivos conectados
+                    Dispositivo conectado
                   </p>
                 </CardContent>
               </Card>
@@ -190,12 +225,17 @@ export default function Dashboard() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Bot Status</CardTitle>
-                  <Activity className="h-4 w-4 text-muted-foreground" />
+                  <Activity className={`h-4 w-4 ${botStatus === 'online' ? 'text-green-600 animate-pulse' : 'text-gray-400'}`} />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-green-600">Online</div>
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-3 h-3 rounded-full ${botStatus === 'online' ? 'bg-green-600 animate-pulse' : 'bg-gray-400'}`}></div>
+                    <div className={`text-2xl font-bold ${botStatus === 'online' ? 'text-green-600' : 'text-gray-600'}`}>
+                      {botStatus === 'online' ? 'Ativo' : 'Inativo'}
+                    </div>
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Sistema operacional
+                    {botStatus === 'online' ? 'Bot em execução' : 'Bot parado'}
                   </p>
                 </CardContent>
               </Card>

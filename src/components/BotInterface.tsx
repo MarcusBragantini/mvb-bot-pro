@@ -641,6 +641,9 @@ export default function BotInterface() {
           alert("Token da Deriv é obrigatório para conectar!");
           return;
         }
+        
+        // Disparar evento de bot iniciado
+        window.dispatchEvent(new Event('bot-started'));
 
         // Carregar configurações dos campos
         initialStake = Math.round(parseFloat(document.getElementById("stake").value) || 1);
@@ -1118,6 +1121,9 @@ export default function BotInterface() {
       function stopBot() {
         isRunning = false;
         isTrading = false;
+        
+        // Disparar evento de bot parado
+        window.dispatchEvent(new Event('bot-stopped'));
         
         if (ws && ws.readyState === WebSocket.OPEN) {
           try {
