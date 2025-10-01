@@ -91,16 +91,11 @@ export default function BotInterface() {
   // Handler para mudança de aba com verificação
   const handleTabChange = (newTab: string) => {
     if (activeTab === 'trading' && newTab !== 'trading' && isBotRunning()) {
-      const confirmed = window.confirm(
-        '⚠️ ATENÇÃO: O bot está em execução!\n\n' +
-        'Mudar de aba pode interromper o bot e você pode perder trades em andamento.\n\n' +
-        'Recomendamos PARAR o bot antes de navegar.\n\n' +
-        'Deseja continuar mesmo assim?'
-      );
-      
-      if (!confirmed) {
-        return; // Não muda de aba
-      }
+      toast({
+        title: "⚠️ Bot em Execução!",
+        description: "O bot continua rodando em segundo plano. Recomendamos não recarregar a página.",
+        duration: 4000,
+      });
     }
     setActiveTab(newTab);
   };
@@ -345,6 +340,22 @@ export default function BotInterface() {
     }
   }, [user?.id]);
 
+  // ===== LISTENER PARA TOASTS DO BOT =====
+  useEffect(() => {
+    const handleToast = (event: any) => {
+      const { title, description, variant } = event.detail;
+      toast({
+        title,
+        description,
+        variant: variant || 'default',
+        duration: 3000,
+      });
+    };
+
+    window.addEventListener('show-toast', handleToast);
+    return () => window.removeEventListener('show-toast', handleToast);
+  }, [toast]);
+
   // ===== INICIALIZAR BOT UMA ÚNICA VEZ (NUNCA REINICIALIZAR) =====
   useEffect(() => {
     if (isLicenseValid && botContainerRef.current && !isInitialized.current) {
@@ -572,7 +583,7 @@ export default function BotInterface() {
         localStorage.setItem('mvb_bot_settings', JSON.stringify(settings));
         
         // Mostrar notificação de sucesso
-        alert('✅ Configurações salvas com sucesso!');
+        window.showToast('✅ Configurações Salvas', 'Suas configurações foram aplicadas com sucesso!');
         addLog('💾 Configurações salvas no armazenamento local');
       }
 
@@ -707,13 +718,13 @@ export default function BotInterface() {
       // ===== FUNÇÕES PRINCIPAIS DO BOT =====
       function startBot() {
         if (isRunning) {
-          alert("Bot já está em execução!");
+          window.showToast('⚠️ Bot em Execução', 'O bot já está rodando!', 'destructive');
           return;
         }
 
         const token = document.getElementById("token").value.trim();
         if (!token) {
-          alert("Token da Deriv é obrigatório para conectar!");
+          window.showToast('❌ Token Necessário', 'Configure o token da Deriv na aba Configurações!', 'destructive');
           return;
         }
         
@@ -1363,38 +1374,6 @@ export default function BotInterface() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-2 sm:p-4">
-      {/* Header ULTRA COMPACTO para Mobile */}
-      <div className="mb-4 sm:mb-6">
-        <Card className="border-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-2xl">
-          <CardHeader className="text-center py-3 sm:py-4 px-3 sm:px-4">
-            <CardTitle className="text-base sm:text-xl md:text-2xl font-bold flex items-center justify-center gap-2">
-              <Bot className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0" />
-              <span className="whitespace-nowrap">MVB Pro</span>
-            </CardTitle>
-            <CardDescription className="text-blue-100 text-xs sm:text-sm md:text-base mt-1">
-              Trading Bot com IA
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-
-      {/* Status da Licença - Compacto */}
-      <Card className="border-green-200 bg-green-50/50 mb-4 sm:mb-6">
-        <CardContent className="p-3 sm:p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 flex-shrink-0" />
-              <span className="font-semibold text-green-800 text-sm sm:text-base">
-                Licença {licenseInfo?.type.toUpperCase()} Ativa
-              </span>
-            </div>
-            <Badge variant="default" className="bg-green-600 text-xs sm:text-sm">
-              ✅ {licenseInfo?.days} dias
-            </Badge>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Container Principal com 3 Abas React - Mobile Optimized */}
       <Card className="shadow-2xl border-0">
         <CardContent className="p-2 sm:p-6">
