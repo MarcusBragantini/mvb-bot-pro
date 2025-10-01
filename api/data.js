@@ -1,4 +1,44 @@
 const mysql = require('mysql2/promise');
+const crypto = require('crypto');
+
+// Chave de criptografia (deve ser mantida em segredo)
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'mvb-pro-encryption-key-2024-super-secret-change-in-production';
+const ENCRYPTION_ALGORITHM = 'aes-256-cbc';
+const ENCRYPTION_IV_LENGTH = 16;
+
+// Funções de criptografia
+function encrypt(text) {
+  if (!text) return null;
+  
+  const iv = crypto.randomBytes(ENCRYPTION_IV_LENGTH);
+  const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+  const cipher = crypto.createCipheriv(ENCRYPTION_ALGORITHM, key, iv);
+  
+  let encrypted = cipher.update(text, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  
+  return iv.toString('hex') + ':' + encrypted;
+}
+
+function decrypt(text) {
+  if (!text) return '';
+  
+  try {
+    const parts = text.split(':');
+    const iv = Buffer.from(parts[0], 'hex');
+    const encryptedText = parts[1];
+    const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+    const decipher = crypto.createDecipheriv(ENCRYPTION_ALGORITHM, key, iv);
+    
+    let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    
+    return decrypted;
+  } catch (error) {
+    console.error('Erro ao descriptografar:', error);
+    return '';
+  }
+}
 
 // Hostinger Database Configuration
 const DB_CONFIG = {
@@ -53,9 +93,15 @@ module.exports = async function handler(req, res) {
 
       const settings = JSON.parse(rows[0].settings || '{}');
       
-      // Adicionar tokens ao objeto de settings
-      settings.derivTokenDemo = rows[0].deriv_token_demo || '';
-      settings.derivTokenReal = rows[0].deriv_token_real || '';
+      // Descriptografar tokens antes de enviar
+      settings.derivTokenDemo = decrypt(rows[0].deriv_token_demo) || '';
+      settings.derivTokenReal = decrypt(rows[0].deriv_token_real) || '';
+      
+      console.log('🔓 Tokens descriptografados para usuário:', {
+        user_id,
+        hasDemo: !!settings.derivTokenDemo,
+        hasReal: !!settings.derivTokenReal
+      });
       
       return res.status(200).json({ settings });
       }
@@ -70,6 +116,18 @@ module.exports = async function handler(req, res) {
         // Extrair tokens das settings
         const derivTokenDemo = settings.derivTokenDemo || null;
         const derivTokenReal = settings.derivTokenReal || null;
+        
+        // Criptografar tokens antes de salvar
+        const encryptedTokenDemo = derivTokenDemo ? encrypt(derivTokenDemo) : null;
+        const encryptedTokenReal = derivTokenReal ? encrypt(derivTokenReal) : null;
+        
+        console.log('🔐 Criptografando tokens para usuário:', {
+          user_id,
+          hasDemo: !!derivTokenDemo,
+          hasReal: !!derivTokenReal,
+          demoLength: derivTokenDemo?.length || 0,
+          realLength: derivTokenReal?.length || 0
+        });
         
         // Remover tokens do objeto settings para salvar apenas configs do bot
         const settingsWithoutTokens = { ...settings };
@@ -86,10 +144,10 @@ module.exports = async function handler(req, res) {
            deriv_token_demo = VALUES(deriv_token_demo),
            deriv_token_real = VALUES(deriv_token_real),
            updated_at = NOW()`,
-          [user_id, settingsJson, derivTokenDemo, derivTokenReal]
+          [user_id, settingsJson, encryptedTokenDemo, encryptedTokenReal]
         );
 
-        console.log(`✅ Configurações salvas para usuário ${user_id} (tokens no banco)`);
+        console.log(`✅ Configurações salvas para usuário ${user_id} (tokens CRIPTOGRAFADOS no banco)`);
 
         return res.status(200).json({ 
           message: 'Configurações salvas com sucesso',
