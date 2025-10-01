@@ -606,6 +606,55 @@ export default function BotInterface() {
         consecutiveLosses: 0
       };
 
+      // ===== FUNÇÕES DE PERSISTÊNCIA DO ESTADO =====
+      function saveBotState() {
+        const botState = {
+          isRunning,
+          currentStake,
+          initialStake,
+          martingaleLevel,
+          profit,
+          stats,
+          timestamp: Date.now()
+        };
+        localStorage.setItem('bot_state', JSON.stringify(botState));
+        console.log('💾 Estado do bot salvo');
+      }
+
+      function restoreBotState() {
+        const savedState = localStorage.getItem('bot_state');
+        if (savedState) {
+          try {
+            const state = JSON.parse(savedState);
+            // Verificar se o estado tem menos de 5 minutos (300000ms)
+            if (Date.now() - state.timestamp < 300000) {
+              currentStake = state.currentStake || initialStake;
+              martingaleLevel = state.martingaleLevel || 0;
+              profit = state.profit || 0;
+              stats = state.stats || stats;
+              
+              // Atualizar UI
+              document.getElementById('profit').innerText = "$" + profit.toFixed(2);
+              document.getElementById('martingaleStatus').textContent = \`\${martingaleLevel}/\${maxMartingale}\`;
+              document.getElementById('currentStake').textContent = "$" + currentStake;
+              
+              if (stats.total > 0) {
+                const accuracy = ((stats.wins / stats.total) * 100).toFixed(1);
+                document.getElementById('accuracy').textContent = \`\${accuracy}%\`;
+              }
+              
+              console.log('✅ Estado do bot restaurado:', state);
+              addLog('🔄 Estado anterior restaurado - Lucro: $' + profit.toFixed(2));
+            } else {
+              console.log('⏰ Estado antigo descartado (mais de 5 minutos)');
+              localStorage.removeItem('bot_state');
+            }
+          } catch (error) {
+            console.error('❌ Erro ao restaurar estado:', error);
+          }
+        }
+      }
+
       let martingaleLevel_current = 0;
       let maxMartingale_current = 3;
       let priceData = [];
@@ -996,6 +1045,9 @@ export default function BotInterface() {
         }
         updateAccuracy();
 
+        // Salvar estado do bot após cada trade
+        saveBotState();
+
         addTradeToHistory(contract.contract_id, finalSignal, confidence, currentStake, martingaleLevel_current, tradeProfit >= 0 ? "WIN" : "LOSS", tradeProfit);
 
         addLog(\`📊 Resultado: \${tradeProfit >= 0 ? 'WIN' : 'LOSS'} | Entrada: $\${currentStake} | Lucro: $\${tradeProfit.toFixed(2)}\`);
@@ -1122,6 +1174,9 @@ export default function BotInterface() {
         isRunning = false;
         isTrading = false;
         
+        // Salvar estado final do bot
+        saveBotState();
+        
         // Disparar evento de bot parado
         window.dispatchEvent(new Event('bot-stopped'));
         
@@ -1145,6 +1200,7 @@ export default function BotInterface() {
       // ===== INICIALIZAÇÃO =====
       setTimeout(() => {
         loadSettings();
+        restoreBotState(); // Restaurar estado do bot
         addLog("🤖 Bot MVB carregado com sucesso!");
         addLog("📱 Interface otimizada para mobile");
         addLog("⚙️ Configure na aba 'Configurações' para começar");

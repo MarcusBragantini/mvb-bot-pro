@@ -71,11 +71,13 @@ export default function Dashboard() {
   useEffect(() => {
     const handleBotStart = () => {
       setBotStatus('online');
+      localStorage.setItem('bot_status', 'online');
       console.log('🤖 Bot iniciado');
     };
 
     const handleBotStop = () => {
       setBotStatus('offline');
+      localStorage.setItem('bot_status', 'offline');
       console.log('🛑 Bot parado');
     };
 
@@ -83,23 +85,54 @@ export default function Dashboard() {
     window.addEventListener('bot-started', handleBotStart);
     window.addEventListener('bot-stopped', handleBotStop);
 
-    // Verificar status inicial do bot (se já está rodando)
+    // Carregar status inicial do localStorage
+    const savedStatus = localStorage.getItem('bot_status');
+    if (savedStatus === 'online') {
+      setBotStatus('online');
+    }
+
+    // Verificar status real do bot periodicamente
     const checkBotStatus = () => {
       const statusElement = document.getElementById('status');
-      if (statusElement && statusElement.textContent && statusElement.textContent !== '⏸️ Bot Parado') {
-        setBotStatus('online');
+      const startButton = document.getElementById('startBtn');
+      
+      if (statusElement && statusElement.textContent) {
+        const statusText = statusElement.textContent.trim();
+        
+        // Se o status diz "Bot Parado", marcar como offline
+        if (statusText.includes('⏸️') || statusText.includes('Bot Parado') || statusText === '') {
+          if (botStatus === 'online') {
+            setBotStatus('offline');
+            localStorage.setItem('bot_status', 'offline');
+          }
+        }
+        // Se tem texto diferente de "Bot Parado" e não está vazio
+        else if (statusText.length > 0 && !statusText.includes('⏸️')) {
+          if (botStatus === 'offline') {
+            setBotStatus('online');
+            localStorage.setItem('bot_status', 'online');
+          }
+        }
+      }
+      
+      // Se o botão "Iniciar" está visível, bot está parado
+      if (startButton && startButton.style.display !== 'none') {
+        if (botStatus === 'online') {
+          setBotStatus('offline');
+          localStorage.setItem('bot_status', 'offline');
+        }
       }
     };
 
-    // Verificar periodicamente
-    const interval = setInterval(checkBotStatus, 2000);
+    // Verificar periodicamente (a cada 1 segundo)
+    const interval = setInterval(checkBotStatus, 1000);
 
     return () => {
       window.removeEventListener('bot-started', handleBotStart);
       window.removeEventListener('bot-stopped', handleBotStop);
       clearInterval(interval);
     };
-  }, []);
+  }, [botStatus]);
 
   const getStatusColor = (daysRemaining: number) => {
     if (daysRemaining > 30) return 'bg-green-500';
