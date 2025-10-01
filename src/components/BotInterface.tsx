@@ -27,6 +27,7 @@ import {
   Zap
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { toast as sonnerToast } from 'sonner';
 
 // ===== TIPOS TYPESCRIPT =====
 interface LicenseInfo {
@@ -354,20 +355,25 @@ export default function BotInterface() {
 
   // ===== CRIAR FUNÇÃO TOAST GLOBAL ANTES DO BOT =====
   useEffect(() => {
-    // Criar função global para o bot usar
+    // Criar função global para o bot usar com Sonner
     (window as any).showToast = (title: string, description: string, variant: 'default' | 'destructive' = 'default') => {
-      toast({
-        title,
-        description,
-        variant,
-        duration: 3000,
-      });
+      if (variant === 'destructive') {
+        sonnerToast.error(title, {
+          description: description,
+          duration: 3000,
+        });
+      } else {
+        sonnerToast.success(title, {
+          description: description,
+          duration: 3000,
+        });
+      }
     };
 
     return () => {
       delete (window as any).showToast;
     };
-  }, [toast]);
+  }, []);
 
   // ===== INICIALIZAR BOT UMA ÚNICA VEZ (NUNCA REINICIALIZAR) =====
   useEffect(() => {
