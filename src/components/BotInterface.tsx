@@ -121,8 +121,11 @@ export default function BotInterface() {
   // ===== FUNÇÕES DE CONFIGURAÇÃO =====
   const loadSettings = async () => {
     try {
+      // Usar chave específica do usuário para evitar compartilhamento
+      const settingsKey = user?.id ? `mvb_bot_settings_${user.id}` : 'mvb_bot_settings_temp';
+      
       // Primeiro, carregar do localStorage (rápido)
-      const savedSettings = localStorage.getItem('mvb_bot_settings');
+      const savedSettings = localStorage.getItem(settingsKey);
       if (savedSettings) {
         const parsed = JSON.parse(savedSettings);
         setSettings(parsed);
@@ -137,8 +140,8 @@ export default function BotInterface() {
             const data = await response.json();
             if (data.settings && Object.keys(data.settings).length > 0) {
               setSettings(prev => ({ ...prev, ...data.settings }));
-              // Atualizar localStorage com dados do servidor
-              localStorage.setItem('mvb_bot_settings', JSON.stringify(data.settings));
+              // Atualizar localStorage com dados do servidor (chave específica do usuário)
+              localStorage.setItem(settingsKey, JSON.stringify(data.settings));
               console.log('✅ Configurações sincronizadas do servidor:', data.settings);
             }
           }
@@ -153,9 +156,12 @@ export default function BotInterface() {
 
   const saveSettings = async () => {
     try {
+      // Usar chave específica do usuário para evitar compartilhamento
+      const settingsKey = user?.id ? `mvb_bot_settings_${user.id}` : 'mvb_bot_settings_temp';
+      
       // Sempre salvar no localStorage primeiro (backup)
-      localStorage.setItem('mvb_bot_settings', JSON.stringify(settings));
-      console.log('✅ Configurações salvas no localStorage:', settings);
+      localStorage.setItem(settingsKey, JSON.stringify(settings));
+      console.log('✅ Configurações salvas no localStorage (usuário específico):', settings);
       
       // Tentar salvar no servidor (sincronização)
       if (user?.id) {
@@ -204,10 +210,15 @@ export default function BotInterface() {
   };
 
   const updateSetting = (key: string, value: any) => {
-    setSettings(prev => ({
-      ...prev,
+    const newSettings = {
+      ...settings,
       [key]: value
-    }));
+    };
+    setSettings(newSettings);
+    
+    // Salvar imediatamente no localStorage com chave do usuário
+    const settingsKey = user?.id ? `mvb_bot_settings_${user.id}` : 'mvb_bot_settings_temp';
+    localStorage.setItem(settingsKey, JSON.stringify(newSettings));
   };
 
   // ===== FUNÇÕES DE LICENÇA =====
@@ -1251,13 +1262,25 @@ export default function BotInterface() {
     setTimeout(() => {
       const tokenInput = document.getElementById('token') as HTMLInputElement;
       if (tokenInput) {
-        // Buscar settings atuais do localStorage
-        const currentSettings = JSON.parse(localStorage.getItem('mvb_bot_settings') || '{}');
+        // Buscar settings do usuário específico
+        const userId = window.localStorage.getItem('auth_user');
+        let settingsKey = 'mvb_bot_settings_temp';
+        if (userId) {
+          try {
+            const userObj = JSON.parse(userId);
+            settingsKey = `mvb_bot_settings_${userObj.id}`;
+          } catch (e) {
+            console.error('Erro ao parsear user:', e);
+          }
+        }
+        
+        const currentSettings = JSON.parse(localStorage.getItem(settingsKey) || '{}');
         const selectedToken = currentSettings.selectedTokenType === 'demo' 
           ? currentSettings.derivTokenDemo 
           : currentSettings.derivTokenReal;
         tokenInput.value = selectedToken || '';
-        console.log('Token preenchido automaticamente:', {
+        console.log('Token preenchido automaticamente (usuário específico):', {
+          userId: settingsKey,
           selectedType: currentSettings.selectedTokenType,
           hasToken: !!selectedToken,
           token: selectedToken ? 'Token configurado' : 'Token não configurado'
