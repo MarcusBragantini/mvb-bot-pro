@@ -663,9 +663,8 @@ export default function BotInterface() {
         
         // Mostrar notificação de sucesso
         window.showToast('✅ Configurações Salvas', 'Suas configurações foram aplicadas com sucesso!');
-        addLog(\`💾 Configurações salvas (usuário: \${userKey})\`);
         
-        // ✅ CORREÇÃO: Sincronizar com servidor se possível
+        // ✅ CORREÇÃO: Sincronizar com servidor silenciosamente
         if (window.user?.id) {
           fetch('/api/data?action=settings', {
             method: 'POST',
@@ -674,14 +673,8 @@ export default function BotInterface() {
               user_id: window.user.id,
               settings: settings
             })
-          }).then(response => {
-            if (response.ok) {
-              addLog('✅ Configurações sincronizadas com servidor');
-            } else {
-              addLog('⚠️ Erro ao sincronizar com servidor');
-            }
           }).catch(error => {
-            addLog('⚠️ Servidor indisponível - salvo apenas localmente');
+            // Silencioso - não mostrar logs desnecessários
           });
         }
       }
@@ -703,7 +696,7 @@ export default function BotInterface() {
               }
             });
             
-            addLog('📥 Configurações carregadas do armazenamento local');
+            // ✅ CORREÇÃO: Removido log desnecessário de carregamento
           } catch (error) {
             addLog('⚠️ Erro ao carregar configurações salvas');
           }
@@ -782,7 +775,7 @@ export default function BotInterface() {
               }
               
               console.log('✅ Estado do bot restaurado:', state);
-              addLog('🔄 Estado anterior restaurado - Lucro: $' + profit.toFixed(2));
+              // ✅ CORREÇÃO: Removido log desnecessário de restauração
             } else {
               console.log('⏰ Estado antigo descartado (mais de 30 minutos)');
               localStorage.removeItem('bot_state');
@@ -919,6 +912,7 @@ export default function BotInterface() {
 
           if (data.msg_type === "authorize") {
             addLog("🔐 Autenticado com sucesso!");
+            document.getElementById("status").innerText = "🔐 Autenticado";
             websocket.send(JSON.stringify({ balance: 1, subscribe: 1 }));
             websocket.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
             addLog(\`📊 Monitorando: \${symbol}\`);
@@ -927,9 +921,6 @@ export default function BotInterface() {
           if (data.msg_type === "balance") {
             const balance = data.balance?.balance || 0;
             const currency = data.balance?.currency || 'USD';
-            
-            // ✅ CORREÇÃO: Log completo dos dados recebidos para debug
-            addLog(\`🔍 Debug completo - balance data: \${JSON.stringify(data.balance)}\`);
             
             // ✅ CORREÇÃO: is_virtual = true significa conta DEMO, false significa conta REAL
             const isVirtual = data.balance?.is_virtual;
@@ -944,12 +935,11 @@ export default function BotInterface() {
             } else if (accountType === 'DEMO') {
               addLog("ℹ️ Bot conectado em conta DEMO");
             } else {
-              addLog("❓ Tipo de conta não identificado - verificando saldo...");
               // Se não conseguimos identificar pelo is_virtual, usar heurística baseada no saldo
               if (balance >= 10000) {
-                addLog("ℹ️ Saldo alto detectado - assumindo conta DEMO");
+                addLog("ℹ️ Bot conectado em conta DEMO");
               } else {
-                addLog("⚠️ Saldo baixo - assumindo conta REAL");
+                addLog("⚠️ ATENÇÃO: Bot conectado em CONTA REAL!");
               }
             }
             
@@ -1363,10 +1353,7 @@ export default function BotInterface() {
       setTimeout(() => {
         loadSettings();
         restoreBotState(); // Restaurar estado do bot
-        addLog("🤖 Bot MVB carregado com sucesso!");
-        addLog("📱 Interface otimizada para mobile");
-        addLog("⚙️ Configure na aba 'Configurações' para começar");
-        addLog("🔧 Bug do contractId.slice corrigido!");
+        // ✅ CORREÇÃO: Removidos logs desnecessários de inicialização
       }, 1000);
     `;
     
