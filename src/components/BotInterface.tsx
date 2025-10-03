@@ -112,7 +112,12 @@ export default function BotInterface() {
     strategy: 'martingale',
     derivTokenDemo: '',
     derivTokenReal: '',
-    selectedTokenType: 'demo' // 'demo' ou 'real'
+    selectedTokenType: 'demo', // 'demo' ou 'real'
+    // ✅ CORREÇÃO: Adicionar parâmetros técnicos faltantes
+    mhiPeriods: 20,
+    emaFast: 8,
+    emaSlow: 18,
+    rsiPeriods: 10
   });
   
   // ===== REFS PARA INTEGRAÇÃO COM CÓDIGO ORIGINAL =====
@@ -426,7 +431,49 @@ export default function BotInterface() {
     if (martingaleInput && settings.martingale) {
       martingaleInput.value = String(settings.martingale);
     }
-  }, [settings.duration, settings.stake, settings.martingale]);
+
+    // ✅ CORREÇÃO: Atualizar stopWin
+    const stopWinInput = document.getElementById('stopWin') as HTMLInputElement;
+    if (stopWinInput && settings.stopWin) {
+      stopWinInput.value = String(settings.stopWin);
+      console.log('StopWin atualizado:', settings.stopWin);
+    }
+
+    // ✅ CORREÇÃO: Atualizar stopLoss
+    const stopLossInput = document.getElementById('stopLoss') as HTMLInputElement;
+    if (stopLossInput && settings.stopLoss) {
+      stopLossInput.value = String(settings.stopLoss);
+      console.log('StopLoss atualizado:', settings.stopLoss);
+    }
+
+    // ✅ CORREÇÃO: Atualizar minConfidence
+    const minConfidenceInput = document.getElementById('minConfidence') as HTMLInputElement;
+    if (minConfidenceInput && settings.confidence) {
+      minConfidenceInput.value = String(settings.confidence);
+      console.log('MinConfidence atualizado:', settings.confidence);
+    }
+
+    // ✅ CORREÇÃO: Atualizar parâmetros técnicos
+    const mhiPeriodsInput = document.getElementById('mhiPeriods') as HTMLInputElement;
+    if (mhiPeriodsInput && settings.mhiPeriods) {
+      mhiPeriodsInput.value = String(settings.mhiPeriods);
+    }
+
+    const emaFastInput = document.getElementById('emaFast') as HTMLInputElement;
+    if (emaFastInput && settings.emaFast) {
+      emaFastInput.value = String(settings.emaFast);
+    }
+
+    const emaSlowInput = document.getElementById('emaSlow') as HTMLInputElement;
+    if (emaSlowInput && settings.emaSlow) {
+      emaSlowInput.value = String(settings.emaSlow);
+    }
+
+    const rsiPeriodsInput = document.getElementById('rsiPeriods') as HTMLInputElement;
+    if (rsiPeriodsInput && settings.rsiPeriods) {
+      rsiPeriodsInput.value = String(settings.rsiPeriods);
+    }
+  }, [settings.duration, settings.stake, settings.martingale, settings.stopWin, settings.stopLoss, settings.confidence, settings.mhiPeriods, settings.emaFast, settings.emaSlow, settings.rsiPeriods]);
 
   // ===== FUNÇÃO PARA INICIALIZAR O BOT ORIGINAL =====
   const initializeOriginalBot = () => {
@@ -567,16 +614,16 @@ export default function BotInterface() {
 
         <!-- Campos ocultos para configurações -->
         <div style="display: none;">
-          <input type="number" id="stake" value="1" min="1" max="1000" step="1">
-          <input type="number" id="martingale" value="2" min="2" max="5" step="1">
-          <input type="number" id="duration" value="2" min="1" max="5">
-          <input type="number" id="stopWin" value="3" min="1" max="1000">
-          <input type="number" id="stopLoss" value="-5" min="-1000" max="-1">
-          <input type="number" id="minConfidence" value="75" min="50" max="90">
-          <input type="number" id="mhiPeriods" value="20" min="5" max="50">
-          <input type="number" id="emaFast" value="8" min="5" max="20">
-          <input type="number" id="emaSlow" value="18" min="15" max="50">
-          <input type="number" id="rsiPeriods" value="10" min="7" max="21">
+          <input type="number" id="stake" value="${settings.stake || 1}" min="1" max="1000" step="1">
+          <input type="number" id="martingale" value="${settings.martingale || 2}" min="2" max="5" step="1">
+          <input type="number" id="duration" value="${settings.duration || 2}" min="1" max="5">
+          <input type="number" id="stopWin" value="${settings.stopWin || 3}" min="1" max="1000">
+          <input type="number" id="stopLoss" value="${settings.stopLoss || -5}" min="-1000" max="-1">
+          <input type="number" id="minConfidence" value="${settings.confidence || 70}" min="50" max="90">
+          <input type="number" id="mhiPeriods" value="${settings.mhiPeriods || 20}" min="5" max="50">
+          <input type="number" id="emaFast" value="${settings.emaFast || 8}" min="5" max="20">
+          <input type="number" id="emaSlow" value="${settings.emaSlow || 18}" min="15" max="50">
+          <input type="number" id="rsiPeriods" value="${settings.rsiPeriods || 10}" min="7" max="21">
         </div>
       </div>
     `;
@@ -584,6 +631,17 @@ export default function BotInterface() {
     // Inserir JavaScript do bot original - COM CORREÇÃO DO BUG
     const script = document.createElement('script');
     script.innerHTML = `
+      // ✅ CORREÇÃO: Disponibilizar dados do usuário para o bot
+      window.user = ${JSON.stringify(user)};
+      
+      console.log('🤖 Bot inicializado com dados do usuário:', window.user);
+    `;
+    
+    botContainerRef.current.appendChild(script);
+    
+    // Inserir o código principal do bot
+    const mainScript = document.createElement('script');
+    mainScript.innerHTML = `
       // ===== FUNÇÃO PARA SALVAR CONFIGURAÇÕES =====
       function saveSettings() {
         const settings = {
@@ -599,16 +657,40 @@ export default function BotInterface() {
           rsiPeriods: document.getElementById('rsiPeriods').value
         };
         
-        localStorage.setItem('mvb_bot_settings', JSON.stringify(settings));
+        // ✅ CORREÇÃO: Salvar com chave específica do usuário
+        const userKey = window.user?.id ? \`mvb_bot_settings_\${window.user.id}\` : 'mvb_bot_settings_temp';
+        localStorage.setItem(userKey, JSON.stringify(settings));
         
         // Mostrar notificação de sucesso
         window.showToast('✅ Configurações Salvas', 'Suas configurações foram aplicadas com sucesso!');
-        addLog('💾 Configurações salvas no armazenamento local');
+        addLog(\`💾 Configurações salvas (usuário: \${userKey})\`);
+        
+        // ✅ CORREÇÃO: Sincronizar com servidor se possível
+        if (window.user?.id) {
+          fetch('/api/data?action=settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              user_id: window.user.id,
+              settings: settings
+            })
+          }).then(response => {
+            if (response.ok) {
+              addLog('✅ Configurações sincronizadas com servidor');
+            } else {
+              addLog('⚠️ Erro ao sincronizar com servidor');
+            }
+          }).catch(error => {
+            addLog('⚠️ Servidor indisponível - salvo apenas localmente');
+          });
+        }
       }
 
       // ===== CARREGAR CONFIGURAÇÕES SALVAS =====
       function loadSettings() {
-        const savedSettings = localStorage.getItem('mvb_bot_settings');
+        // ✅ CORREÇÃO: Usar chave específica do usuário
+        const userKey = window.user?.id ? \`mvb_bot_settings_\${window.user.id}\` : 'mvb_bot_settings_temp';
+        const savedSettings = localStorage.getItem(userKey);
         if (savedSettings) {
           try {
             const settings = JSON.parse(savedSettings);
@@ -682,8 +764,8 @@ export default function BotInterface() {
         if (savedState) {
           try {
             const state = JSON.parse(savedState);
-            // Verificar se o estado tem menos de 5 minutos (300000ms)
-            if (Date.now() - state.timestamp < 300000) {
+            // ✅ CORREÇÃO: Verificar se o estado tem menos de 30 minutos (1800000ms)
+            if (Date.now() - state.timestamp < 1800000) {
               currentStake = state.currentStake || initialStake;
               martingaleLevel = state.martingaleLevel || 0;
               profit = state.profit || 0;
@@ -702,7 +784,7 @@ export default function BotInterface() {
               console.log('✅ Estado do bot restaurado:', state);
               addLog('🔄 Estado anterior restaurado - Lucro: $' + profit.toFixed(2));
             } else {
-              console.log('⏰ Estado antigo descartado (mais de 5 minutos)');
+              console.log('⏰ Estado antigo descartado (mais de 30 minutos)');
               localStorage.removeItem('bot_state');
             }
           } catch (error) {
@@ -844,8 +926,18 @@ export default function BotInterface() {
 
           if (data.msg_type === "balance") {
             const balance = data.balance?.balance || 0;
+            const currency = data.balance?.currency || 'USD';
+            const accountType = data.balance?.is_virtual ? 'DEMO' : 'REAL';
+            
             document.getElementById("balance").innerText = balance;
-            addLog(\`💰 Saldo: $\${balance} USD\`);
+            addLog(\`💰 Saldo: $\${balance} \${currency} (Conta \${accountType})\`);
+            
+            // ✅ CORREÇÃO: Detectar tipo de conta automaticamente
+            if (accountType === 'REAL') {
+              addLog("⚠️ ATENÇÃO: Bot conectado em CONTA REAL!");
+            } else {
+              addLog("ℹ️ Bot conectado em conta DEMO");
+            }
             
             if (!isRunning) {
               isRunning = true;
@@ -1264,7 +1356,7 @@ export default function BotInterface() {
       }, 1000);
     `;
     
-    document.head.appendChild(script);
+    botContainerRef.current.appendChild(mainScript);
     
     // Preencher automaticamente o token baseado na seleção
     setTimeout(() => {
@@ -1717,11 +1809,11 @@ export default function BotInterface() {
                             type="number"
                             min="5"
                             max="50"
-                            defaultValue="20"
+                            value={settings.mhiPeriods || 20}
                             className="mt-1"
                             onChange={(e) => {
-                              const hiddenInput = document.getElementById('mhiPeriods');
-                              if (hiddenInput) (hiddenInput as HTMLInputElement).value = e.target.value;
+                              const value = parseInt(e.target.value) || 20;
+                              updateSetting('mhiPeriods', value);
                             }}
                           />
                         </div>
@@ -1733,11 +1825,11 @@ export default function BotInterface() {
                             type="number"
                             min="5"
                             max="20"
-                            defaultValue="8"
+                            value={settings.emaFast || 8}
                             className="mt-1"
                             onChange={(e) => {
-                              const hiddenInput = document.getElementById('emaFast');
-                              if (hiddenInput) (hiddenInput as HTMLInputElement).value = e.target.value;
+                              const value = parseInt(e.target.value) || 8;
+                              updateSetting('emaFast', value);
                             }}
                           />
                         </div>
@@ -1749,11 +1841,11 @@ export default function BotInterface() {
                             type="number"
                             min="15"
                             max="50"
-                            defaultValue="18"
+                            value={settings.emaSlow || 18}
                             className="mt-1"
                             onChange={(e) => {
-                              const hiddenInput = document.getElementById('emaSlow');
-                              if (hiddenInput) (hiddenInput as HTMLInputElement).value = e.target.value;
+                              const value = parseInt(e.target.value) || 18;
+                              updateSetting('emaSlow', value);
                             }}
                           />
                         </div>
@@ -1765,11 +1857,11 @@ export default function BotInterface() {
                             type="number"
                             min="7"
                             max="21"
-                            defaultValue="10"
+                            value={settings.rsiPeriods || 10}
                             className="mt-1"
                             onChange={(e) => {
-                              const hiddenInput = document.getElementById('rsiPeriods');
-                              if (hiddenInput) (hiddenInput as HTMLInputElement).value = e.target.value;
+                              const value = parseInt(e.target.value) || 10;
+                              updateSetting('rsiPeriods', value);
                             }}
                           />
                         </div>
