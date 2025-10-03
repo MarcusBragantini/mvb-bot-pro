@@ -927,7 +927,13 @@ export default function BotInterface() {
           if (data.msg_type === "balance") {
             const balance = data.balance?.balance || 0;
             const currency = data.balance?.currency || 'USD';
-            const accountType = data.balance?.is_virtual ? 'DEMO' : 'REAL';
+            
+            // ✅ CORREÇÃO: Log completo dos dados recebidos para debug
+            addLog(\`🔍 Debug completo - balance data: \${JSON.stringify(data.balance)}\`);
+            
+            // ✅ CORREÇÃO: is_virtual = true significa conta DEMO, false significa conta REAL
+            const isVirtual = data.balance?.is_virtual;
+            const accountType = isVirtual === true ? 'DEMO' : (isVirtual === false ? 'REAL' : 'DESCONHECIDO');
             
             document.getElementById("balance").innerText = balance;
             addLog(\`💰 Saldo: $\${balance} \${currency} (Conta \${accountType})\`);
@@ -935,8 +941,16 @@ export default function BotInterface() {
             // ✅ CORREÇÃO: Detectar tipo de conta automaticamente
             if (accountType === 'REAL') {
               addLog("⚠️ ATENÇÃO: Bot conectado em CONTA REAL!");
-            } else {
+            } else if (accountType === 'DEMO') {
               addLog("ℹ️ Bot conectado em conta DEMO");
+            } else {
+              addLog("❓ Tipo de conta não identificado - verificando saldo...");
+              // Se não conseguimos identificar pelo is_virtual, usar heurística baseada no saldo
+              if (balance >= 10000) {
+                addLog("ℹ️ Saldo alto detectado - assumindo conta DEMO");
+              } else {
+                addLog("⚠️ Saldo baixo - assumindo conta REAL");
+              }
             }
             
             if (!isRunning) {
