@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
+import { Toaster as ReactToaster } from '@/components/ui/toaster';
 
 // ===== TIPOS TYPESCRIPT =====
 interface LicenseInfo {
@@ -360,25 +361,60 @@ export default function BotInterface() {
 
   // ===== CRIAR FUNÇÃO TOAST GLOBAL ANTES DO BOT =====
   useEffect(() => {
-    // Criar função global para o bot usar com Sonner
+    // ✅ CORREÇÃO: Criar função global para o bot usar com múltiplos sistemas de toast
     (window as any).showToast = (title: string, description: string, variant: 'default' | 'destructive' = 'default') => {
-      if (variant === 'destructive') {
-        sonnerToast.error(title, {
-          description: description,
-          duration: 3000,
-        });
-      } else {
-        sonnerToast.success(title, {
-          description: description,
-          duration: 3000,
-        });
+      console.log('🔔 Toast chamado:', { title, description, variant });
+      
+      try {
+        // Tentar usar o sistema React primeiro
+        if (toast) {
+          console.log('🔔 Usando toast React...');
+          toast({
+            title: title,
+            description: description,
+            variant: variant,
+            duration: 3000,
+          });
+          return; // Se funcionou, não tentar outros métodos
+        }
+      } catch (error) {
+        console.log('❌ Toast React falhou:', error);
       }
+
+      try {
+        // Fallback para Sonner
+        console.log('🔔 Tentando Sonner...');
+        if (variant === 'destructive') {
+          sonnerToast.error(title, {
+            description: description,
+            duration: 3000,
+          });
+        } else {
+          sonnerToast.success(title, {
+            description: description,
+            duration: 3000,
+          });
+        }
+        return; // Se funcionou, não tentar alert
+      } catch (error) {
+        console.log('❌ Sonner falhou:', error);
+      }
+
+      // Último fallback: alert nativo
+      console.log('🔔 Usando alert nativo...');
+      alert(`${title}: ${description}`);
+    };
+
+    // ✅ CORREÇÃO: Adicionar função de teste para debug
+    (window as any).testToast = () => {
+      (window as any).showToast('Teste Toast', 'Se você está vendo isso, o sistema está funcionando!', 'default');
     };
 
     return () => {
       delete (window as any).showToast;
+      delete (window as any).testToast;
     };
-  }, []);
+  }, [toast]);
 
   // ===== INICIALIZAR BOT UMA ÚNICA VEZ (NUNCA REINICIALIZAR) =====
   useEffect(() => {
@@ -1904,6 +1940,9 @@ export default function BotInterface() {
           </Tabs>
         </CardContent>
       </Card>
+      
+      {/* ✅ CORREÇÃO: Adicionar Toaster do sistema React */}
+      <ReactToaster />
     </div>
   );
 }
