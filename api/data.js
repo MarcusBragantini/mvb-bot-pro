@@ -240,6 +240,85 @@ module.exports = async function handler(req, res) {
       });
     }
 
+    // ===== BOT PERFORMANCE =====
+    if (action === 'performance') {
+      if (req.method === 'GET') {
+        const { user_id } = req.query;
+        
+        if (!user_id) {
+          return res.status(400).json({ error: 'user_id é obrigatório' });
+        }
+
+        const [rows] = await connection.execute(
+          'SELECT * FROM bot_performance WHERE user_id = ?',
+          [user_id]
+        );
+
+        if (rows.length === 0) {
+          // Criar registro inicial se não existir
+          await connection.execute(
+            'INSERT INTO bot_performance (user_id) VALUES (?)',
+            [user_id]
+          );
+          return res.status(200).json({
+            total_profit: 0,
+            total_trades: 0,
+            wins: 0,
+            losses: 0,
+            win_rate: 0,
+            monthly_return: 0,
+            last_session_profit: 0,
+            last_session_trades: 0
+          });
+        }
+
+        return res.status(200).json(rows[0]);
+      }
+
+      if (req.method === 'POST') {
+        const { user_id, performance_data } = req.body;
+        
+        if (!user_id || !performance_data) {
+          return res.status(400).json({ error: 'user_id e performance_data são obrigatórios' });
+        }
+
+        const {
+          total_profit = 0,
+          total_trades = 0,
+          wins = 0,
+          losses = 0,
+          win_rate = 0,
+          monthly_return = 0,
+          last_session_profit = 0,
+          last_session_trades = 0
+        } = performance_data;
+
+        await connection.execute(
+          `INSERT INTO bot_performance 
+           (user_id, total_profit, total_trades, wins, losses, win_rate, monthly_return, last_session_profit, last_session_trades, updated_at) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW()) 
+           ON DUPLICATE KEY UPDATE 
+           total_profit = VALUES(total_profit),
+           total_trades = VALUES(total_trades),
+           wins = VALUES(wins),
+           losses = VALUES(losses),
+           win_rate = VALUES(win_rate),
+           monthly_return = VALUES(monthly_return),
+           last_session_profit = VALUES(last_session_profit),
+           last_session_trades = VALUES(last_session_trades),
+           updated_at = NOW()`,
+          [user_id, total_profit, total_trades, wins, losses, win_rate, monthly_return, last_session_profit, last_session_trades]
+        );
+
+        console.log(`✅ Performance atualizada para usuário ${user_id}`);
+
+        return res.status(200).json({
+          success: true,
+          message: 'Performance atualizada com sucesso'
+        });
+      }
+    }
+
     return res.status(400).json({ error: 'Ação inválida' });
 
   } catch (error) {

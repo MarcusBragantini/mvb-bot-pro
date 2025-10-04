@@ -88,6 +88,26 @@ async function initializeDatabase() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
+    // ✅ NOVO: Criar tabela de performance do bot
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS bot_performance (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        total_profit DECIMAL(10,2) DEFAULT 0.00,
+        total_trades INT DEFAULT 0,
+        wins INT DEFAULT 0,
+        losses INT DEFAULT 0,
+        win_rate DECIMAL(5,2) DEFAULT 0.00,
+        monthly_return DECIMAL(5,2) DEFAULT 0.00,
+        last_session_profit DECIMAL(10,2) DEFAULT 0.00,
+        last_session_trades INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_user_performance (user_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
     connection.release();
     console.log('✅ Database initialized successfully');
   } catch (error) {

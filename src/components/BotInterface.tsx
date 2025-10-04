@@ -779,6 +779,62 @@ export default function BotInterface() {
         };
         localStorage.setItem('bot_state', JSON.stringify(botState));
         console.log('💾 Estado do bot salvo:', { profit, martingaleLevel, currentStake });
+        
+        // ✅ NOVO: Salvar performance no banco de dados
+        savePerformanceToDatabase();
+      }
+      
+      // ✅ NOVO: Função para salvar performance no banco
+      function savePerformanceToDatabase() {
+        if (!window.user?.id) return;
+        
+        try {
+          const winRate = stats.total > 0 ? (stats.wins / stats.total) * 100 : 0;
+          
+          // Calcular retorno mensal baseado na performance atual
+          let monthlyReturn = 0;
+          if (stats.total > 0) {
+            const avgProfitPerTrade = profit / stats.total;
+            const tradesPerDay = Math.min(stats.total, 10);
+            const dailyReturn = avgProfitPerTrade * tradesPerDay;
+            monthlyReturn = (dailyReturn * 30) / initialStake * 100;
+            monthlyReturn = Math.min(Math.max(monthlyReturn, -50), 100);
+          }
+          
+          const performanceData = {
+            total_profit: profit,
+            total_trades: stats.total,
+            wins: stats.wins,
+            losses: stats.losses,
+            win_rate: winRate,
+            monthly_return: monthlyReturn,
+            last_session_profit: profit,
+            last_session_trades: stats.total
+          };
+          
+          // Salvar no banco de dados
+          fetch('/api/data?action=performance', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              user_id: window.user.id,
+              performance_data: performanceData
+            })
+          }).then(response => {
+            if (response.ok) {
+              console.log('✅ Performance salva no banco de dados');
+            } else {
+              console.log('⚠️ Erro ao salvar performance no banco');
+            }
+          }).catch(error => {
+            console.log('⚠️ Erro de rede ao salvar performance:', error);
+          });
+          
+        } catch (error) {
+          console.log('❌ Erro ao salvar performance:', error);
+        }
       }
 
       // Salvar estado periodicamente enquanto bot está rodando

@@ -11,7 +11,6 @@ import {
   Shield, 
   Calendar, 
   Users, 
-  Activity, 
   TrendingUp, 
   Settings,
   LogOut,
@@ -39,8 +38,16 @@ export default function Dashboard() {
   const [licenses, setLicenses] = useState<License[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [botStatus, setBotStatus] = useState<'online' | 'offline'>('offline');
   const [activeTab, setActiveTab] = useState('overview');
+  
+  // ✅ NOVO: Estado para performance do bot
+  const [performance, setPerformance] = useState({
+    monthlyReturn: 0,
+    totalProfit: 0,
+    totalTrades: 0,
+    winRate: 0,
+    isPositive: true
+  });
 
   useEffect(() => {
     const loadLicenses = async () => {
@@ -68,92 +75,60 @@ export default function Dashboard() {
     loadLicenses();
   }, [user?.id]);
 
-  // ✅ CORREÇÃO: Listener para status do bot com limpeza inicial
-  useEffect(() => {
-    // ✅ CORREÇÃO: Limpar status antigo na inicialização
-    localStorage.removeItem('bot_status');
-    setBotStatus('offline');
-
-    const handleBotStart = () => {
-      setBotStatus('online');
-      localStorage.setItem('bot_status', 'online');
-      console.log('🤖 Bot iniciado');
-    };
-
-    const handleBotStop = () => {
-      setBotStatus('offline');
-      localStorage.setItem('bot_status', 'offline');
-      console.log('🛑 Bot parado');
-    };
-
-    // Adicionar listeners
-    window.addEventListener('bot-started', handleBotStart);
-    window.addEventListener('bot-stopped', handleBotStop);
-
-    // ✅ CORREÇÃO: Status sempre inicia como offline (limpo na inicialização acima)
-
-    // ✅ CORREÇÃO: Verificar status real do bot periodicamente (mais preciso)
-    const checkBotStatus = () => {
-      const statusElement = document.getElementById('status');
+  // ✅ NOVO: Função para carregar performance do banco de dados
+  const loadPerformance = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const response = await fetch(`/api/data?action=performance&user_id=${user.id}`);
       
-      if (statusElement && statusElement.textContent) {
-        const statusText = statusElement.textContent.trim();
+      if (response.ok) {
+        const data = await response.json();
         
-        // ✅ CORREÇÃO: Status que indicam bot offline
-        const offlineStatuses = [
-          '⏸️',
-          'Bot Parado',
-          'Aguardando',
-          '⏳ Aguardando',
-          'Parado',
-          '⏹ Parado'
-        ];
+        setPerformance({
+          monthlyReturn: data.monthly_return || 0,
+          totalProfit: data.total_profit || 0,
+          totalTrades: data.total_trades || 0,
+          winRate: data.win_rate || 0,
+          isPositive: (data.monthly_return || 0) >= 0
+        });
         
-        // ✅ CORREÇÃO: Status que indicam bot online
-        const onlineStatuses = [
-          'Analisando',
-          '📊 Analisando',
-          'Conectando',
-          '🔐 Autenticando',
-          '🔐 Autenticado',
-          'Trading',
-          'Operando'
-        ];
-        
-        const isOffline = offlineStatuses.some(status => statusText.includes(status)) || statusText === '';
-        const isOnline = onlineStatuses.some(status => statusText.includes(status));
-        
-        if (isOffline && botStatus === 'online') {
-          setBotStatus('offline');
-          localStorage.setItem('bot_status', 'offline');
-          console.log('🛑 Status mudou para offline:', statusText);
-        } else if (isOnline && botStatus === 'offline') {
-          setBotStatus('online');
-          localStorage.setItem('bot_status', 'online');
-          console.log('✅ Status mudou para online:', statusText);
-        }
+        console.log('✅ Performance carregada do banco:', data);
       } else {
-        // ✅ CORREÇÃO: Se não consegue encontrar o elemento, assumir offline
-        if (botStatus === 'online') {
-          setBotStatus('offline');
-          localStorage.setItem('bot_status', 'offline');
-          console.log('🛑 Elemento de status não encontrado - marcando como offline');
-        }
+        console.log('⚠️ Erro ao carregar performance do banco');
+        // Usar valores padrão
+        setPerformance({
+          monthlyReturn: 0,
+          totalProfit: 0,
+          totalTrades: 0,
+          winRate: 0,
+          isPositive: true
+        });
       }
-    };
+    } catch (error) {
+      console.log('❌ Erro ao carregar performance:', error);
+      setPerformance({
+        monthlyReturn: 0,
+        totalProfit: 0,
+        totalTrades: 0,
+        winRate: 0,
+        isPositive: true
+      });
+    }
+  };
 
-    // ✅ CORREÇÃO: Verificação inicial imediata
-    checkBotStatus();
-
-    // Verificar periodicamente (a cada 1 segundo)
-    const interval = setInterval(checkBotStatus, 1000);
-
+  // ✅ NOVO: Carregar performance do banco de dados
+  useEffect(() => {
+    // Carregar imediatamente
+    loadPerformance();
+    
+    // Recarregar a cada 60 segundos
+    const interval = setInterval(loadPerformance, 60000);
+    
     return () => {
-      window.removeEventListener('bot-started', handleBotStart);
-      window.removeEventListener('bot-stopped', handleBotStop);
       clearInterval(interval);
     };
-  }, [botStatus]);
+  }, [user?.id]);
 
   const getStatusColor = (daysRemaining: number) => {
     if (daysRemaining > 30) return 'bg-green-500';
@@ -276,34 +251,27 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Bot Status</CardTitle>
-                  <Activity className={`h-4 w-4 ${botStatus === 'online' ? 'text-green-600 animate-pulse' : 'text-gray-400'}`} />
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center space-x-2">
-                    <div className={`w-3 h-3 rounded-full ${botStatus === 'online' ? 'bg-green-600 animate-pulse' : 'bg-gray-400'}`}></div>
-                    <div className={`text-2xl font-bold ${botStatus === 'online' ? 'text-green-600' : 'text-gray-600'}`}>
-                      {botStatus === 'online' ? 'Ativo' : 'Inativo'}
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {botStatus === 'online' ? 'Bot em execução' : 'Bot parado'}
-                  </p>
-                </CardContent>
-              </Card>
+              {/* ✅ CORREÇÃO: Card de status do bot removido (causava problemas intermitentes) */}
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Performance</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  <TrendingUp className={`h-4 w-4 ${performance.isPositive ? 'text-green-600' : 'text-red-600'}`} />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-green-600">+12.5%</div>
+                  <div className={`text-2xl font-bold ${performance.isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                    {performance.isPositive ? '+' : ''}{performance.monthlyReturn}%
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Retorno mensal
+                    Retorno mensal projetado
                   </p>
+                  {performance.totalTrades > 0 && (
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      <div>Lucro atual: ${performance.totalProfit.toFixed(2)}</div>
+                      <div>Taxa de vitória: {performance.winRate}%</div>
+                      <div>Total de trades: {performance.totalTrades}</div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
