@@ -363,7 +363,7 @@ export default function Dashboard() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
-                    <Activity className="h-5 w-5" />
+                    <Bot className="h-5 w-5" />
                     <span>Atividade Recente</span>
                   </CardTitle>
                   <CardDescription>
