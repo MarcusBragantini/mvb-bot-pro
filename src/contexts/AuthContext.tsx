@@ -57,13 +57,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return `${isMobile ? 'Mobile' : 'Desktop'} - ${platform} - ${browserName} - ${timestamp}`;
   };
 
-  // Verificar sessão periodicamente
+  // ✅ CORREÇÃO: Verificar sessão periodicamente (mais tolerante)
   useEffect(() => {
     if (!user || !sessionToken) return;
 
     const checkSession = async () => {
       try {
         const response = await fetch(`/api/auth?action=check-session&user_id=${user.id}&session_token=${sessionToken}`);
+        
+        // ✅ CORREÇÃO: Se não conseguir verificar (servidor offline), não desconectar
+        if (!response.ok) {
+          console.log('⚠️ Servidor indisponível - mantendo sessão local');
+          return;
+        }
+        
         const data = await response.json();
 
         if (!data.valid) {
@@ -72,12 +79,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           logout();
         }
       } catch (error) {
-        console.error('Erro ao verificar sessão:', error);
+        // ✅ CORREÇÃO: Em caso de erro de rede, não desconectar automaticamente
+        console.log('⚠️ Erro de rede ao verificar sessão - mantendo sessão local');
       }
     };
 
-    // Verificar a cada 30 segundos
-    const interval = setInterval(checkSession, 30000);
+    // ✅ CORREÇÃO: Verificar a cada 2 minutos (menos frequente)
+    const interval = setInterval(checkSession, 120000);
     
     return () => clearInterval(interval);
   }, [user, sessionToken]);

@@ -228,20 +228,37 @@ module.exports = async function handler(req, res) {
           return res.status(400).json({ error: 'user_id e session_token são obrigatórios' });
         }
 
-        // PRIMEIRO: Deletar TODAS as sessões antigas deste usuário
-        await connection.execute(
-          'DELETE FROM user_sessions WHERE user_id = ?',
+        // ✅ CORREÇÃO: Verificar se já existe uma sessão ativa recente (menos de 5 minutos)
+        const [existingSessions] = await connection.execute(
+          `SELECT id, session_token, device_info, last_activity 
+           FROM user_sessions 
+           WHERE user_id = ? AND is_active = 1 AND last_activity > DATE_SUB(NOW(), INTERVAL 5 MINUTE)`,
           [user_id]
         );
 
-        // DEPOIS: Criar a nova sessão (única)
-        await connection.execute(
-          `INSERT INTO user_sessions (user_id, session_token, device_info, is_active, created_at, last_activity)
-           VALUES (?, ?, ?, 1, NOW(), NOW())`,
-          [user_id, session_token, device_info || 'Unknown']
-        );
+        if (existingSessions.length > 0) {
+          // ✅ CORREÇÃO: Se há sessão recente, reutilizar em vez de invalidar
+          const existingSession = existingSessions[0];
+          await connection.execute(
+            'UPDATE user_sessions SET session_token = ?, device_info = ?, last_activity = NOW() WHERE id = ?',
+            [session_token, device_info || 'Unknown', existingSession.id]
+          );
+          console.log(`✅ Sessão existente atualizada para usuário ${user_id}`);
+        } else {
+          // ✅ CORREÇÃO: Só invalidar sessões antigas (mais de 5 minutos)
+          await connection.execute(
+            'DELETE FROM user_sessions WHERE user_id = ? AND last_activity < DATE_SUB(NOW(), INTERVAL 5 MINUTE)',
+            [user_id]
+          );
 
-        console.log(`✅ Todas as sessões do usuário ${user_id} foram invalidadas. Nova sessão: ${session_token.substring(0, 20)}...`);
+          // Criar nova sessão
+          await connection.execute(
+            `INSERT INTO user_sessions (user_id, session_token, device_info, is_active, created_at, last_activity)
+             VALUES (?, ?, ?, 1, NOW(), NOW())`,
+            [user_id, session_token, device_info || 'Unknown']
+          );
+          console.log(`✅ Nova sessão criada para usuário ${user_id}`);
+        }
 
         return res.status(200).json({ 
           success: true,
