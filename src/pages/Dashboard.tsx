@@ -68,8 +68,12 @@ export default function Dashboard() {
     loadLicenses();
   }, [user?.id]);
 
-  // Listener para status do bot
+  // ✅ CORREÇÃO: Listener para status do bot com limpeza inicial
   useEffect(() => {
+    // ✅ CORREÇÃO: Limpar status antigo na inicialização
+    localStorage.removeItem('bot_status');
+    setBotStatus('offline');
+
     const handleBotStart = () => {
       setBotStatus('online');
       localStorage.setItem('bot_status', 'online');
@@ -86,44 +90,60 @@ export default function Dashboard() {
     window.addEventListener('bot-started', handleBotStart);
     window.addEventListener('bot-stopped', handleBotStop);
 
-    // Carregar status inicial do localStorage
-    const savedStatus = localStorage.getItem('bot_status');
-    if (savedStatus === 'online') {
-      setBotStatus('online');
-    }
+    // ✅ CORREÇÃO: Status sempre inicia como offline (limpo na inicialização acima)
 
-    // Verificar status real do bot periodicamente
+    // ✅ CORREÇÃO: Verificar status real do bot periodicamente (mais preciso)
     const checkBotStatus = () => {
       const statusElement = document.getElementById('status');
-      const startButton = document.getElementById('startBtn');
       
       if (statusElement && statusElement.textContent) {
         const statusText = statusElement.textContent.trim();
         
-        // Se o status diz "Bot Parado", marcar como offline
-        if (statusText.includes('⏸️') || statusText.includes('Bot Parado') || statusText === '') {
-          if (botStatus === 'online') {
-            setBotStatus('offline');
-            localStorage.setItem('bot_status', 'offline');
-          }
+        // ✅ CORREÇÃO: Status que indicam bot offline
+        const offlineStatuses = [
+          '⏸️',
+          'Bot Parado',
+          'Aguardando',
+          '⏳ Aguardando',
+          'Parado',
+          '⏹ Parado'
+        ];
+        
+        // ✅ CORREÇÃO: Status que indicam bot online
+        const onlineStatuses = [
+          'Analisando',
+          '📊 Analisando',
+          'Conectando',
+          '🔐 Autenticando',
+          '🔐 Autenticado',
+          'Trading',
+          'Operando'
+        ];
+        
+        const isOffline = offlineStatuses.some(status => statusText.includes(status)) || statusText === '';
+        const isOnline = onlineStatuses.some(status => statusText.includes(status));
+        
+        if (isOffline && botStatus === 'online') {
+          setBotStatus('offline');
+          localStorage.setItem('bot_status', 'offline');
+          console.log('🛑 Status mudou para offline:', statusText);
+        } else if (isOnline && botStatus === 'offline') {
+          setBotStatus('online');
+          localStorage.setItem('bot_status', 'online');
+          console.log('✅ Status mudou para online:', statusText);
         }
-        // Se tem texto diferente de "Bot Parado" e não está vazio
-        else if (statusText.length > 0 && !statusText.includes('⏸️')) {
-          if (botStatus === 'offline') {
-            setBotStatus('online');
-            localStorage.setItem('bot_status', 'online');
-          }
-        }
-      }
-      
-      // Se o botão "Iniciar" está visível, bot está parado
-      if (startButton && startButton.style.display !== 'none') {
+      } else {
+        // ✅ CORREÇÃO: Se não consegue encontrar o elemento, assumir offline
         if (botStatus === 'online') {
           setBotStatus('offline');
           localStorage.setItem('bot_status', 'offline');
+          console.log('🛑 Elemento de status não encontrado - marcando como offline');
         }
       }
     };
+
+    // ✅ CORREÇÃO: Verificação inicial imediata
+    checkBotStatus();
 
     // Verificar periodicamente (a cada 1 segundo)
     const interval = setInterval(checkBotStatus, 1000);
