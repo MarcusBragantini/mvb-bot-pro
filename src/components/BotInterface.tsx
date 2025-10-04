@@ -921,10 +921,16 @@ export default function BotInterface() {
           if (data.msg_type === "balance") {
             const balance = data.balance?.balance || 0;
             const currency = data.balance?.currency || 'USD';
+            const loginid = data.balance?.loginid || '';
             
-            // ✅ CORREÇÃO: is_virtual = true significa conta DEMO, false significa conta REAL
-            const isVirtual = data.balance?.is_virtual;
-            const accountType = isVirtual === true ? 'DEMO' : (isVirtual === false ? 'REAL' : 'DESCONHECIDO');
+            // ✅ CORREÇÃO: Detectar conta demo baseado no loginid (VRTC = Virtual/Demo)
+            let accountType = 'REAL';
+            if (loginid.startsWith('VRTC') || loginid.includes('VR')) {
+              accountType = 'DEMO';
+            } else if (balance >= 10000) {
+              // Saldo muito alto geralmente indica conta demo
+              accountType = 'DEMO';
+            }
             
             document.getElementById("balance").innerText = balance;
             addLog(\`💰 Saldo: $\${balance} \${currency} (Conta \${accountType})\`);
@@ -932,15 +938,8 @@ export default function BotInterface() {
             // ✅ CORREÇÃO: Detectar tipo de conta automaticamente
             if (accountType === 'REAL') {
               addLog("⚠️ ATENÇÃO: Bot conectado em CONTA REAL!");
-            } else if (accountType === 'DEMO') {
-              addLog("ℹ️ Bot conectado em conta DEMO");
             } else {
-              // Se não conseguimos identificar pelo is_virtual, usar heurística baseada no saldo
-              if (balance >= 10000) {
-                addLog("ℹ️ Bot conectado em conta DEMO");
-              } else {
-                addLog("⚠️ ATENÇÃO: Bot conectado em CONTA REAL!");
-              }
+              addLog("ℹ️ Bot conectado em conta DEMO");
             }
             
             if (!isRunning) {
@@ -1353,7 +1352,11 @@ export default function BotInterface() {
       setTimeout(() => {
         loadSettings();
         restoreBotState(); // Restaurar estado do bot
-        // ✅ CORREÇÃO: Removidos logs desnecessários de inicialização
+        // ✅ CORREÇÃO: Limpar logs antigos do localStorage se existirem
+        const logElement = document.getElementById("log");
+        if (logElement && logElement.innerHTML.includes("Bot MVB carregado com sucesso")) {
+          logElement.innerHTML = ""; // Limpar logs antigos
+        }
       }, 1000);
     `;
     
