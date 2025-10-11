@@ -18,9 +18,11 @@ import {
   Monitor,
   Shield,
   CheckCircle,
-  XCircle
+  XCircle,
+  LogOut
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface DashboardStats {
   totalUsers: number;
@@ -99,8 +101,9 @@ const LICENSE_TYPES = {
 };
 
 export default function Admin() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
@@ -312,7 +315,21 @@ export default function Admin() {
                 <p className="text-sm text-gray-500">Bot MVB Pro - Sistema SaaS</p>
               </div>
             </div>
-            <Badge variant="destructive">ADMIN</Badge>
+            <div className="flex items-center space-x-3">
+              <Badge variant="destructive">ADMIN</Badge>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  logout();
+                  navigate('/dashboard');
+                }}
+                className="flex items-center space-x-2"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Sair</span>
+              </Button>
+            </div>
           </div>
         </div>
       </header>

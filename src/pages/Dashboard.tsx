@@ -276,6 +276,8 @@ export default function Dashboard() {
                         <p className="font-semibold text-gray-900">
                           {activeLicense.license_type === 'lifetime' 
                             ? '∞ Vitalícia' 
+                            : activeLicense.license_type === 'free' 
+                            ? `${Math.max(0, Math.ceil((new Date(activeLicense.expires_at).getTime() - Date.now()) / (1000 * 60)))} min`
                             : `${activeLicense.days_remaining} dias`}
                         </p>
                       </div>
@@ -300,13 +302,15 @@ export default function Dashboard() {
                   <div className="flex items-center space-x-2">
                     {activeLicense ? getStatusIcon(activeLicense.days_remaining) : <AlertCircle className="h-4 w-4 text-red-600" />}
                     <span className="text-2xl font-bold">
-                      {activeLicense ? 'Ativa' : 'Inativa'}
+                      {activeLicense && activeLicense.is_active ? 'Ativa' : 'Inativa'}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {activeLicense 
                       ? (activeLicense.license_type === 'lifetime' 
                           ? 'Licença vitalícia' 
+                          : activeLicense.license_type === 'free' 
+                          ? `${Math.max(0, Math.ceil((new Date(activeLicense.expires_at).getTime() - Date.now()) / (1000 * 60)))} minutos restantes`
                           : `${activeLicense.days_remaining} dias restantes`)
                       : 'Nenhuma licença ativa'}
                   </p>
@@ -402,23 +406,35 @@ export default function Dashboard() {
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-gray-600">Tempo restante:</span>
                           <span className={`text-sm font-bold ${
-                            activeLicense.days_remaining > 7 ? 'text-green-600' : 
-                            activeLicense.days_remaining > 0 ? 'text-yellow-600' : 
-                            'text-red-600'
+                            activeLicense.license_type === 'free' 
+                              ? (Math.max(0, Math.ceil((new Date(activeLicense.expires_at).getTime() - Date.now()) / (1000 * 60))) > 2 ? 'text-green-600' : 'text-red-600')
+                              : (activeLicense.days_remaining > 7 ? 'text-green-600' : 
+                                activeLicense.days_remaining > 0 ? 'text-yellow-600' : 
+                                'text-red-600')
                           }`}>
-                            {activeLicense.days_remaining} {activeLicense.days_remaining === 1 ? 'dia' : 'dias'}
+                            {activeLicense.license_type === 'free' 
+                              ? `${Math.max(0, Math.ceil((new Date(activeLicense.expires_at).getTime() - Date.now()) / (1000 * 60)))} min`
+                              : `${activeLicense.days_remaining} ${activeLicense.days_remaining === 1 ? 'dia' : 'dias'}`}
                           </span>
                         </div>
                         <Progress 
-                          value={Math.min((activeLicense.days_remaining / 30) * 100, 100)} 
+                          value={activeLicense.license_type === 'free' 
+                            ? Math.max(0, ((new Date(activeLicense.expires_at).getTime() - Date.now()) / (1000 * 60 * 5)) * 100)
+                            : Math.min((activeLicense.days_remaining / 30) * 100, 100)
+                          } 
                           className="h-2"
                         />
                         <p className="text-xs text-gray-500 text-center">
-                          {activeLicense.days_remaining > 7 ? 
-                            'Licença ativa' : 
-                            activeLicense.days_remaining > 0 ? 
-                            '⚠️ Licença expirando em breve!' : 
-                            '❌ Licença expirada'}
+                          {activeLicense.license_type === 'free' 
+                            ? (Math.max(0, Math.ceil((new Date(activeLicense.expires_at).getTime() - Date.now()) / (1000 * 60))) > 2 
+                              ? 'Licença ativa' 
+                              : '⚠️ Licença expirando em breve!')
+                            : (activeLicense.days_remaining > 7 ? 
+                              'Licença ativa' : 
+                              activeLicense.days_remaining > 0 ? 
+                              '⚠️ Licença expirando em breve!' : 
+                              '❌ Licença expirada')
+                          }
                         </p>
                       </div>
                     </>
