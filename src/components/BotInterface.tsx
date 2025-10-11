@@ -302,31 +302,35 @@ export default function BotInterface() {
 
       try {
         setLoading(true);
-        // Simular carregamento das licenças do usuário
-        // Em uma implementação real, você faria uma chamada para a API
-        const mockUserLicenses = [
-          {
-            id: 1,
-            license_key: 'FREE-MG5TKQHT-A7LGSL', // Usar a licença real do usuário
-            license_type: 'free',
-            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 dias
-            max_devices: 1,
-            is_active: true
-          }
-        ];
-
-        setUserLicenses(mockUserLicenses);
         
-        // Verificar se o usuário tem uma licença válida
-        const activeLicense = mockUserLicenses.find(license => 
+        // Buscar licenças reais do banco de dados via API
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://mvb-bot-pro.vercel.app/api';
+        const response = await fetch(`${API_BASE_URL}/data?action=licenses&user_id=${user.id}`);
+        
+        if (!response.ok) {
+          throw new Error('Erro ao carregar licenças');
+        }
+        
+        const data = await response.json();
+        const licenses = data.licenses || [];
+        
+        setUserLicenses(licenses);
+        
+        // Verificar se o usuário tem uma licença válida E NÃO EXPIRADA
+        const activeLicense = licenses.find(license => 
           license.is_active && new Date(license.expires_at) > new Date()
         );
 
         if (activeLicense) {
+          // Calcular tempo restante em minutos para testes curtos
+          const timeRemaining = new Date(activeLicense.expires_at).getTime() - Date.now();
+          const minutesRemaining = Math.floor(timeRemaining / (1000 * 60));
+          const daysRemaining = Math.ceil(timeRemaining / (1000 * 60 * 60 * 24));
+          
           // Usuário tem licença válida, pular validação
           const licenseInfo: LicenseInfo = {
             type: activeLicense.license_type,
-            days: Math.ceil((new Date(activeLicense.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
+            days: daysRemaining,
             features: activeLicense.license_type === 'free' ? ['limited_features'] : ['all_features'],
             maxDevices: activeLicense.max_devices
           };
@@ -334,11 +338,27 @@ export default function BotInterface() {
           setLicenseInfo(licenseInfo);
           setLicenseKey(activeLicense.license_key);
           setIsLicenseValid(true);
-          setLicenseStatus('Licença válida encontrada! Acesso liberado.');
+          
+          // Mostrar tempo restante apropriado (minutos se < 60, caso contrário dias)
+          const timeDisplay = minutesRemaining < 60 
+            ? `${minutesRemaining} minuto(s)` 
+            : `${daysRemaining} dia(s)`;
+          
+          setLicenseStatus(`Licença válida! Expira em ${timeDisplay}.`);
           
           toast({
             title: "✅ Acesso liberado!",
-            description: `Bem-vindo ao Bot Trading, ${user.name}!`,
+            description: `Bem-vindo ao Bot Trading, ${user.name}! Licença expira em ${timeDisplay}.`,
+          });
+        } else {
+          // Nenhuma licença válida encontrada
+          setIsLicenseValid(false);
+          setLicenseStatus('Nenhuma licença válida. Por favor, renove sua licença.');
+          
+          toast({
+            title: "⚠️ Licença Expirada",
+            description: "Sua licença expirou. Renove para continuar usando o bot.",
+            variant: "destructive"
           });
         }
       } catch (error) {
@@ -350,6 +370,11 @@ export default function BotInterface() {
     };
 
     loadUserLicenses();
+    
+    // ✅ NOVO: Verificar licença a cada 30 segundos para bloquear quando expirar
+    const licenseCheckInterval = setInterval(loadUserLicenses, 30000);
+    
+    return () => clearInterval(licenseCheckInterval);
   }, [isAuthenticated, user, toast]);
 
   // ===== CARREGAR CONFIGURAÇÕES =====
@@ -358,6 +383,32 @@ export default function BotInterface() {
       loadSettings();
     }
   }, [user?.id]);
+
+  // ===== MONITORAR EXPIRAÇÃO DE LICENÇA E PARAR BOT =====
+  useEffect(() => {
+    if (!isLicenseValid) {
+      // Licença expirou, parar o bot se estiver rodando
+      const stopBotButton = document.querySelector('button[onclick="stopBot()"]') as HTMLButtonElement;
+      if (stopBotButton) {
+        stopBotButton.click();
+      }
+      
+      // Também chamar a função global se existir
+      if ((window as any).stopBot) {
+        (window as any).stopBot();
+      }
+      
+      toast({
+        title: "🔒 Licença Expirada",
+        description: "O bot foi parado automaticamente. Renove sua licença para continuar.",
+        variant: "destructive",
+        duration: 5000,
+      });
+    }
+    
+    // Atualizar estado global da licença para o bot poder verificar
+    (window as any).isLicenseValid = isLicenseValid;
+  }, [isLicenseValid, toast]);
 
   // ===== CRIAR FUNÇÃO TOAST GLOBAL ANTES DO BOT =====
   useEffect(() => {
@@ -576,8 +627,14 @@ export default function BotInterface() {
 
           <!-- Botões de Controle - Mobile Optimized -->
           <div class="button-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px;">
-            <button onclick="startBot()" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); transition: transform 0.2s;" onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">
-              ▶ Iniciar Bot
+            <button 
+              onclick="startBot()" 
+              ${!isLicenseValid ? 'disabled' : ''}
+              style="background: ${isLicenseValid ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#6b7280'}; color: white; border: none; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: ${isLicenseValid ? 'pointer' : 'not-allowed'}; box-shadow: 0 4px 15px ${isLicenseValid ? 'rgba(16, 185, 129, 0.3)' : 'rgba(107, 114, 128, 0.3)'}; transition: transform 0.2s; opacity: ${isLicenseValid ? '1' : '0.5'};" 
+              onmousedown="this.style.transform='scale(0.95)'" 
+              onmouseup="this.style.transform='scale(1)'"
+              title="${!isLicenseValid ? 'Licença expirada - Renove para continuar' : 'Iniciar trading automático'}">
+              ${isLicenseValid ? '▶ Iniciar Bot' : '🔒 Licença Expirada'}
             </button>
             <button onclick="stopBot()" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); transition: transform 0.2s;" onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">
               ⏹ Parar Bot
@@ -903,6 +960,13 @@ export default function BotInterface() {
 
       // ===== FUNÇÕES PRINCIPAIS DO BOT =====
       function startBot() {
+        // ✅ VERIFICAR LICENÇA ANTES DE INICIAR
+        if (!window.isLicenseValid) {
+          window.showToast('🔒 Licença Expirada', 'Sua licença expirou! Renove para continuar usando o bot.', 'destructive');
+          addLog('❌ Tentativa de iniciar bot bloqueada: Licença expirada!');
+          return;
+        }
+        
         if (isRunning) {
           window.showToast('⚠️ Bot em Execução', 'O bot já está rodando!', 'destructive');
           return;

@@ -80,7 +80,7 @@ module.exports = async function handler(req, res) {
 
       const licenseKey = generateLicenseKey();
       const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7); // 7 dias de teste
+      expiresAt.setMinutes(expiresAt.getMinutes() + 5); // 5 minutos de teste
 
       // Criar licença de teste
       await connection.execute(
@@ -89,14 +89,15 @@ module.exports = async function handler(req, res) {
         [userId, licenseKey, expiresAt]
       );
 
-      console.log(`✅ Usuário ${userId} criado com licença de teste: ${licenseKey} (7 dias)`);
+      console.log(`✅ Usuário ${userId} criado com licença de teste: ${licenseKey} (5 minutos)`);
 
       return res.status(201).json({ 
         message: 'Usuário criado com sucesso',
         license: {
           key: licenseKey,
           type: 'free',
-          days: 7,
+          days: 0,
+          minutes: 5,
           expires_at: expiresAt
         }
       });
