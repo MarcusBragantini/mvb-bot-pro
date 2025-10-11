@@ -67,15 +67,35 @@ module.exports = async function handler(req, res) {
       // Total de licenças
       const [licensesCount] = await connection.execute('SELECT COUNT(*) as count FROM licenses');
       
-      // Licenças ativas
-      const [activeLicensesCount] = await connection.execute(
-        'SELECT COUNT(*) as count FROM licenses WHERE is_active = 1 AND expires_at > NOW()'
-      );
+      // Licenças ativas (mais recente por usuário)
+      const [activeLicensesCount] = await connection.execute(`
+        SELECT COUNT(*) as count FROM (
+          SELECT l1.user_id
+          FROM licenses l1
+          WHERE l1.id = (
+            SELECT l2.id 
+            FROM licenses l2 
+            WHERE l2.user_id = l1.user_id 
+            ORDER BY l2.created_at DESC 
+            LIMIT 1
+          ) AND l1.is_active = 1 AND l1.expires_at > NOW()
+        ) as active_licenses
+      `);
       
-      // Licenças expiradas
-      const [expiredLicensesCount] = await connection.execute(
-        'SELECT COUNT(*) as count FROM licenses WHERE expires_at <= NOW()'
-      );
+      // Licenças expiradas (mais recente por usuário)
+      const [expiredLicensesCount] = await connection.execute(`
+        SELECT COUNT(*) as count FROM (
+          SELECT l1.user_id
+          FROM licenses l1
+          WHERE l1.id = (
+            SELECT l2.id 
+            FROM licenses l2 
+            WHERE l2.user_id = l1.user_id 
+            ORDER BY l2.created_at DESC 
+            LIMIT 1
+          ) AND l1.expires_at <= NOW()
+        ) as expired_licenses
+      `);
 
       // Usuários recentes
       const [recentUsers] = await connection.execute(`
@@ -128,13 +148,23 @@ module.exports = async function handler(req, res) {
           l.is_active,
           DATEDIFF(l.expires_at, NOW()) as days_remaining,
           CASE 
-            WHEN l.expires_at IS NULL THEN 'sem_licenca'
+            WHEN l.id IS NULL THEN 'sem_licenca'
             WHEN l.expires_at <= NOW() THEN 'expirada'
             WHEN DATEDIFF(l.expires_at, NOW()) <= 7 THEN 'expirando'
             ELSE 'ativa'
           END as license_status
         FROM users u
-        LEFT JOIN licenses l ON u.id = l.user_id AND l.is_active = 1 AND l.expires_at > NOW()
+        LEFT JOIN (
+          SELECT l1.*
+          FROM licenses l1
+          WHERE l1.id = (
+            SELECT l2.id 
+            FROM licenses l2 
+            WHERE l2.user_id = l1.user_id 
+            ORDER BY l2.created_at DESC 
+            LIMIT 1
+          )
+        ) l ON u.id = l.user_id
         ORDER BY u.created_at DESC
       `);
 
