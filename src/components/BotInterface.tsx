@@ -320,8 +320,10 @@ export default function BotInterface() {
         const latestLicense = licenses.find(license => license.is_active);
         
         if (latestLicense) {
-          // Verificar se a licença ainda é válida (não expirada)
-          const isLicenseValid = new Date(latestLicense.expires_at) > new Date();
+          // Verificar se a licença ainda é válida (não expirada) - considerar fuso horário do Brasil
+          const now = new Date();
+          const brazilTime = new Date(now.getTime() - (3 * 60 * 60 * 1000)); // UTC-3
+          const isLicenseValid = new Date(latestLicense.expires_at) > brazilTime;
           
           if (isLicenseValid) {
             const activeLicense = latestLicense;

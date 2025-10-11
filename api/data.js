@@ -202,8 +202,9 @@ module.exports = async function handler(req, res) {
         // Para licenças "free", calcular minutos restantes (mesmo se expirada)
         if (license.license_type === 'free') {
           const now = new Date();
+          const brazilTime = new Date(now.getTime() - (3 * 60 * 60 * 1000)); // UTC-3
           const expiresAt = new Date(license.expires_at);
-          const minutesRemaining = Math.floor((expiresAt - now) / (1000 * 60));
+          const minutesRemaining = Math.floor((expiresAt - brazilTime) / (1000 * 60));
           license.days_remaining = minutesRemaining; // Pode ser negativo se expirada
         }
       }

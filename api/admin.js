@@ -255,7 +255,11 @@ module.exports = async function handler(req, res) {
       console.log(`🗑️ Todas as licenças anteriores do usuário ${user_id} foram REMOVIDAS`);
 
       const licenseKey = generateLicenseKey();
-      const expiresAt = new Date();
+      
+      // Ajustar para fuso horário do Brasil (UTC-3)
+      const now = new Date();
+      const brazilTime = new Date(now.getTime() - (3 * 60 * 60 * 1000)); // UTC-3
+      const expiresAt = new Date(brazilTime);
       
       // Para licenças "free" (teste), usar minutos. Para outras, usar dias
       if (license_type === 'free') {
