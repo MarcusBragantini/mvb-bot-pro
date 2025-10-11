@@ -29,15 +29,20 @@ interface DashboardStats {
   expiredLicenses: number;
 }
 
-interface User {
+interface AdminUser {
   id: number;
   email: string;
   name: string;
   role: string;
   status: string;
   created_at: string;
-  license_count: number;
-  latest_license_expiry: string | null;
+  license_id: number | null;
+  license_key: string | null;
+  license_type: string | null;
+  expires_at: string | null;
+  is_active: boolean | null;
+  days_remaining: number | null;
+  license_status: 'sem_licenca' | 'ativa' | 'expirando' | 'expirada';
 }
 
 interface License {
@@ -104,7 +109,7 @@ export default function Admin() {
     expiredLicenses: 0
   });
   
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [licenses, setLicenses] = useState<License[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -376,48 +381,98 @@ export default function Admin() {
                       <tr className="border-b">
                         <th className="text-left p-3">Usuário</th>
                         <th className="text-left p-3">Email</th>
-                        <th className="text-left p-3">Status</th>
-                        <th className="text-left p-3">Licenças</th>
-                        <th className="text-left p-3">Cadastro</th>
+                        <th className="text-left p-3">Data Cadastro</th>
+                        <th className="text-left p-3">Tipo Licença</th>
+                        <th className="text-left p-3">Status Licença</th>
+                        <th className="text-left p-3">Expira em</th>
                         <th className="text-left p-3">Ações</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {users.map((user) => (
-                        <tr key={user.id} className="border-b hover:bg-gray-50">
-                          <td className="p-3">
-                            <div>
-                              <div className="font-medium">{user.name}</div>
-                              <div className="text-sm text-gray-500">ID: {user.id}</div>
-                            </div>
-                          </td>
-                          <td className="p-3">{user.email}</td>
-                          <td className="p-3">{getStatusBadge(user.status)}</td>
-                          <td className="p-3">
-                            <Badge variant="outline">{user.license_count} licenças</Badge>
-                          </td>
-                          <td className="p-3">
-                            {new Date(user.created_at).toLocaleDateString()}
-                          </td>
-                          <td className="p-3">
-                            <div className="flex gap-2">
-                              <Select
-                                value={user.status}
-                                onValueChange={(value) => handleUpdateUserStatus(user.id, value)}
-                              >
-                                <SelectTrigger className="w-32">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="active">Ativo</SelectItem>
-                                  <SelectItem value="suspended">Suspenso</SelectItem>
-                                  <SelectItem value="expired">Expirado</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                      {users.map((user) => {
+                        const isExpiring = user.license_status === 'expirando' || user.license_status === 'expirada';
+                        const rowClass = isExpiring ? 'border-b hover:bg-orange-50 bg-orange-50/30' : 'border-b hover:bg-gray-50';
+                        
+                        return (
+                          <tr key={user.id} className={rowClass}>
+                            <td className="p-3">
+                              <div>
+                                <div className="font-medium">{user.name}</div>
+                                <div className="text-sm text-gray-500">ID: {user.id}</div>
+                              </div>
+                            </td>
+                            <td className="p-3">{user.email}</td>
+                            <td className="p-3">
+                              <div className="text-sm">
+                                {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                              </div>
+                            </td>
+                            <td className="p-3">
+                              {user.license_type ? (
+                                <Badge className={LICENSE_TYPES[user.license_type as keyof typeof LICENSE_TYPES]?.color || 'bg-gray-100 text-gray-800'}>
+                                  {LICENSE_TYPES[user.license_type as keyof typeof LICENSE_TYPES]?.name || user.license_type.toUpperCase()}
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-gray-400">Sem Licença</Badge>
+                              )}
+                            </td>
+                            <td className="p-3">
+                              {user.license_status === 'sem_licenca' && (
+                                <Badge variant="outline" className="text-gray-500">
+                                  Sem Licença
+                                </Badge>
+                              )}
+                              {user.license_status === 'ativa' && (
+                                <Badge className="bg-green-100 text-green-800">
+                                  ✓ Ativa
+                                </Badge>
+                              )}
+                              {user.license_status === 'expirando' && (
+                                <Badge className="bg-orange-100 text-orange-800">
+                                  ⚠ Expirando
+                                </Badge>
+                              )}
+                              {user.license_status === 'expirada' && (
+                                <Badge className="bg-red-100 text-red-800">
+                                  ✗ Expirada
+                                </Badge>
+                              )}
+                            </td>
+                            <td className="p-3">
+                              {user.expires_at ? (
+                                <div className="text-sm">
+                                  {user.license_type === 'lifetime' ? (
+                                    <span className="font-semibold text-yellow-600">∞ Vitalícia</span>
+                                  ) : user.days_remaining > 0 ? (
+                                    <span>{user.days_remaining} dias</span>
+                                  ) : (
+                                    <span className="text-red-600">Expirada</span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-gray-400 text-sm">-</span>
+                              )}
+                            </td>
+                            <td className="p-3">
+                              <div className="flex gap-2">
+                                <Select
+                                  value={user.status}
+                                  onValueChange={(value) => handleUpdateUserStatus(user.id, value)}
+                                >
+                                  <SelectTrigger className="w-32">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="active">Ativo</SelectItem>
+                                    <SelectItem value="suspended">Suspenso</SelectItem>
+                                    <SelectItem value="expired">Expirado</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

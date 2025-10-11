@@ -121,11 +121,20 @@ module.exports = async function handler(req, res) {
           u.role,
           u.status,
           u.created_at,
-          COUNT(l.id) as license_count,
-          MAX(l.expires_at) as latest_license_expiry
+          l.id as license_id,
+          l.license_key,
+          l.license_type,
+          l.expires_at,
+          l.is_active,
+          DATEDIFF(l.expires_at, NOW()) as days_remaining,
+          CASE 
+            WHEN l.expires_at IS NULL THEN 'sem_licenca'
+            WHEN l.expires_at <= NOW() THEN 'expirada'
+            WHEN DATEDIFF(l.expires_at, NOW()) <= 7 THEN 'expirando'
+            ELSE 'ativa'
+          END as license_status
         FROM users u
-        LEFT JOIN licenses l ON u.id = l.user_id
-        GROUP BY u.id
+        LEFT JOIN licenses l ON u.id = l.user_id AND l.is_active = 1 AND l.expires_at > NOW()
         ORDER BY u.created_at DESC
       `);
 
@@ -207,15 +216,13 @@ module.exports = async function handler(req, res) {
         return key;
       };
 
-      // ✅ DESATIVAR LICENÇAS EXPIRADAS DO USUÁRIO AUTOMATICAMENTE
+      // ✅ REMOVER TODAS AS LICENÇAS ANTERIORES DO USUÁRIO (1 USUÁRIO = 1 LICENÇA)
       await connection.execute(
-        `UPDATE licenses 
-         SET is_active = 0, updated_at = NOW() 
-         WHERE user_id = ? AND (expires_at <= NOW() OR is_active = 0)`,
+        `DELETE FROM licenses WHERE user_id = ?`,
         [user_id]
       );
       
-      console.log(`🗑️ Licenças expiradas do usuário ${user_id} foram desativadas`);
+      console.log(`🗑️ Todas as licenças anteriores do usuário ${user_id} foram REMOVIDAS`);
 
       const licenseKey = generateLicenseKey();
       const expiresAt = new Date();
