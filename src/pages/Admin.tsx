@@ -237,6 +237,23 @@ export default function Admin() {
     }
   };
 
+  const handleCleanupExpiredLicenses = async () => {
+    try {
+      const result = await apiClient.cleanupExpiredLicenses();
+      toast({
+        title: "Limpeza concluída",
+        description: `${result.count} licença(s) expirada(s) removida(s) com sucesso`
+      });
+      loadDashboardData();
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível limpar licenças expiradas",
+        variant: "destructive"
+      });
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "destructive" | "outline" | "secondary"> = {
       active: 'default',
@@ -418,13 +435,14 @@ export default function Admin() {
                       Visualize, crie e gerencie todas as licenças do sistema
                     </CardDescription>
                   </div>
-                  <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Nova Licença
-                      </Button>
-                    </DialogTrigger>
+                  <div className="flex gap-2">
+                    <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Nova Licença
+                        </Button>
+                      </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
                         <DialogTitle>Criar Nova Licença</DialogTitle>
@@ -500,6 +518,14 @@ export default function Admin() {
                       </div>
                     </DialogContent>
                   </Dialog>
+                  <Button 
+                    variant="outline"
+                    onClick={handleCleanupExpiredLicenses}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Limpar Expiradas
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent>

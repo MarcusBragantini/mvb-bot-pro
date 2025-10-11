@@ -186,6 +186,12 @@ class ApiClient {
       body: JSON.stringify({ additional_days }),
     });
   }
+
+  async cleanupExpiredLicenses(): Promise<{ message: string; count: number }> {
+    return this.request<{ message: string; count: number }>('/admin/licenses/cleanup', {
+      method: 'POST',
+    });
+  }
 }
 
 export const apiClient = new ApiClient();

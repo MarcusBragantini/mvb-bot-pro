@@ -151,6 +151,7 @@ module.exports = async function handler(req, res) {
 
     // ===== GET ALL LICENSES =====
     if (path === '/licenses' && req.method === 'GET') {
+      // ✅ MOSTRAR APENAS LICENÇAS ATIVAS E NÃO EXPIRADAS
       const [licenses] = await connection.execute(`
         SELECT 
           l.*,
@@ -160,10 +161,27 @@ module.exports = async function handler(req, res) {
           (SELECT COUNT(*) FROM device_sessions WHERE license_id = l.id) as active_devices
         FROM licenses l
         JOIN users u ON l.user_id = u.id
+        WHERE l.is_active = 1 AND l.expires_at > NOW()
         ORDER BY l.created_at DESC
       `);
 
       return res.status(200).json(licenses);
+    }
+
+    // ===== LIMPAR TODAS AS LICENÇAS EXPIRADAS =====
+    if (path === '/licenses/cleanup' && req.method === 'POST') {
+      const [result] = await connection.execute(`
+        UPDATE licenses 
+        SET is_active = 0, updated_at = NOW() 
+        WHERE expires_at <= NOW() OR is_active = 0
+      `);
+
+      console.log(`🗑️ ${result.affectedRows} licenças expiradas foram desativadas`);
+
+      return res.status(200).json({ 
+        message: 'Licenças expiradas removidas com sucesso',
+        count: result.affectedRows 
+      });
     }
 
     // ===== CREATE LICENSE =====
