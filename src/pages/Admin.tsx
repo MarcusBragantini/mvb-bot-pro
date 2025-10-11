@@ -426,8 +426,8 @@ export default function Admin() {
                             </td>
                             <td className="p-3">
                               {user.license_type ? (
-                                <Badge className={LICENSE_TYPES[user.license_type as keyof typeof LICENSE_TYPES]?.color || 'bg-gray-100 text-gray-800'}>
-                                  {LICENSE_TYPES[user.license_type as keyof typeof LICENSE_TYPES]?.name || user.license_type.toUpperCase()}
+                                <Badge className={Object.values(LICENSE_TYPES).find(lt => lt.type === user.license_type)?.color || 'bg-gray-100 text-gray-800'}>
+                                  {Object.values(LICENSE_TYPES).find(lt => lt.type === user.license_type)?.name || user.license_type.toUpperCase()}
                                 </Badge>
                               ) : (
                                 <Badge variant="outline" className="text-gray-400">Sem Licença</Badge>
@@ -541,7 +541,7 @@ export default function Admin() {
                         <div className="space-y-2">
                           <Label>Tipo de Licença</Label>
                           <Select 
-                            value={newLicense.license_type} 
+                            value={Object.keys(LICENSE_TYPES).find(key => LICENSE_TYPES[key as keyof typeof LICENSE_TYPES].type === newLicense.license_type) || ''} 
                             onValueChange={(value) => {
                               const licenseType = LICENSE_TYPES[value as keyof typeof LICENSE_TYPES];
                               setNewLicense({ 
@@ -569,7 +569,7 @@ export default function Admin() {
                             <Label>Duração</Label>
                             <Input
                               type="text"
-                              value={LICENSE_TYPES[newLicense.license_type as keyof typeof LICENSE_TYPES]?.name.match(/\((.*?)\)/)?.[1] || `${newLicense.duration_days} dias`}
+                              value={Object.values(LICENSE_TYPES).find(lt => lt.type === newLicense.license_type)?.name.match(/\((.*?)\)/)?.[1] || `${newLicense.duration_days} dias`}
                               disabled
                               className="bg-gray-50"
                             />
@@ -628,8 +628,8 @@ export default function Admin() {
                             </div>
                           </td>
                           <td className="p-3">
-                            <Badge className={LICENSE_TYPES[license.license_type as keyof typeof LICENSE_TYPES]?.color || 'bg-gray-100 text-gray-800'}>
-                              {LICENSE_TYPES[license.license_type as keyof typeof LICENSE_TYPES]?.name || license.license_type.toUpperCase()}
+                            <Badge className={Object.values(LICENSE_TYPES).find(lt => lt.type === license.license_type)?.color || 'bg-gray-100 text-gray-800'}>
+                              {Object.values(LICENSE_TYPES).find(lt => lt.type === license.license_type)?.name || license.license_type.toUpperCase()}
                             </Badge>
                           </td>
                           <td className="p-3">
