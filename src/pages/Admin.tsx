@@ -65,8 +65,8 @@ interface License {
 const LICENSE_TYPES = {
   test: { 
     name: 'Teste (5 minutos)', 
-    days: 0.00347, // 5 minutos em dias
-    type: 'test',
+    days: 5, // 5 minutos (para licenças free)
+    type: 'free', // Tipo correto para API
     maxDevices: 1,
     color: 'bg-gray-100 text-gray-800'
   },
@@ -546,7 +546,7 @@ export default function Admin() {
                               const licenseType = LICENSE_TYPES[value as keyof typeof LICENSE_TYPES];
                               setNewLicense({ 
                                 ...newLicense, 
-                                license_type: value,
+                                license_type: licenseType.type, // Usar o tipo correto da API
                                 duration_days: licenseType.days,
                                 max_devices: licenseType.maxDevices
                               });

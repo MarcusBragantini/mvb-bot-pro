@@ -256,7 +256,13 @@ module.exports = async function handler(req, res) {
 
       const licenseKey = generateLicenseKey();
       const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + parseInt(duration_days));
+      
+      // Para licenças "free" (teste), usar minutos. Para outras, usar dias
+      if (license_type === 'free') {
+        expiresAt.setMinutes(expiresAt.getMinutes() + parseInt(duration_days)); // duration_days = minutos para "free"
+      } else {
+        expiresAt.setDate(expiresAt.getDate() + parseInt(duration_days));
+      }
 
       const [result] = await connection.execute(
         `INSERT INTO licenses (user_id, license_key, license_type, expires_at, max_devices, is_active, created_at, updated_at)
