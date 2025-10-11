@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +17,8 @@ import {
   LogOut,
   CheckCircle,
   AlertCircle,
-  Clock
+  Clock,
+  ShieldCheck
 } from 'lucide-react';
 import BotInterface from '@/components/BotInterface';
 
@@ -34,7 +36,8 @@ interface License {
 }
 
 export default function Dashboard() {
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
+  const navigate = useNavigate();
   const [licenses, setLicenses] = useState<License[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -188,15 +191,28 @@ export default function Dashboard() {
                 <p className="text-sm font-medium text-gray-900">{user?.name}</p>
                 <p className="text-xs text-gray-600">{user?.email}</p>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={logout}
-                className="flex items-center space-x-2"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Sair</span>
-              </Button>
+              <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => navigate('/admin')}
+                    className="flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                  >
+                    <ShieldCheck className="h-4 w-4" />
+                    <span>Painel Admin</span>
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={logout}
+                  className="flex items-center space-x-2"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Sair</span>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
