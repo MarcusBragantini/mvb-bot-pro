@@ -233,8 +233,64 @@ export default function Dashboard() {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6" forceMount style={{ display: activeTab === 'overview' ? 'block' : 'none' }}>
+            {/* Informações da Conta */}
+            <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-blue-600" />
+                  Minha Conta
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Nome</p>
+                    <p className="font-semibold text-gray-900">{user?.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Email</p>
+                    <p className="font-semibold text-gray-900">{user?.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Cliente desde</p>
+                    <p className="font-semibold text-gray-900">
+                      {user?.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : '-'}
+                    </p>
+                  </div>
+                </div>
+                {activeLicense && (
+                  <div className="pt-4 border-t border-blue-200">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-600">Tipo de Licença</p>
+                        <Badge className="mt-1 bg-blue-600 text-white">
+                          {activeLicense.license_type.toUpperCase()}
+                        </Badge>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Chave</p>
+                        <p className="font-mono text-xs font-semibold text-gray-900">{activeLicense.license_key}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Expira em</p>
+                        <p className="font-semibold text-gray-900">
+                          {activeLicense.license_type === 'lifetime' 
+                            ? '∞ Vitalícia' 
+                            : `${activeLicense.days_remaining} dias`}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Dispositivos</p>
+                        <p className="font-semibold text-gray-900">{activeLicense.max_devices} permitido(s)</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Status Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Status da Licença</CardTitle>
@@ -248,7 +304,11 @@ export default function Dashboard() {
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {activeLicense ? `${activeLicense.days_remaining} dias restantes` : 'Nenhuma licença ativa'}
+                    {activeLicense 
+                      ? (activeLicense.license_type === 'lifetime' 
+                          ? 'Licença vitalícia' 
+                          : `${activeLicense.days_remaining} dias restantes`)
+                      : 'Nenhuma licença ativa'}
                   </p>
                 </CardContent>
               </Card>

@@ -54,6 +54,45 @@ interface License {
   days_remaining: number;
 }
 
+// ✅ Tipos de licença pré-definidos
+const LICENSE_TYPES = {
+  test: { 
+    name: 'Teste (5 minutos)', 
+    days: 0.00347, // 5 minutos em dias
+    type: 'test',
+    maxDevices: 1,
+    color: 'bg-gray-100 text-gray-800'
+  },
+  trial: { 
+    name: 'Trial (7 dias)', 
+    days: 7,
+    type: 'trial',
+    maxDevices: 1,
+    color: 'bg-blue-100 text-blue-800'
+  },
+  basic: { 
+    name: 'Básico (30 dias)', 
+    days: 30,
+    type: 'basic',
+    maxDevices: 1,
+    color: 'bg-green-100 text-green-800'
+  },
+  premium: { 
+    name: 'Premium (180 dias)', 
+    days: 180,
+    type: 'premium',
+    maxDevices: 3,
+    color: 'bg-purple-100 text-purple-800'
+  },
+  lifetime: { 
+    name: 'Vitalícia (Sem expiração)', 
+    days: 36500, // 100 anos
+    type: 'lifetime',
+    maxDevices: 5,
+    color: 'bg-yellow-100 text-yellow-800'
+  }
+};
+
 export default function Admin() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -71,8 +110,8 @@ export default function Admin() {
   
   const [newLicense, setNewLicense] = useState({
     user_id: '',
-    license_type: 'basic',
-    duration_days: 30,
+    license_type: 'trial',
+    duration_days: 7,
     max_devices: 1
   });
 
@@ -150,8 +189,8 @@ export default function Admin() {
       setIsCreateDialogOpen(false);
       setNewLicense({
         user_id: '',
-        license_type: 'basic',
-        duration_days: 30,
+        license_type: 'trial',
+        duration_days: 7,
         max_devices: 1
       });
       loadDashboardData();
@@ -411,25 +450,38 @@ export default function Admin() {
                         </div>
                         <div className="space-y-2">
                           <Label>Tipo de Licença</Label>
-                          <Select value={newLicense.license_type} onValueChange={(value) => setNewLicense({ ...newLicense, license_type: value })}>
+                          <Select 
+                            value={newLicense.license_type} 
+                            onValueChange={(value) => {
+                              const licenseType = LICENSE_TYPES[value as keyof typeof LICENSE_TYPES];
+                              setNewLicense({ 
+                                ...newLicense, 
+                                license_type: value,
+                                duration_days: licenseType.days,
+                                max_devices: licenseType.maxDevices
+                              });
+                            }}
+                          >
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="free">Gratuita</SelectItem>
-                              <SelectItem value="basic">Básica</SelectItem>
-                              <SelectItem value="standard">Standard</SelectItem>
-                              <SelectItem value="premium">Premium</SelectItem>
+                              {Object.entries(LICENSE_TYPES).map(([key, value]) => (
+                                <SelectItem key={key} value={key}>
+                                  {value.name}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label>Duração (dias)</Label>
+                            <Label>Duração</Label>
                             <Input
-                              type="number"
-                              value={newLicense.duration_days}
-                              onChange={(e) => setNewLicense({ ...newLicense, duration_days: Number(e.target.value) })}
+                              type="text"
+                              value={LICENSE_TYPES[newLicense.license_type as keyof typeof LICENSE_TYPES]?.name.match(/\((.*?)\)/)?.[1] || `${newLicense.duration_days} dias`}
+                              disabled
+                              className="bg-gray-50"
                             />
                           </div>
                           <div className="space-y-2">
@@ -437,7 +489,8 @@ export default function Admin() {
                             <Input
                               type="number"
                               value={newLicense.max_devices}
-                              onChange={(e) => setNewLicense({ ...newLicense, max_devices: Number(e.target.value) })}
+                              disabled
+                              className="bg-gray-50"
                             />
                           </div>
                         </div>
@@ -476,7 +529,9 @@ export default function Admin() {
                             </div>
                           </td>
                           <td className="p-3">
-                            <Badge variant="outline">{license.license_type.toUpperCase()}</Badge>
+                            <Badge className={LICENSE_TYPES[license.license_type as keyof typeof LICENSE_TYPES]?.color || 'bg-gray-100 text-gray-800'}>
+                              {LICENSE_TYPES[license.license_type as keyof typeof LICENSE_TYPES]?.name || license.license_type.toUpperCase()}
+                            </Badge>
                           </td>
                           <td className="p-3">
                             <Badge variant={getLicenseStatusColor(license)}>
