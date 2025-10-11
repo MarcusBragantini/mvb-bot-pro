@@ -36,13 +36,13 @@ interface AdminUser {
   role: string;
   status: string;
   created_at: string;
-  license_id: number | null;
-  license_key: string | null;
-  license_type: string | null;
-  expires_at: string | null;
-  is_active: boolean | null;
-  days_remaining: number | null;
-  license_status: 'sem_licenca' | 'ativa' | 'expirando' | 'expirada';
+  license_id?: number | null;
+  license_key?: string | null;
+  license_type?: string | null;
+  expires_at?: string | null;
+  is_active?: boolean | null;
+  days_remaining?: number | null;
+  license_status?: 'sem_licenca' | 'ativa' | 'expirando' | 'expirada';
 }
 
 interface License {
