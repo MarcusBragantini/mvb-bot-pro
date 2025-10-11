@@ -164,7 +164,7 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ error: 'user_id é obrigatório' });
       }
 
-      // ✅ RETORNAR APENAS LICENÇAS ATIVAS E NÃO EXPIRADAS
+      // ✅ RETORNAR LICENÇA MAIS RECENTE (ATIVA OU EXPIRADA)
       const [licenses] = await connection.execute(
         `SELECT 
           id,
@@ -186,7 +186,6 @@ module.exports = async function handler(req, res) {
          FROM licenses 
          WHERE user_id = ? 
          AND is_active = 1 
-         AND expires_at > NOW()
          ORDER BY created_at DESC 
          LIMIT 1`,
         [user_id]

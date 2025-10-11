@@ -316,53 +316,67 @@ export default function BotInterface() {
         
         setUserLicenses(licenses);
         
-        // Verificar se o usuário tem uma licença válida E NÃO EXPIRADA
-        const activeLicense = licenses.find(license => 
-          license.is_active && new Date(license.expires_at) > new Date()
-        );
-
-        if (activeLicense) {
-          // Para licenças "free", usar o valor já calculado pela API (em minutos)
-          // Para outras licenças, calcular normalmente
-          const isFreeLicense = activeLicense.license_type === 'free';
-          const minutesRemaining = isFreeLicense 
-            ? activeLicense.days_remaining // API já retorna minutos para "free"
-            : Math.floor((new Date(activeLicense.expires_at).getTime() - Date.now()) / (1000 * 60));
-          const daysRemaining = Math.ceil((new Date(activeLicense.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+        // Buscar a licença mais recente (ativa ou expirada)
+        const latestLicense = licenses.find(license => license.is_active);
+        
+        if (latestLicense) {
+          // Verificar se a licença ainda é válida (não expirada)
+          const isLicenseValid = new Date(latestLicense.expires_at) > new Date();
           
-          // Usuário tem licença válida, pular validação
-          const licenseInfo: LicenseInfo = {
-            type: activeLicense.license_type,
-            days: isFreeLicense ? Math.ceil(minutesRemaining / (60 * 24)) : daysRemaining,
-            features: activeLicense.license_type === 'free' ? ['limited_features'] : ['all_features'],
-            maxDevices: activeLicense.max_devices
-          };
-          
-          setLicenseInfo(licenseInfo);
-          setLicenseKey(activeLicense.license_key);
-          setIsLicenseValid(true);
-          
-          // Mostrar tempo restante apropriado
-          const timeDisplay = isFreeLicense 
-            ? `${minutesRemaining} minuto(s)` 
-            : minutesRemaining < 60 
+          if (isLicenseValid) {
+            const activeLicense = latestLicense;
+            // Para licenças "free", usar o valor já calculado pela API (em minutos)
+            // Para outras licenças, calcular normalmente
+            const isFreeLicense = activeLicense.license_type === 'free';
+            const minutesRemaining = isFreeLicense 
+              ? activeLicense.days_remaining // API já retorna minutos para "free"
+              : Math.floor((new Date(activeLicense.expires_at).getTime() - Date.now()) / (1000 * 60));
+            const daysRemaining = Math.ceil((new Date(activeLicense.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+            
+            // Usuário tem licença válida, pular validação
+            const licenseInfo: LicenseInfo = {
+              type: activeLicense.license_type,
+              days: isFreeLicense ? Math.ceil(minutesRemaining / (60 * 24)) : daysRemaining,
+              features: activeLicense.license_type === 'free' ? ['limited_features'] : ['all_features'],
+              maxDevices: activeLicense.max_devices
+            };
+            
+            setLicenseInfo(licenseInfo);
+            setLicenseKey(activeLicense.license_key);
+            setIsLicenseValid(true);
+            
+            // Mostrar tempo restante apropriado
+            const timeDisplay = isFreeLicense 
               ? `${minutesRemaining} minuto(s)` 
-              : `${daysRemaining} dia(s)`;
-          
-          setLicenseStatus(`Licença válida! Expira em ${timeDisplay}.`);
-          
-          toast({
-            title: "✅ Acesso liberado!",
-            description: `Bem-vindo ao Bot Trading, ${user.name}! Licença expira em ${timeDisplay}.`,
-          });
+              : minutesRemaining < 60 
+                ? `${minutesRemaining} minuto(s)` 
+                : `${daysRemaining} dia(s)`;
+            
+            setLicenseStatus(`Licença válida! Expira em ${timeDisplay}.`);
+            
+            toast({
+              title: "✅ Acesso liberado!",
+              description: `Bem-vindo ao Bot Trading, ${user.name}! Licença expira em ${timeDisplay}.`,
+            });
+          } else {
+            // Licença encontrada mas expirada
+            setIsLicenseValid(false);
+            setLicenseStatus(`Licença expirada. Tipo: ${latestLicense.license_type}. Renove para continuar.`);
+            
+            toast({
+              title: "⚠️ Licença Expirada",
+              description: `Sua licença ${latestLicense.license_type} expirou. Renove para continuar usando o bot.`,
+              variant: "destructive"
+            });
+          }
         } else {
-          // Nenhuma licença válida encontrada
+          // Nenhuma licença encontrada
           setIsLicenseValid(false);
-          setLicenseStatus('Nenhuma licença válida. Por favor, renove sua licença.');
+          setLicenseStatus('Nenhuma licença encontrada. Por favor, solicite uma licença.');
           
           toast({
-            title: "⚠️ Licença Expirada",
-            description: "Sua licença expirou. Renove para continuar usando o bot.",
+            title: "❌ Sem Licença",
+            description: "Você não possui uma licença ativa. Solicite uma licença para usar o bot.",
             variant: "destructive"
           });
         }
