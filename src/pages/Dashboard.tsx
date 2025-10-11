@@ -85,12 +85,13 @@ export default function Dashboard() {
       if (response.ok) {
         const data = await response.json();
         
+        // ✅ CORREÇÃO: Converter strings do MySQL para números
         setPerformance({
-          monthlyReturn: data.monthly_return || 0,
-          totalProfit: data.total_profit || 0,
-          totalTrades: data.total_trades || 0,
-          winRate: data.win_rate || 0,
-          isPositive: (data.monthly_return || 0) >= 0
+          monthlyReturn: parseFloat(data.monthly_return) || 0,
+          totalProfit: parseFloat(data.total_profit) || 0,
+          totalTrades: parseInt(data.total_trades) || 0,
+          winRate: parseFloat(data.win_rate) || 0,
+          isPositive: (parseFloat(data.monthly_return) || 0) >= 0
         });
         
         console.log('✅ Performance carregada do banco:', data);
