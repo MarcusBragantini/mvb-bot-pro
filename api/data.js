@@ -199,12 +199,12 @@ module.exports = async function handler(req, res) {
         );
         license.active_devices = devices[0].count;
         
-        // Para licenças "free", calcular minutos restantes
+        // Para licenças "free", calcular minutos restantes (mesmo se expirada)
         if (license.license_type === 'free') {
           const now = new Date();
           const expiresAt = new Date(license.expires_at);
-          const minutesRemaining = Math.max(0, Math.floor((expiresAt - now) / (1000 * 60)));
-          license.days_remaining = minutesRemaining; // Usar para minutos
+          const minutesRemaining = Math.floor((expiresAt - now) / (1000 * 60));
+          license.days_remaining = minutesRemaining; // Pode ser negativo se expirada
         }
       }
 
