@@ -1550,85 +1550,7 @@ export default function BotInterface() {
   };
 
   // ===== RENDER =====
-  if (!isLicenseValid) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-        <Card className="w-full max-w-md shadow-2xl border-0">
-          <CardHeader className="text-center pb-8">
-            <div className="text-6xl mb-4">🤖</div>
-            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Bot MVB
-            </CardTitle>
-            <CardDescription className="text-lg text-gray-600">
-              Sistema de Trading Automatizado
-            </CardDescription>
-          </CardHeader>
-          
-          <CardContent className="space-y-6">
-            <div className="space-y-4">
-              <Label htmlFor="licenseKey" className="text-base font-semibold">
-                Insira sua Licença:
-              </Label>
-              <Input
-                id="licenseKey"
-                type="text"
-                placeholder="Digite sua chave de licença"
-                value={licenseKey}
-                onChange={(e) => setLicenseKey(e.target.value)}
-                maxLength={20}
-                className="h-12 text-center font-mono text-lg"
-              />
-            </div>
-            
-            <Button 
-              onClick={validateLicense}
-              className="w-full h-12 text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-              disabled={!licenseKey.trim()}
-            >
-              <Key className="mr-2 h-5 w-5" />
-              Acessar Sistema
-            </Button>
-            
-            {licenseStatus && (
-              <Alert className={licenseStatus.includes('sucesso') ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
-                {licenseStatus.includes('sucesso') ? (
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                ) : (
-                  <AlertTriangle className="h-4 w-4 text-red-600" />
-                )}
-                <AlertDescription className={licenseStatus.includes('sucesso') ? 'text-green-800' : 'text-red-800'}>
-                  {licenseStatus}
-                </AlertDescription>
-              </Alert>
-            )}
-            
-            {/* Licenças de exemplo */}
-            <Card className="bg-gray-50 border-gray-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-gray-700">
-                  Licenças Disponíveis:
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="font-mono bg-gray-200 px-2 py-1 rounded">STANDARD-MVB-2025</span>
-                  <span className="text-green-600 font-semibold">30 dias | 2 dispositivos</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="font-mono bg-gray-200 px-2 py-1 rounded">PRO-MVB-UNLIMITED</span>
-                  <span className="text-purple-600 font-semibold">365 dias | 5 dispositivos</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="font-mono bg-gray-200 px-2 py-1 rounded">FREE-MVB-24</span>
-                  <span className="text-blue-600 font-semibold">1 dia | 1 dispositivo</span>
-                </div>
-              </CardContent>
-            </Card>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // Removido: tela antiga de inserir licença - agora as licenças vêm da API
 
   // ===== TELA DE LOADING =====
   if (loading) {
@@ -1680,6 +1602,16 @@ export default function BotInterface() {
             </TabsList>
             
             <TabsContent value="trading" className="space-y-4" forceMount style={{ display: activeTab === 'trading' ? 'block' : 'none' }}>
+              {/* Alerta de Licença Inválida */}
+              {!isLicenseValid && !loading && (
+                <Alert className="border-red-200 bg-red-50">
+                  <AlertTriangle className="h-4 w-4 text-red-600" />
+                  <AlertDescription className="text-red-800">
+                    {licenseStatus || 'Nenhuma licença válida. Por favor, renove sua licença.'}
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               {/* Seletor de Token */}
               <Card className="border-blue-200">
                 <CardHeader className="pb-3">
