@@ -189,6 +189,16 @@ module.exports = async function handler(req, res) {
         return key;
       };
 
+      // ✅ DESATIVAR LICENÇAS EXPIRADAS DO USUÁRIO AUTOMATICAMENTE
+      await connection.execute(
+        `UPDATE licenses 
+         SET is_active = 0, updated_at = NOW() 
+         WHERE user_id = ? AND (expires_at <= NOW() OR is_active = 0)`,
+        [user_id]
+      );
+      
+      console.log(`🗑️ Licenças expiradas do usuário ${user_id} foram desativadas`);
+
       const licenseKey = generateLicenseKey();
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + parseInt(duration_days));
