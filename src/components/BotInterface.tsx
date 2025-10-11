@@ -322,15 +322,18 @@ export default function BotInterface() {
         );
 
         if (activeLicense) {
-          // Calcular tempo restante em minutos para testes curtos
-          const timeRemaining = new Date(activeLicense.expires_at).getTime() - Date.now();
-          const minutesRemaining = Math.floor(timeRemaining / (1000 * 60));
-          const daysRemaining = Math.ceil(timeRemaining / (1000 * 60 * 60 * 24));
+          // Para licenças "free", usar o valor já calculado pela API (em minutos)
+          // Para outras licenças, calcular normalmente
+          const isFreeLicense = activeLicense.license_type === 'free';
+          const minutesRemaining = isFreeLicense 
+            ? activeLicense.days_remaining // API já retorna minutos para "free"
+            : Math.floor((new Date(activeLicense.expires_at).getTime() - Date.now()) / (1000 * 60));
+          const daysRemaining = Math.ceil((new Date(activeLicense.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
           
           // Usuário tem licença válida, pular validação
           const licenseInfo: LicenseInfo = {
             type: activeLicense.license_type,
-            days: daysRemaining,
+            days: isFreeLicense ? Math.ceil(minutesRemaining / (60 * 24)) : daysRemaining,
             features: activeLicense.license_type === 'free' ? ['limited_features'] : ['all_features'],
             maxDevices: activeLicense.max_devices
           };
@@ -339,10 +342,12 @@ export default function BotInterface() {
           setLicenseKey(activeLicense.license_key);
           setIsLicenseValid(true);
           
-          // Mostrar tempo restante apropriado (minutos se < 60, caso contrário dias)
-          const timeDisplay = minutesRemaining < 60 
+          // Mostrar tempo restante apropriado
+          const timeDisplay = isFreeLicense 
             ? `${minutesRemaining} minuto(s)` 
-            : `${daysRemaining} dia(s)`;
+            : minutesRemaining < 60 
+              ? `${minutesRemaining} minuto(s)` 
+              : `${daysRemaining} dia(s)`;
           
           setLicenseStatus(`Licença válida! Expira em ${timeDisplay}.`);
           

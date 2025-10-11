@@ -176,7 +176,8 @@ module.exports = async function handler(req, res) {
           created_at,
           DATEDIFF(expires_at, NOW()) as days_remaining,
           CASE 
-            WHEN DATEDIFF(expires_at, NOW()) < 0 THEN 'expirada'
+            WHEN expires_at <= NOW() THEN 'expirada'
+            WHEN license_type = 'free' AND TIMESTAMPDIFF(MINUTE, NOW(), expires_at) <= 5 THEN 'expirando'
             WHEN DATEDIFF(expires_at, NOW()) = 0 THEN 'expira hoje'
             WHEN DATEDIFF(expires_at, NOW()) <= 7 THEN 'expirando'
             WHEN is_active = 1 THEN 'ativa'
@@ -191,13 +192,21 @@ module.exports = async function handler(req, res) {
         [user_id]
       );
 
-      // Adicionar contagem de dispositivos ativos
+      // Adicionar contagem de dispositivos ativos e ajustar cálculo de tempo
       for (let license of licenses) {
         const [devices] = await connection.execute(
           'SELECT COUNT(*) as count FROM device_sessions WHERE license_id = ?',
           [license.id]
         );
         license.active_devices = devices[0].count;
+        
+        // Para licenças "free", calcular minutos restantes
+        if (license.license_type === 'free') {
+          const now = new Date();
+          const expiresAt = new Date(license.expires_at);
+          const minutesRemaining = Math.max(0, Math.floor((expiresAt - now) / (1000 * 60)));
+          license.days_remaining = minutesRemaining; // Usar para minutos
+        }
       }
 
       return res.status(200).json({ licenses });
