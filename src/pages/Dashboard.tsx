@@ -20,6 +20,8 @@ import {
   Clock,
   ShieldCheck
 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import BotInterface from '@/components/BotInterface';
 
 interface License {
@@ -35,6 +37,124 @@ interface License {
   created_at: string;
 }
 
+// ✅ Componente para configuração de performance
+function PerformanceConfigForm({ onSave }: { onSave: (config: any) => void }) {
+  const [formData, setFormData] = useState({
+    initialBalance: 0,
+    currentBalance: 0,
+    totalDeposits: 0,
+    totalTrades: 0,
+    winRate: 0,
+    tradingDays: 30
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave(formData);
+  };
+
+  const handleChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: parseFloat(value) || 0
+    }));
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <div className="text-sm font-medium text-gray-700 mb-3">
+        Configure seus dados de performance:
+      </div>
+      
+      <div className="space-y-2">
+        <div>
+          <Label htmlFor="initialBalance" className="text-xs">Saldo Inicial ($)</Label>
+          <Input
+            id="initialBalance"
+            type="number"
+            step="0.01"
+            placeholder="10.00"
+            value={formData.initialBalance || ''}
+            onChange={(e) => handleChange('initialBalance', e.target.value)}
+            className="h-8 text-xs"
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor="currentBalance" className="text-xs">Saldo Atual ($)</Label>
+          <Input
+            id="currentBalance"
+            type="number"
+            step="0.01"
+            placeholder="300.00"
+            value={formData.currentBalance || ''}
+            onChange={(e) => handleChange('currentBalance', e.target.value)}
+            className="h-8 text-xs"
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor="totalDeposits" className="text-xs">Total de Depósitos ($)</Label>
+          <Input
+            id="totalDeposits"
+            type="number"
+            step="0.01"
+            placeholder="0.00"
+            value={formData.totalDeposits || ''}
+            onChange={(e) => handleChange('totalDeposits', e.target.value)}
+            className="h-8 text-xs"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Inclua aqui depósitos feitos durante o período
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <Label htmlFor="totalTrades" className="text-xs">Total de Trades</Label>
+            <Input
+              id="totalTrades"
+              type="number"
+              placeholder="45"
+              value={formData.totalTrades || ''}
+              onChange={(e) => handleChange('totalTrades', e.target.value)}
+              className="h-8 text-xs"
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="winRate" className="text-xs">Taxa de Vitória (%)</Label>
+            <Input
+              id="winRate"
+              type="number"
+              step="0.1"
+              placeholder="78"
+              value={formData.winRate || ''}
+              onChange={(e) => handleChange('winRate', e.target.value)}
+              className="h-8 text-xs"
+            />
+          </div>
+        </div>
+      </div>
+      
+      <div className="flex gap-2 pt-2">
+        <Button type="submit" size="sm" className="flex-1 text-xs">
+          Salvar Configuração
+        </Button>
+        <Button 
+          type="button" 
+          variant="outline" 
+          size="sm" 
+          onClick={() => onSave({})}
+          className="text-xs"
+        >
+          Cancelar
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 export default function Dashboard() {
   const { user, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
@@ -45,8 +165,9 @@ export default function Dashboard() {
   
   // ✅ NOVO: Estado para performance do bot
   const [performance, setPerformance] = useState({
-    initialBalance: 10, // Valor inicial em dólares
-    currentBalance: 300, // Valor atual em dólares
+    initialBalance: 0, // Valor inicial em dólares (será carregado do banco ou configurado)
+    currentBalance: 0, // Valor atual em dólares (será carregado do banco ou configurado)
+    totalDeposits: 0, // Total de depósitos feitos
     totalProfit: 0,
     totalProfitPercentage: 0,
     dailyAverage: 0,
@@ -57,6 +178,9 @@ export default function Dashboard() {
     isPositive: true,
     tradingDays: 0
   });
+  
+  // Estado para controlar se deve mostrar formulário de configuração
+  const [showConfigForm, setShowConfigForm] = useState(false);
 
   useEffect(() => {
     const loadLicenses = async () => {
@@ -88,9 +212,11 @@ export default function Dashboard() {
   const calculatePerformance = () => {
     const initial = performance.initialBalance;
     const current = performance.currentBalance;
+    const deposits = performance.totalDeposits;
     
-    // Calcular lucro total
-    const totalProfit = current - initial;
+    // Calcular lucro total (considerando depósitos)
+    // Lucro = Saldo Atual - Saldo Inicial - Depósitos
+    const totalProfit = current - initial - deposits;
     const totalProfitPercentage = initial > 0 ? ((totalProfit / initial) * 100) : 0;
     
     // Simular dados de trading (em produção viria do banco)
@@ -122,28 +248,77 @@ export default function Dashboard() {
     if (!user?.id) return;
     
     try {
-      // Primeiro calcular performance baseada nos valores
-      calculatePerformance();
-      
-      // Tentar carregar dados adicionais do banco se existir
+      // Tentar carregar dados reais do banco
       const response = await fetch(`/api/data?action=performance&user_id=${user.id}`);
       
       if (response.ok) {
         const data = await response.json();
         console.log('✅ Performance carregada do banco:', data);
         
-        // Atualizar com dados do banco se disponíveis
+        // Usar dados reais do banco
         setPerformance(prev => ({
           ...prev,
-          totalTrades: parseInt(data.total_trades) || prev.totalTrades,
-          winRate: parseFloat(data.win_rate) || prev.winRate,
+          initialBalance: parseFloat(data.initial_balance) || 0,
+          currentBalance: parseFloat(data.current_balance) || 0,
+          totalDeposits: parseFloat(data.total_deposits) || 0,
+          totalTrades: parseInt(data.total_trades) || 0,
+          winRate: parseFloat(data.win_rate) || 0,
+          tradingDays: parseInt(data.trading_days) || 0,
         }));
+        
+        // Calcular performance com dados reais
+        calculatePerformance();
       } else {
-        console.log('⚠️ Usando performance calculada (banco não disponível)');
+        console.log('⚠️ Nenhum dado de performance encontrado no banco');
+        
+        // Se não há dados no banco, verificar se há dados salvos no localStorage
+        const savedData = localStorage.getItem(`performance_${user.id}`);
+        if (savedData) {
+          const parsed = JSON.parse(savedData);
+          setPerformance(prev => ({
+            ...prev,
+            initialBalance: parsed.initialBalance || 0,
+            currentBalance: parsed.currentBalance || 0,
+            totalDeposits: parsed.totalDeposits || 0,
+            totalTrades: parsed.totalTrades || 0,
+            winRate: parsed.winRate || 0,
+            tradingDays: parsed.tradingDays || 0,
+          }));
+          calculatePerformance();
+        } else {
+          // Mostrar formulário de configuração se não há dados
+          setShowConfigForm(true);
+        }
       }
     } catch (error) {
-      console.log('❌ Erro ao carregar performance, usando cálculo local:', error);
+      console.log('❌ Erro ao carregar performance:', error);
+      setShowConfigForm(true);
     }
+  };
+
+  // ✅ NOVO: Função para salvar configuração de performance
+  const savePerformanceConfig = (config: any) => {
+    if (!user?.id) return;
+    
+    // Salvar no localStorage
+    localStorage.setItem(`performance_${user.id}`, JSON.stringify(config));
+    
+    // Atualizar estado
+    setPerformance(prev => ({
+      ...prev,
+      initialBalance: config.initialBalance,
+      currentBalance: config.currentBalance,
+      totalDeposits: config.totalDeposits,
+      totalTrades: config.totalTrades,
+      winRate: config.winRate,
+      tradingDays: config.tradingDays,
+    }));
+    
+    // Calcular performance
+    calculatePerformance();
+    
+    // Esconder formulário
+    setShowConfigForm(false);
   };
 
   // ✅ NOVO: Carregar performance do banco de dados
@@ -365,43 +540,66 @@ export default function Dashboard() {
                   <TrendingUp className={`h-4 w-4 ${performance.isPositive ? 'text-green-600' : 'text-red-600'}`} />
                 </CardHeader>
                 <CardContent>
-                  <div className={`text-2xl font-bold ${performance.isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                    {performance.isPositive ? '+' : ''}{performance.totalProfitPercentage.toFixed(1)}%
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Ganho total: ${performance.totalProfit.toFixed(2)}
-                  </p>
-                  
-                  {/* Detalhes de Performance */}
-                  <div className="mt-3 space-y-1 text-xs text-muted-foreground">
-                    <div className="flex justify-between">
-                      <span>Média diária:</span>
-                      <span className={performance.dailyAverage >= 0 ? 'text-green-600' : 'text-red-600'}>
-                        {performance.dailyAverage >= 0 ? '+' : ''}${performance.dailyAverage.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Média semanal:</span>
-                      <span className={performance.weeklyAverage >= 0 ? 'text-green-600' : 'text-red-600'}>
-                        {performance.weeklyAverage >= 0 ? '+' : ''}${performance.weeklyAverage.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Média mensal:</span>
-                      <span className={performance.monthlyAverage >= 0 ? 'text-green-600' : 'text-red-600'}>
-                        {performance.monthlyAverage >= 0 ? '+' : ''}${performance.monthlyAverage.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Estatísticas de Trading */}
-                  {performance.totalTrades > 0 && (
-                    <div className="mt-3 pt-2 border-t border-gray-200">
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>Taxa de vitória: {performance.winRate}%</span>
-                        <span>{performance.totalTrades} trades</span>
+                  {showConfigForm ? (
+                    <PerformanceConfigForm onSave={savePerformanceConfig} />
+                  ) : (
+                    <>
+                      <div className={`text-2xl font-bold ${performance.isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                        {performance.isPositive ? '+' : ''}{performance.totalProfitPercentage.toFixed(1)}%
                       </div>
-                    </div>
+                      <p className="text-xs text-muted-foreground">
+                        Ganho total: ${performance.totalProfit.toFixed(2)}
+                      </p>
+                      {performance.totalDeposits > 0 && (
+                        <p className="text-xs text-blue-600">
+                          Depósitos: ${performance.totalDeposits.toFixed(2)}
+                        </p>
+                      )}
+                      
+                      {/* Detalhes de Performance */}
+                      <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                        <div className="flex justify-between">
+                          <span>Média diária:</span>
+                          <span className={performance.dailyAverage >= 0 ? 'text-green-600' : 'text-red-600'}>
+                            {performance.dailyAverage >= 0 ? '+' : ''}${performance.dailyAverage.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Média semanal:</span>
+                          <span className={performance.weeklyAverage >= 0 ? 'text-green-600' : 'text-red-600'}>
+                            {performance.weeklyAverage >= 0 ? '+' : ''}${performance.weeklyAverage.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Média mensal:</span>
+                          <span className={performance.monthlyAverage >= 0 ? 'text-green-600' : 'text-red-600'}>
+                            {performance.monthlyAverage >= 0 ? '+' : ''}${performance.monthlyAverage.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Estatísticas de Trading */}
+                      {performance.totalTrades > 0 && (
+                        <div className="mt-3 pt-2 border-t border-gray-200">
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>Taxa de vitória: {performance.winRate}%</span>
+                            <span>{performance.totalTrades} trades</span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Botão para reconfigurar */}
+                      <div className="mt-3 pt-2 border-t border-gray-200">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => setShowConfigForm(true)}
+                          className="w-full text-xs"
+                        >
+                          Configurar Performance
+                        </Button>
+                      </div>
+                    </>
                   )}
                 </CardContent>
               </Card>
