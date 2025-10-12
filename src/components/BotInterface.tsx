@@ -1431,20 +1431,8 @@ export default function BotInterface() {
             volume: "NEUTRO"
           };
           
-          // ✅ FILTRO CRÍTICO: Bloquear se RSI estiver extremo contrário
+          // ✅ SEM FILTROS RESTRITIVOS - Estratégia simples
           let finalSignal = calculateFinalSignal(signals, fibonacciAnalysis);
-          
-          // ❌ BLOQUEAR CALL se RSI > 65
-          if (finalSignal === "CALL" && rsi > 65) {
-            addLog(\`❌ CALL bloqueado: RSI muito alto (\${rsi.toFixed(1)}) - risco de reversão\`);
-            finalSignal = "NEUTRO";
-          }
-          
-          // ❌ BLOQUEAR PUT se RSI < 35
-          if (finalSignal === "PUT" && rsi < 35) {
-            addLog(\`❌ PUT bloqueado: RSI muito baixo (\${rsi.toFixed(1)}) - risco de reversão\`);
-            finalSignal = "NEUTRO";
-          }
           
           const confidence = calculateConfidence(signals, rsi, fibonacciAnalysis);
           
@@ -1708,66 +1696,39 @@ export default function BotInterface() {
       }
 
       function calculateFinalSignal(signals, fibonacciAnalysis) {
-        // ✅ SISTEMA DE PONTUAÇÃO POR CONFLUÊNCIA (0-100 pontos)
-        // ❌ FIBONACCI DESATIVADO - Pesos redistribuídos
-        let callScore = 0, putScore = 0;
+        // ✅ ESTRATÉGIA SIMPLIFICADA - Apenas RSI + Bollinger
+        // RSI: Indica momentum (sobrecompra/sobrevenda)
+        // Bollinger: Indica volatilidade e timing
         
-        // 🎯 PESO 1: TENDÊNCIA (50 pontos) - MHI + EMA (aumentado)
-        if (signals.trend === "CALL") callScore += 50;
-        else if (signals.trend === "PUT") putScore += 50;
-        
-        // 🎯 PESO 2: BOLLINGER (30 pontos) - Confirmação de timing (aumentado)
-        if (signals.bollinger === "CALL") callScore += 30;
-        else if (signals.bollinger === "PUT") putScore += 30;
-        
-        // 🎯 PESO 3: RSI (20 pontos) - Filtro adicional (aumentado)
-        if (signals.rsi === "CALL") callScore += 20;
-        else if (signals.rsi === "PUT") putScore += 20;
-        
-        // ✅ SCORE MÍNIMO: 70 pontos para operar (ajustado sem Fibonacci)
-        const MIN_SCORE = 70;
-        
-        if (callScore >= MIN_SCORE && callScore > putScore) {
-          addLog(\`✅ CALL Score: \${callScore}/100 (Tendência:\${signals.trend === "CALL" ? "50" : "0"} + BB:\${signals.bollinger === "CALL" ? "30" : "0"} + RSI:\${signals.rsi === "CALL" ? "20" : "0"})\`);
+        // ✅ REGRA SIMPLES DE COMPRA:
+        // - RSI entre 30-45 (saindo de oversold) OU
+        // - Preço tocando banda inferior (0-20%)
+        if (signals.rsi === "CALL" || signals.bollinger === "CALL") {
+          addLog(\`✅ CALL detectado (RSI:\${signals.rsi} | BB:\${signals.bollinger})\`);
           return "CALL";
         }
         
-        if (putScore >= MIN_SCORE && putScore > callScore) {
-          addLog(\`✅ PUT Score: \${putScore}/100 (Tendência:\${signals.trend === "PUT" ? "50" : "0"} + BB:\${signals.bollinger === "PUT" ? "30" : "0"} + RSI:\${signals.rsi === "PUT" ? "20" : "0"})\`);
+        // ✅ REGRA SIMPLES DE VENDA:
+        // - RSI entre 55-70 (saindo de overbought) OU
+        // - Preço tocando banda superior (80-100%)
+        if (signals.rsi === "PUT" || signals.bollinger === "PUT") {
+          addLog(\`✅ PUT detectado (RSI:\${signals.rsi} | BB:\${signals.bollinger})\`);
           return "PUT";
         }
         
-        // ⚠️ Score insuficiente
-        addLog(\`⚠️ Score insuficiente: CALL=\${callScore} PUT=\${putScore} (mínimo: \${MIN_SCORE})\`);
         return "NEUTRO";
       }
 
       function calculateConfidence(signals, rsi, fibonacciAnalysis) {
-        let confidence = 0;
+        let confidence = 50; // Base de 50%
         
-        // ✅ FIBONACCI TEM PESO MAIOR NA CONFIANÇA
-        if (fibonacciAnalysis && fibonacciAnalysis.confidence > 0) {
-          confidence += fibonacciAnalysis.confidence * 0.5; // 50% da confiança vem do Fibonacci
-        }
+        // ✅ CONFIANÇA SIMPLES - RSI + Bollinger
+        if (signals.rsi !== "NEUTRO") confidence += 20;
+        if (signals.bollinger !== "NEUTRO") confidence += 20;
         
-        // ✅ OUTROS INDICADORES CONTRIBUEM
-        if (signals.trend !== "NEUTRO") confidence += 10;
-        if (signals.rsi !== "NEUTRO") confidence += 15;
-        if (signals.bollinger !== "NEUTRO") confidence += 15;
-        
-        // ✅ BONUS POR RSI EXTREMO
-        if (rsi < 20 || rsi > 80) confidence += 15;
-        else if (rsi < 30 || rsi > 70) confidence += 10;
-        
-        // ✅ BONUS SE FIBONACCI E OUTROS INDICADORES CONCORDAM
-        if (fibonacciAnalysis && signals.fibonacci !== "NEUTRO") {
-          const agreementCount = [
-            signals.trend === signals.fibonacci,
-            signals.rsi === signals.fibonacci,
-            signals.bollinger === signals.fibonacci
-          ].filter(Boolean).length;
-          
-          confidence += agreementCount * 5; // +5% por cada indicador que concorda
+        // ✅ BONUS SE AMBOS CONCORDAM
+        if (signals.rsi === signals.bollinger && signals.rsi !== "NEUTRO") {
+          confidence += 10; // +10% quando RSI e Bollinger concordam
         }
         
         return Math.min(95, confidence);
