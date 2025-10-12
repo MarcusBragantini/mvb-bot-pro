@@ -40,7 +40,7 @@ function decrypt(text) {
   }
 }
 
-// Hostinger Database Configuration
+// Hostinger Database Configuration com Connection Pool
 const DB_CONFIG = {
   host: process.env.DB_HOST || 'srv806.hstgr.io',
   user: process.env.DB_USER || 'u950457610_bot_mvb_saas',
@@ -50,8 +50,25 @@ const DB_CONFIG = {
   ssl: {
     rejectUnauthorized: false
   },
-  connectTimeout: 60000
+  connectTimeout: 60000,
+  // ✅ POOL CONFIG - Reutiliza conexões
+  connectionLimit: 10,
+  waitForConnections: true,
+  queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0
 };
+
+// ✅ Criar pool global (reutilizado entre requests)
+let pool = null;
+
+function getPool() {
+  if (!pool) {
+    pool = mysql.createPool(DB_CONFIG);
+    console.log('✅ Connection pool criado');
+  }
+  return pool;
+}
 
 module.exports = async function handler(req, res) {
   // Configurar CORS
@@ -67,7 +84,9 @@ module.exports = async function handler(req, res) {
   let connection;
 
   try {
-    connection = await mysql.createConnection(DB_CONFIG);
+    // ✅ Usar pool em vez de criar nova conexão
+    const dbPool = getPool();
+    connection = await dbPool.getConnection();
 
     // ===== USER SETTINGS =====
     if (action === 'settings') {
@@ -461,8 +480,10 @@ module.exports = async function handler(req, res) {
       details: error.message 
     });
   } finally {
+    // ✅ Liberar conexão de volta ao pool (não fechar!)
     if (connection) {
-      await connection.end();
+      connection.release();
+      console.log('🔄 Conexão liberada de volta ao pool');
     }
   }
 };

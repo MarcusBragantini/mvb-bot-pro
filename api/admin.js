@@ -1,7 +1,7 @@
 const mysql = require('mysql2/promise');
 const jwt = require('jsonwebtoken');
 
-// Database configuration
+// Database configuration com Connection Pool
 const DB_CONFIG = {
   host: process.env.DB_HOST || 'srv806.hstgr.io',
   user: process.env.DB_USER || 'u950457610_bot_mvb_saas',
@@ -11,8 +11,24 @@ const DB_CONFIG = {
   ssl: {
     rejectUnauthorized: false
   },
-  connectTimeout: 60000
+  connectTimeout: 60000,
+  // ✅ POOL CONFIG
+  connectionLimit: 10,
+  waitForConnections: true,
+  queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0
 };
+
+// ✅ Pool global
+let pool = null;
+
+function getPool() {
+  if (!pool) {
+    pool = mysql.createPool(DB_CONFIG);
+  }
+  return pool;
+}
 
 const JWT_SECRET = process.env.JWT_SECRET || 'mvb-bot-pro-secret-key-2024';
 
@@ -57,7 +73,9 @@ module.exports = async function handler(req, res) {
   let connection;
 
   try {
-    connection = await mysql.createConnection(DB_CONFIG);
+    // ✅ Usar pool
+    const dbPool = getPool();
+    connection = await dbPool.getConnection();
 
     // ===== GET DASHBOARD STATS =====
     if (path === '/dashboard' && req.method === 'GET') {
@@ -405,8 +423,9 @@ module.exports = async function handler(req, res) {
       details: error.message 
     });
   } finally {
+    // ✅ Liberar conexão de volta ao pool
     if (connection) {
-      await connection.end();
+      connection.release();
     }
   }
 };
