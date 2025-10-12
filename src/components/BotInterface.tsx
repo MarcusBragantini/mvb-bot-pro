@@ -1165,14 +1165,18 @@ export default function BotInterface() {
             
             // ✅ CORREÇÃO: Atualizar interface para refletir o tipo de conta detectado
             const detectedTokenType = accountType === 'DEMO' ? 'demo' : 'real';
-            // Usar setSettings diretamente para evitar erro de "settings is not defined"
-            setSettings(prev => {
-              if (prev.selectedTokenType !== detectedTokenType) {
+            
+            // Usar updateSetting se disponível, senão apenas log
+            try {
+              if (typeof updateSetting === 'function') {
+                updateSetting('selectedTokenType', detectedTokenType);
                 addLog(\`🔄 Tipo de conta detectado: \${accountType} - Interface atualizada\`);
-                return { ...prev, selectedTokenType: detectedTokenType };
+              } else {
+                addLog(\`🔄 Tipo de conta detectado: \${accountType}\`);
               }
-              return prev;
-            });
+            } catch (error) {
+              addLog(\`🔄 Tipo de conta detectado: \${accountType}\`);
+            }
             
             document.getElementById("balance").innerText = balance;
             addLog(\`💰 Saldo: $\${balance} \${currency} (Conta \${accountType})\`);
