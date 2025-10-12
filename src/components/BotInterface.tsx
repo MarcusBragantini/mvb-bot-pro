@@ -627,6 +627,10 @@ export default function BotInterface() {
               <div class="indicator-value" id="bollingerSignal" style="font-weight: bold; font-size: 1rem;">-</div>
             </div>
             <div class="indicator-card" style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
+              <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 4px;">🎯 Fibonacci</div>
+              <div class="indicator-value" id="fibonacciSignal" style="font-weight: bold; font-size: 1rem;">-</div>
+            </div>
+            <div class="indicator-card" style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
               <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 4px;">Confiança</div>
               <div class="indicator-value" id="confidenceValue" style="font-weight: bold; font-size: 1rem;">-</div>
             </div>
@@ -1354,22 +1358,27 @@ export default function BotInterface() {
             addLog(\`📊 Bollinger: Upper=\${upper.toFixed(5)}, Middle=\${middle.toFixed(5)}, Lower=\${lower.toFixed(5)}, Price=\${currentPrice.toFixed(5)}\`);
           }
           
+          // ✅ FIBONACCI - NOVA ANÁLISE
+          const fibonacciAnalysis = analyzeFibonacciSignal(prices, currentPrice);
+          
           const signals = {
             mhi: mhiSignal,
             trend: trendSignal,
             ema: currentPrice > emaFastValue ? "CALL" : "PUT",
             rsi: rsiSignal,
-            bollinger: bollingerSignal, // ✅ NOVO
+            bollinger: bollingerSignal,
+            fibonacci: fibonacciAnalysis.signal, // ✅ NOVO
             volume: "NEUTRO"
           };
           
-          const finalSignal = calculateFinalSignal(signals);
-          const confidence = calculateConfidence(signals, rsi);
+          const finalSignal = calculateFinalSignal(signals, fibonacciAnalysis);
+          const confidence = calculateConfidence(signals, rsi, fibonacciAnalysis);
           
           return {
             signals: { ...signals, final: finalSignal },
             confidence,
-            finalSignal
+            finalSignal,
+            fibonacciData: fibonacciAnalysis // ✅ Para logs e debug
           };
         } catch (error) {
           addLog(\`❌ Erro no cálculo MHI: \${error.message}\`);
@@ -1438,14 +1447,201 @@ export default function BotInterface() {
         }
       }
 
-      function calculateFinalSignal(signals) {
-        // ✅ PESOS COM TENDÊNCIA - RSI, Bollinger e Tendência
+      // ✅ FIBONACCI - NOVAS FUNÇÕES
+      function calculateFibonacciLevels(prices, lookback = 50) {
+        if (prices.length < lookback) return null;
+        
+        try {
+          const recentPrices = prices.slice(-lookback);
+          const highs = recentPrices.map(c => c.high);
+          const lows = recentPrices.map(c => c.low);
+          
+          const highest = Math.max(...highs);
+          const lowest = Math.min(...lows);
+          const range = highest - lowest;
+          
+          // Níveis de Retração Fibonacci
+          const fib = {
+            high: highest,
+            low: lowest,
+            // Retração (do topo para baixo)
+            ret_0: highest,
+            ret_236: highest - (range * 0.236),
+            ret_382: highest - (range * 0.382),
+            ret_500: highest - (range * 0.500),
+            ret_618: highest - (range * 0.618),
+            ret_786: highest - (range * 0.786),
+            ret_100: lowest,
+            // Extensão (projeção)
+            ext_1272: highest + (range * 0.272),
+            ext_1618: highest + (range * 0.618)
+          };
+          
+          return fib;
+        } catch (error) {
+          addLog(\`❌ Erro no cálculo Fibonacci: \${error.message}\`);
+          return null;
+        }
+      }
+
+      // ✅ ADX (Average Directional Index) - FORÇA DA TENDÊNCIA
+      function calculateADX(prices, period = 14) {
+        if (prices.length < period + 1) return 0;
+        
+        try {
+          let plusDM = [], minusDM = [], tr = [];
+          
+          // Calcular +DM, -DM e TR
+          for (let i = 1; i < prices.length; i++) {
+            const high = prices[i].high;
+            const low = prices[i].low;
+            const prevHigh = prices[i-1].high;
+            const prevLow = prices[i-1].low;
+            const prevClose = prices[i-1].close;
+            
+            const upMove = high - prevHigh;
+            const downMove = prevLow - low;
+            
+            plusDM.push(upMove > downMove && upMove > 0 ? upMove : 0);
+            minusDM.push(downMove > upMove && downMove > 0 ? downMove : 0);
+            
+            const trueRange = Math.max(
+              high - low,
+              Math.abs(high - prevClose),
+              Math.abs(low - prevClose)
+            );
+            tr.push(trueRange);
+          }
+          
+          // Suavizar com EMA
+          const smoothPlusDM = plusDM.slice(-period).reduce((a, b) => a + b, 0);
+          const smoothMinusDM = minusDM.slice(-period).reduce((a, b) => a + b, 0);
+          const smoothTR = tr.slice(-period).reduce((a, b) => a + b, 0);
+          
+          const plusDI = (smoothPlusDM / smoothTR) * 100;
+          const minusDI = (smoothMinusDM / smoothTR) * 100;
+          
+          const dx = Math.abs(plusDI - minusDI) / (plusDI + minusDI) * 100;
+          
+          return dx; // Simplificado, ADX seria média do DX
+        } catch (error) {
+          return 0;
+        }
+      }
+
+      // ✅ EMA 50 e 200 para Tendência Principal
+      function calculateEMA50_200(prices) {
+        if (prices.length < 200) return null;
+        
+        const ema50 = calculateEMA(prices.slice(-50), 50);
+        const ema200 = calculateEMA(prices.slice(-200), 200);
+        
+        return { ema50, ema200 };
+      }
+
+      // ✅ ANÁLISE FIBONACCI INTEGRADA
+      function analyzeFibonacciSignal(prices, currentPrice) {
+        if (prices.length < 200) return { signal: "NEUTRO", confidence: 0, reason: "Dados insuficientes" };
+        
+        try {
+          // 1. IDENTIFICAR TENDÊNCIA PRINCIPAL
+          const emas = calculateEMA50_200(prices);
+          if (!emas) return { signal: "NEUTRO", confidence: 0, reason: "EMAs indisponíveis" };
+          
+          const { ema50, ema200 } = emas;
+          const adx = calculateADX(prices, 14);
+          
+          let mainTrend = "NEUTRO";
+          if (ema50 > ema200 && adx > 25) {
+            mainTrend = "ALTA"; // Tendência de alta confirmada
+          } else if (ema50 < ema200 && adx > 25) {
+            mainTrend = "BAIXA"; // Tendência de baixa confirmada
+          }
+          
+          // 2. CALCULAR NÍVEIS FIBONACCI
+          const fib = calculateFibonacciLevels(prices, 50);
+          if (!fib) return { signal: "NEUTRO", confidence: 0, reason: "Fibonacci indisponível" };
+          
+          // 3. VERIFICAR POSIÇÃO DO PREÇO EM RELAÇÃO AOS NÍVEIS
+          let fibSignal = "NEUTRO";
+          let fibConfidence = 0;
+          let fibReason = "";
+          
+          // SETUP DE COMPRA (Tendência de Alta)
+          if (mainTrend === "ALTA") {
+            // Preço na zona de suporte Fibonacci (0.382-0.618)
+            if (currentPrice >= fib.ret_618 && currentPrice <= fib.ret_382) {
+              fibSignal = "CALL";
+              fibConfidence = 80;
+              fibReason = "Correção em zona Fib 0.382-0.618 + Tendência Alta";
+              addLog(\`🎯 Fibonacci CALL: Preço=\${currentPrice.toFixed(5)} entre 0.618(\${fib.ret_618.toFixed(5)}) e 0.382(\${fib.ret_382.toFixed(5)})\`);
+            }
+            // Preço no nível 0.5 (equilíbrio)
+            else if (Math.abs(currentPrice - fib.ret_500) < (fib.high - fib.low) * 0.05) {
+              fibSignal = "CALL";
+              fibConfidence = 70;
+              fibReason = "Preço no nível 0.5 Fib + Tendência Alta";
+            }
+            // Breakout acima da resistência
+            else if (currentPrice > fib.ret_236) {
+              fibSignal = "CALL";
+              fibConfidence = 75;
+              fibReason = "Breakout acima 0.236 + Tendência Alta";
+            }
+          }
+          
+          // SETUP DE VENDA (Tendência de Baixa)
+          else if (mainTrend === "BAIXA") {
+            // Preço na zona de resistência Fibonacci (0.382-0.618)
+            if (currentPrice <= fib.ret_382 && currentPrice >= fib.ret_618) {
+              fibSignal = "PUT";
+              fibConfidence = 80;
+              fibReason = "Correção em zona Fib 0.382-0.618 + Tendência Baixa";
+              addLog(\`🎯 Fibonacci PUT: Preço=\${currentPrice.toFixed(5)} entre 0.382(\${fib.ret_382.toFixed(5)}) e 0.618(\${fib.ret_618.toFixed(5)})\`);
+            }
+            // Preço no nível 0.5
+            else if (Math.abs(currentPrice - fib.ret_500) < (fib.high - fib.low) * 0.05) {
+              fibSignal = "PUT";
+              fibConfidence = 70;
+              fibReason = "Preço no nível 0.5 Fib + Tendência Baixa";
+            }
+            // Breakout abaixo do suporte
+            else if (currentPrice < fib.ret_786) {
+              fibSignal = "PUT";
+              fibConfidence = 75;
+              fibReason = "Breakout abaixo 0.786 + Tendência Baixa";
+            }
+          }
+          
+          // Log informativo
+          if (fibSignal !== "NEUTRO") {
+            addLog(\`📊 ADX: \${adx.toFixed(1)} | EMA50: \${ema50.toFixed(5)} | EMA200: \${ema200.toFixed(5)}\`);
+            addLog(\`🎯 Fibonacci: \${fibReason}\`);
+          }
+          
+          return { 
+            signal: fibSignal, 
+            confidence: fibConfidence, 
+            reason: fibReason,
+            mainTrend,
+            adx,
+            fibLevels: fib
+          };
+        } catch (error) {
+          addLog(\`❌ Erro na análise Fibonacci: \${error.message}\`);
+          return { signal: "NEUTRO", confidence: 0, reason: "Erro no cálculo" };
+        }
+      }
+
+      function calculateFinalSignal(signals, fibonacciAnalysis) {
+        // ✅ PESOS COM FIBONACCI - Estratégia Avançada
         const weights = { 
           mhi: 0.0,        // ❌ DESABILITADO
-          trend: 0.3,      // ✅ 30% - Tendência
+          trend: 0.15,     // ✅ 15% - Tendência básica
           ema: 0.0,        // ❌ DESABILITADO
-          rsi: 0.35,       // ✅ 35% - RSI
-          bollinger: 0.35, // ✅ 35% - Bollinger
+          rsi: 0.20,       // ✅ 20% - RSI
+          bollinger: 0.20, // ✅ 20% - Bollinger
+          fibonacci: 0.45, // ✅ 45% - FIBONACCI (peso maior!)
           volume: 0.0 
         };
         let callScore = 0, putScore = 0;
@@ -1461,17 +1657,33 @@ export default function BotInterface() {
         return "NEUTRO";
       }
 
-      function calculateConfidence(signals, rsi) {
+      function calculateConfidence(signals, rsi, fibonacciAnalysis) {
         let confidence = 0;
         
-        // ✅ FOCO EM TENDÊNCIA, RSI E BOLLINGER
-        if (signals.trend !== "NEUTRO") confidence += 30;
-        if (signals.rsi !== "NEUTRO") confidence += 35;
-        if (signals.bollinger !== "NEUTRO") confidence += 35;
+        // ✅ FIBONACCI TEM PESO MAIOR NA CONFIANÇA
+        if (fibonacciAnalysis && fibonacciAnalysis.confidence > 0) {
+          confidence += fibonacciAnalysis.confidence * 0.5; // 50% da confiança vem do Fibonacci
+        }
+        
+        // ✅ OUTROS INDICADORES CONTRIBUEM
+        if (signals.trend !== "NEUTRO") confidence += 10;
+        if (signals.rsi !== "NEUTRO") confidence += 15;
+        if (signals.bollinger !== "NEUTRO") confidence += 15;
         
         // ✅ BONUS POR RSI EXTREMO
-        if (rsi < 20 || rsi > 80) confidence += 20;
+        if (rsi < 20 || rsi > 80) confidence += 15;
         else if (rsi < 30 || rsi > 70) confidence += 10;
+        
+        // ✅ BONUS SE FIBONACCI E OUTROS INDICADORES CONCORDAM
+        if (fibonacciAnalysis && signals.fibonacci !== "NEUTRO") {
+          const agreementCount = [
+            signals.trend === signals.fibonacci,
+            signals.rsi === signals.fibonacci,
+            signals.bollinger === signals.fibonacci
+          ].filter(Boolean).length;
+          
+          confidence += agreementCount * 5; // +5% por cada indicador que concorda
+        }
         
         return Math.min(95, confidence);
       }
@@ -1481,10 +1693,11 @@ export default function BotInterface() {
         document.getElementById("mhiSignal").textContent = "OFF";
         document.getElementById("emaSignal").textContent = "OFF";
         
-        // ✅ ATIVOS - Tendência, RSI e Bollinger
+        // ✅ ATIVOS - Tendência, RSI, Bollinger e FIBONACCI
         document.getElementById("trendSignal").textContent = signals.trend || "-";
         document.getElementById("rsiValue").textContent = signals.rsi || "-";
         document.getElementById("bollingerSignal").textContent = signals.bollinger || "-";
+        document.getElementById("fibonacciSignal").textContent = signals.fibonacci || "-";
         document.getElementById("confidenceValue").textContent = confidence ? \`\${confidence}%\` : "-";
         document.getElementById("finalSignal").textContent = signals.final || "-";
       }
