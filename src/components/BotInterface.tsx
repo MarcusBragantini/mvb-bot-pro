@@ -1515,9 +1515,12 @@ export default function BotInterface() {
           clearTimeout(autoCloseTimer);
         }
         
+        // ✅ CORREÇÃO: Usar valor do campo autoCloseTime em vez de settings
+        const autoCloseTimeValue = parseInt(document.getElementById("autoCloseTime").value) || 30;
+        
         autoCloseTimer = setTimeout(() => {
           if (currentContractId) {
-            addLog(\`⏰ Fechando trade automaticamente após \${settings.autoCloseTime} segundos...\`);
+            addLog(\`⏰ Fechando trade automaticamente após \${autoCloseTimeValue} segundos...\`);
             // Enviar comando para fechar o trade com contract_id específico
             websocket.send(JSON.stringify({ 
               sell: currentContractId, 
@@ -1526,7 +1529,7 @@ export default function BotInterface() {
           } else {
             addLog("⚠️ Não foi possível fechar trade - Contract ID não encontrado");
           }
-        }, settings.autoCloseTime * 1000); // Tempo configurável em segundos
+        }, autoCloseTimeValue * 1000); // Tempo configurável em segundos
       }
 
       function handleTradeResult(contract) {
