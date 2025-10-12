@@ -353,27 +353,36 @@ module.exports = async function handler(req, res) {
         }
 
         try {
-          // Buscar saldo da Deriv do usuário
-          const [rows] = await connection.execute(`
-            SELECT 
-              deriv_balance,
-              deriv_updated_at
-            FROM user_deriv_account 
-            WHERE user_id = ?
-          `, [user_id]);
+          // ✅ CORREÇÃO: Verificar se tabela existe antes de usar
+          try {
+            const [rows] = await connection.execute(`
+              SELECT 
+                deriv_balance,
+                deriv_updated_at
+              FROM user_deriv_account 
+              WHERE user_id = ?
+            `, [user_id]);
 
-          if (rows.length === 0) {
-            // Se não há dados, retornar valor padrão
+            if (rows.length === 0) {
+              // Se não há dados, retornar valor padrão
+              return res.status(200).json({ 
+                balance: "0.00",
+                message: "Nenhum saldo da Deriv encontrado. Configure sua conta Deriv."
+              });
+            }
+
+            return res.status(200).json({ 
+              balance: rows[0].deriv_balance,
+              updated_at: rows[0].deriv_updated_at
+            });
+          } catch (tableError) {
+            // Se tabela não existe, retornar valor padrão
+            console.log('Tabela user_deriv_account não encontrada, retornando valor padrão');
             return res.status(200).json({ 
               balance: "0.00",
-              message: "Nenhum saldo da Deriv encontrado. Configure sua conta Deriv."
+              message: "Integração com Deriv não configurada ainda."
             });
           }
-
-          return res.status(200).json({ 
-            balance: rows[0].deriv_balance,
-            updated_at: rows[0].deriv_updated_at
-          });
         } catch (error) {
           console.error('Erro ao buscar saldo da Deriv:', error);
           return res.status(500).json({ error: 'Erro interno do servidor' });
@@ -391,43 +400,52 @@ module.exports = async function handler(req, res) {
         }
 
         try {
-          // Buscar histórico de trades do usuário
-          const [rows] = await connection.execute(`
-            SELECT 
-              id,
-              trade_type,
-              profit,
-              created_at,
-              status
-            FROM user_trades 
-            WHERE user_id = ?
-            ORDER BY created_at DESC
-            LIMIT 1000
-          `, [user_id]);
+          // ✅ CORREÇÃO: Verificar se tabela existe antes de usar
+          try {
+            const [rows] = await connection.execute(`
+              SELECT 
+                id,
+                trade_type,
+                profit,
+                created_at,
+                status
+              FROM user_trades 
+              WHERE user_id = ?
+              ORDER BY created_at DESC
+              LIMIT 1000
+            `, [user_id]);
 
-          // Se não há trades, retornar array vazio
-          if (rows.length === 0) {
+            // Se não há trades, retornar array vazio
+            if (rows.length === 0) {
+              return res.status(200).json({ 
+                trades: [],
+                message: "Nenhum trade encontrado. Configure seu histórico de trading."
+              });
+            }
+
+            // Processar trades para calcular estatísticas
+            const trades = rows.map(trade => ({
+              id: trade.id,
+              type: trade.trade_type,
+              profit: parseFloat(trade.profit) || 0,
+              created_at: trade.created_at,
+              status: trade.status
+            }));
+
+            return res.status(200).json({ 
+              trades: trades,
+              total_trades: trades.length,
+              winning_trades: trades.filter(t => t.profit > 0).length,
+              total_profit: trades.reduce((sum, t) => sum + t.profit, 0)
+            });
+          } catch (tableError) {
+            // Se tabela não existe, retornar dados vazios
+            console.log('Tabela user_trades não encontrada, retornando dados vazios');
             return res.status(200).json({ 
               trades: [],
-              message: "Nenhum trade encontrado. Configure seu histórico de trading."
+              message: "Histórico de trading não configurado ainda."
             });
           }
-
-          // Processar trades para calcular estatísticas
-          const trades = rows.map(trade => ({
-            id: trade.id,
-            type: trade.trade_type,
-            profit: parseFloat(trade.profit) || 0,
-            created_at: trade.created_at,
-            status: trade.status
-          }));
-
-          return res.status(200).json({ 
-            trades: trades,
-            total_trades: trades.length,
-            winning_trades: trades.filter(t => t.profit > 0).length,
-            total_profit: trades.reduce((sum, t) => sum + t.profit, 0)
-          });
         } catch (error) {
           console.error('Erro ao buscar histórico de trading:', error);
           return res.status(500).json({ error: 'Erro interno do servidor' });
