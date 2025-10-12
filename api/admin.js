@@ -256,15 +256,14 @@ module.exports = async function handler(req, res) {
 
       const licenseKey = generateLicenseKey();
       
-      // Ajustar para fuso horário do Brasil (UTC-3)
+      // Usar horário atual (o servidor já está em UTC)
       const now = new Date();
-      const brazilTime = new Date(now.getTime() - (3 * 60 * 60 * 1000)); // UTC-3
-      const expiresAt = new Date(brazilTime);
+      const expiresAt = new Date(now);
       
       // LOGS DETALHADOS PARA DEBUG
       console.log('🕐 DEBUG - Criação de Licença:');
       console.log('  📅 Agora (UTC):', now.toISOString());
-      console.log('  🇧🇷 Brasil (UTC-3):', brazilTime.toISOString());
+      console.log('  🇧🇷 Brasil (UTC-3):', new Date(now.getTime() - (3 * 60 * 60 * 1000)).toISOString());
       console.log('  📝 Tipo:', license_type);
       console.log('  ⏱️ Duração:', duration_days, 'minutos/dias');
       
@@ -306,7 +305,21 @@ module.exports = async function handler(req, res) {
 
       console.log(`✅ Admin criou licença: ${licenseKey} para usuário ${user_id}`);
 
-      return res.status(201).json(newLicense[0]);
+      // Incluir logs de debug na resposta para facilitar o debug
+      const debugInfo = {
+        created_at_utc: now.toISOString(),
+        created_at_brazil: new Date(now.getTime() - (3 * 60 * 60 * 1000)).toISOString(),
+        expires_at_utc: expiresAt.toISOString(),
+        expires_at_brazil: new Date(expiresAt.getTime() - (3 * 60 * 60 * 1000)).toISOString(),
+        license_type: license_type,
+        duration_days: duration_days,
+        current_time_brazil: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+      };
+
+      return res.status(201).json({
+        ...newLicense[0],
+        debug_info: debugInfo
+      });
     }
 
     // ===== DEACTIVATE LICENSE =====

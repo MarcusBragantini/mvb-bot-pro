@@ -202,14 +202,13 @@ module.exports = async function handler(req, res) {
         // Para licenças "free", calcular minutos restantes (mesmo se expirada)
         if (license.license_type === 'free') {
           const now = new Date();
-          const brazilTime = new Date(now.getTime() - (3 * 60 * 60 * 1000)); // UTC-3
           const expiresAt = new Date(license.expires_at);
-          const minutesRemaining = Math.floor((expiresAt - brazilTime) / (1000 * 60));
+          const minutesRemaining = Math.floor((expiresAt - now) / (1000 * 60));
           
           // LOGS DETALHADOS PARA DEBUG
           console.log('🔍 DEBUG - Validação Licença FREE:');
           console.log('  📅 Agora (UTC):', now.toISOString());
-          console.log('  🇧🇷 Brasil (UTC-3):', brazilTime.toISOString());
+          console.log('  🇧🇷 Brasil (UTC-3):', new Date(now.getTime() - (3 * 60 * 60 * 1000)).toISOString());
           console.log('  🎯 Expira (do banco):', license.expires_at);
           console.log('  🎯 Expira (Date):', expiresAt.toISOString());
           console.log('  ⏱️ Minutos restantes:', minutesRemaining);
