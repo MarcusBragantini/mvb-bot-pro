@@ -1311,7 +1311,7 @@ export default function BotInterface() {
                 addLog(\`💰 Lucro atual: +\${profitPercentage.toFixed(1)}% ($\${currentPrice.toFixed(2)} / $\${buyPrice.toFixed(2)})\`);
               }
               
-              // ✅ FECHAR APENAS se lucro >= 40%
+              // ✅ FECHAR APENAS se lucro >= 30%
               if (profitPercentage >= 40) {
                 addLog(\`🎯 META ATINGIDA! Lucro de \${profitPercentage.toFixed(1)}% >= 40% - Fechando trade!\`);
                 
