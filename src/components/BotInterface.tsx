@@ -756,7 +756,7 @@ export default function BotInterface() {
           <input type="number" id="mhiPeriods" value="${settings.mhiPeriods || 20}" min="5" max="50">
           <input type="number" id="emaFast" value="${settings.emaFast || 8}" min="5" max="20">
           <input type="number" id="emaSlow" value="${settings.emaSlow || 18}" min="15" max="50">
-          <input type="number" id="rsiPeriods" value="${settings.rsiPeriods || 10}" min="7" max="21">
+          <input type="number" id="rsiPeriods" value="${settings.rsiPeriods || 11}" min="7" max="21">
           <input type="number" id="autoCloseTime" value="${settings.autoCloseTime || 30}" min="10" max="300">
         </div>
       </div>
@@ -852,7 +852,7 @@ export default function BotInterface() {
       let mhiPeriods = 14;
       let emaFast = 9;
       let emaSlow = 21;
-      let rsiPeriods = 14;
+      let rsiPeriods = 11; // ✅ AJUSTADO: Menos sensível
       let minConfidence = 70;
 
       let stats = {
@@ -1329,33 +1329,43 @@ export default function BotInterface() {
             trendSignal = "PUT";
           }
           
-          // RSI Calculation
+          // ✅ RSI OTIMIZADO - Filtro inteligente
           const rsi = calculateRSI(prices, rsiPeriods);
           let rsiSignal = "NEUTRO";
-          if (rsi < 30) {
+          
+          // Para COMPRA: RSI entre 30-45 (saindo de oversold)
+          if (rsi >= 30 && rsi <= 45) {
             rsiSignal = "CALL";
-          } else if (rsi > 70) {
+          } 
+          // Para VENDA: RSI entre 55-70 (saindo de overbought)
+          else if (rsi >= 55 && rsi <= 70) {
             rsiSignal = "PUT";
           }
+          // ❌ EVITAR: RSI > 65 para CALL ou RSI < 35 para PUT
+          // (mesmo que outros indicadores estejam ok)
           
-          // ✅ BANDAS DE BOLLINGER - NOVO
+          // ✅ BOLLINGER OTIMIZADO - Confirmação de Timing
           const bollingerBands = calculateBollingerBands(prices, 20, 2);
           let bollingerSignal = "NEUTRO";
           
           if (bollingerBands) {
             const { upper, middle, lower } = bollingerBands;
+            const pricePosition = (currentPrice - lower) / (upper - lower); // 0 = banda inferior, 1 = banda superior
             
-            // Sinal CALL: Preço toca banda inferior (sobrevenda)
-            if (currentPrice <= lower) {
+            // ✅ COMPRA: Preço na banda inferior (0-20% da banda) + subindo
+            if (pricePosition <= 0.2 && currentPrice >= lower) {
               bollingerSignal = "CALL";
+              addLog(\`📊 Bollinger CALL: Preço tocando banda inferior (\${(pricePosition * 100).toFixed(1)}% da banda)\`);
             }
-            // Sinal PUT: Preço toca banda superior (sobrecompra)
-            else if (currentPrice >= upper) {
+            // ✅ VENDA: Preço na banda superior (80-100% da banda) + descendo
+            else if (pricePosition >= 0.8 && currentPrice <= upper) {
               bollingerSignal = "PUT";
+              addLog(\`📊 Bollinger PUT: Preço tocando banda superior (\${(pricePosition * 100).toFixed(1)}% da banda)\`);
             }
-            // Sinal NEUTRO: Preço entre as bandas
-            
-            addLog(\`📊 Bollinger: Upper=\${upper.toFixed(5)}, Middle=\${middle.toFixed(5)}, Lower=\${lower.toFixed(5)}, Price=\${currentPrice.toFixed(5)}\`);
+            // ⚠️ NEUTRO: Preço no meio da banda
+            else {
+              addLog(\`📊 Bollinger NEUTRO: Preço no meio da banda (\${(pricePosition * 100).toFixed(1)}%)\`);
+            }
           }
           
           // ✅ FIBONACCI - NOVA ANÁLISE
@@ -1371,7 +1381,21 @@ export default function BotInterface() {
             volume: "NEUTRO"
           };
           
-          const finalSignal = calculateFinalSignal(signals, fibonacciAnalysis);
+          // ✅ FILTRO CRÍTICO: Bloquear se RSI estiver extremo contrário
+          let finalSignal = calculateFinalSignal(signals, fibonacciAnalysis);
+          
+          // ❌ BLOQUEAR CALL se RSI > 65
+          if (finalSignal === "CALL" && rsi > 65) {
+            addLog(\`❌ CALL bloqueado: RSI muito alto (\${rsi.toFixed(1)}) - risco de reversão\`);
+            finalSignal = "NEUTRO";
+          }
+          
+          // ❌ BLOQUEAR PUT se RSI < 35
+          if (finalSignal === "PUT" && rsi < 35) {
+            addLog(\`❌ PUT bloqueado: RSI muito baixo (\${rsi.toFixed(1)}) - risco de reversão\`);
+            finalSignal = "NEUTRO";
+          }
+          
           const confidence = calculateConfidence(signals, rsi, fibonacciAnalysis);
           
           return {
@@ -1634,26 +1658,40 @@ export default function BotInterface() {
       }
 
       function calculateFinalSignal(signals, fibonacciAnalysis) {
-        // ✅ PESOS COM FIBONACCI - Estratégia Avançada
-        const weights = { 
-          mhi: 0.0,        // ❌ DESABILITADO
-          trend: 0.15,     // ✅ 15% - Tendência básica
-          ema: 0.0,        // ❌ DESABILITADO
-          rsi: 0.20,       // ✅ 20% - RSI
-          bollinger: 0.20, // ✅ 20% - Bollinger
-          fibonacci: 0.45, // ✅ 45% - FIBONACCI (peso maior!)
-          volume: 0.0 
-        };
-        let callScore = 0, putScore = 0;
+        // ✅ SISTEMA DE PONTUAÇÃO HIERÁRQUICO - Evita conflitos
+        let callPoints = 0, putPoints = 0;
         
-        Object.keys(signals).forEach(key => {
-          if (signals[key] === "CALL") callScore += weights[key] || 0;
-          else if (signals[key] === "PUT") putScore += weights[key] || 0;
-        });
+        // 🥇 PRIORIDADE 1: TENDÊNCIA (peso maior - 2 pontos)
+        if (signals.trend === "CALL") callPoints += 2;
+        else if (signals.trend === "PUT") putPoints += 2;
         
-        // ✅ THRESHOLD AJUSTADO - 3 indicadores (Tendência + RSI + Bollinger)
-        if (callScore > putScore && callScore > 0.55) return "CALL";
-        if (putScore > callScore && putScore > 0.55) return "PUT";
+        // 🥈 PRIORIDADE 2: FIBONACCI (zonas de entrada - 2 pontos)
+        if (signals.fibonacci === "CALL") callPoints += 2;
+        else if (signals.fibonacci === "PUT") putPoints += 2;
+        
+        // 🥉 PRIORIDADE 3: BOLLINGER (confirmação timing - 1 ponto)
+        if (signals.bollinger === "CALL") callPoints += 1;
+        else if (signals.bollinger === "PUT") putPoints += 1;
+        
+        // 🏅 PRIORIDADE 4: RSI (filtro adicional - 1 ponto)
+        if (signals.rsi === "CALL") callPoints += 1;
+        else if (signals.rsi === "PUT") putPoints += 1;
+        
+        // ✅ REGRA: Mínimo 4 pontos para operar (confluência forte)
+        const MIN_POINTS = 4;
+        
+        if (callPoints >= MIN_POINTS && callPoints > putPoints) {
+          addLog(\`✅ Confluência CALL: \${callPoints} pontos (Tendência:\${signals.trend === "CALL" ? "✓" : "✗"} Fib:\${signals.fibonacci === "CALL" ? "✓" : "✗"} BB:\${signals.bollinger === "CALL" ? "✓" : "✗"} RSI:\${signals.rsi === "CALL" ? "✓" : "✗"})\`);
+          return "CALL";
+        }
+        
+        if (putPoints >= MIN_POINTS && putPoints > callPoints) {
+          addLog(\`✅ Confluência PUT: \${putPoints} pontos (Tendência:\${signals.trend === "PUT" ? "✓" : "✗"} Fib:\${signals.fibonacci === "PUT" ? "✓" : "✗"} BB:\${signals.bollinger === "PUT" ? "✓" : "✗"} RSI:\${signals.rsi === "PUT" ? "✓" : "✗"})\`);
+          return "PUT";
+        }
+        
+        // ⚠️ Sem confluência suficiente
+        addLog(\`⚠️ Sem confluência: CALL=\${callPoints}pts PUT=\${putPoints}pts (mínimo: \${MIN_POINTS}pts)\`);
         return "NEUTRO";
       }
 
