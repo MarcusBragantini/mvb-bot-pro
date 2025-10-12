@@ -984,8 +984,10 @@ export default function BotInterface() {
       let isTrading = false;
       let lastTradeTime = 0;
       let minTradeInterval = 60000;
-      let autoCloseTimer = null; // ✅ NOVO: Timer para fechamento automático em 30 segundos
-      let currentContractId = null; // ✅ NOVO: ID do contrato atual para fechamento
+      let autoCloseTimer = null; // Timer para fechamento por tempo
+      let currentContractId = null; // ID do contrato atual
+      let contractBuyPrice = 0; // Preço de compra do contrato
+      let profitCheckInterval = null; // Intervalo para verificar lucro
 
       const WEBSOCKET_ENDPOINTS = [
         "wss://ws.binaryws.com/websockets/v3",
@@ -1291,8 +1293,38 @@ export default function BotInterface() {
 
           if (data.msg_type === "proposal_open_contract") {
             const contract = data.proposal_open_contract;
+            
+            // ✅ Verificar se o trade já foi vendido
             if (contract.is_sold) {
               handleTradeResult(contract);
+              return;
+            }
+            
+            // ✅ ESTRATÉGIA DE FECHAMENTO: Só fechar com 40%+ de lucro
+            if (contract.bid_price && contract.buy_price) {
+              const currentPrice = parseFloat(contract.bid_price);
+              const buyPrice = parseFloat(contract.buy_price);
+              const profitPercentage = ((currentPrice - buyPrice) / buyPrice) * 100;
+              
+              // Log do P&L atual (a cada update)
+              if (profitPercentage > 0) {
+                addLog(\`💰 Lucro atual: +\${profitPercentage.toFixed(1)}% ($\${currentPrice.toFixed(2)} / $\${buyPrice.toFixed(2)})\`);
+              }
+              
+              // ✅ FECHAR APENAS se lucro >= 40%
+              if (profitPercentage >= 40) {
+                addLog(\`🎯 META ATINGIDA! Lucro de \${profitPercentage.toFixed(1)}% >= 40% - Fechando trade!\`);
+                
+                // Fechar o trade
+                websocket.send(JSON.stringify({ 
+                  sell: contract.contract_id, 
+                  price: 0 
+                }));
+                
+                // Limpar timers
+                if (autoCloseTimer) clearTimeout(autoCloseTimer);
+                if (profitCheckInterval) clearInterval(profitCheckInterval);
+              }
             }
           }
 
@@ -1770,37 +1802,28 @@ export default function BotInterface() {
         websocket.send(JSON.stringify(proposal));
         document.getElementById("status").innerText = \`🚀 \${signal} - $\${currentStake}\`;
         
-        // ✅ NOVO: Fechamento automático em 30 segundos
-        if (autoCloseTimer) {
-          clearTimeout(autoCloseTimer);
-        }
+        // Limpar timers anteriores
+        if (autoCloseTimer) clearTimeout(autoCloseTimer);
+        if (profitCheckInterval) clearInterval(profitCheckInterval);
         
-        // ✅ CORREÇÃO: Usar valor do campo autoCloseTime em vez de settings
-        const autoCloseTimeValue = parseInt(document.getElementById("autoCloseTime").value) || 30;
-        
-        autoCloseTimer = setTimeout(() => {
-          if (currentContractId) {
-            addLog(\`⏰ Fechando trade automaticamente após \${autoCloseTimeValue} segundos...\`);
-            // Enviar comando para fechar o trade com contract_id específico
-            websocket.send(JSON.stringify({ 
-              sell: currentContractId, 
-              price: 0 
-            }));
-          } else {
-            addLog("⚠️ Não foi possível fechar trade - Contract ID não encontrado");
-          }
-        }, autoCloseTimeValue * 1000); // Tempo configurável em segundos
+        // Salvar preço de compra (será atualizado quando receber data.buy)
+        contractBuyPrice = currentStake;
       }
 
       function handleTradeResult(contract) {
-        // ✅ NOVO: Limpar timer de fechamento automático se trade foi finalizado
+        // Limpar todos os timers
         if (autoCloseTimer) {
           clearTimeout(autoCloseTimer);
           autoCloseTimer = null;
         }
+        if (profitCheckInterval) {
+          clearInterval(profitCheckInterval);
+          profitCheckInterval = null;
+        }
         
-        // ✅ NOVO: Limpar contract_id atual
+        // Limpar variáveis do contrato
         currentContractId = null;
+        contractBuyPrice = 0;
         
         const tradeProfit = contract.profit;
         const finalSignal = document.getElementById("finalSignal").textContent;
