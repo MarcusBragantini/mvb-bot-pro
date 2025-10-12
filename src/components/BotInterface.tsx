@@ -1098,6 +1098,32 @@ export default function BotInterface() {
           if (data.msg_type === "authorize") {
             addLog("🔐 Autenticado com sucesso!");
             document.getElementById("status").innerText = "🔐 Autenticado";
+            
+            // ✅ NOVO: Mostrar informações da conta no log
+            const accountInfo = data.authorize;
+            if (accountInfo) {
+              const accountId = accountInfo.account_id || 'N/A';
+              const accountType = accountInfo.account_type || 'N/A';
+              const currency = accountInfo.currency || 'USD';
+              
+              addLog(\`👤 Conta: \${accountId} | Tipo: \${accountType} | Moeda: \${currency}\`);
+              
+              // ✅ NOVO: Salvar informações de autorização para usar na detecção
+              localStorage.setItem('deriv_auth_data', JSON.stringify({
+                account_id: accountId,
+                account_type: accountType,
+                currency: currency,
+                timestamp: Date.now()
+              }));
+              
+              // Detectar se é conta demo ou real baseado no account_type
+              if (accountType.toLowerCase().includes('demo') || accountType.toLowerCase().includes('virtual')) {
+                addLog("ℹ️ Conta DEMO detectada");
+              } else {
+                addLog("⚠️ CONTA REAL detectada - ATENÇÃO!");
+              }
+            }
+            
             websocket.send(JSON.stringify({ balance: 1, subscribe: 1 }));
             websocket.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
             addLog(\`📊 Monitorando: \${symbol}\`);
@@ -1108,21 +1134,45 @@ export default function BotInterface() {
             const currency = data.balance?.currency || 'USD';
             const loginid = data.balance?.loginid || '';
             
-            // ✅ CORREÇÃO: Detectar conta demo baseado no loginid (VRTC = Virtual/Demo)
+            // ✅ CORREÇÃO: Detectar conta demo baseado em múltiplos critérios
             let accountType = 'REAL';
+            
+            // Critério 1: Login ID (VRTC = Virtual/Demo)
             if (loginid.startsWith('VRTC') || loginid.includes('VR')) {
               accountType = 'DEMO';
-            } else if (balance >= 10000) {
-              // Saldo muito alto geralmente indica conta demo
+            }
+            // Critério 2: Saldo muito alto geralmente indica conta demo
+            else if (balance >= 10000) {
               accountType = 'DEMO';
+            }
+            // Critério 3: Verificar se temos informação do account_type da autorização
+            else {
+              // Buscar informações da autorização se disponível
+              const authData = localStorage.getItem('deriv_auth_data');
+              if (authData) {
+                try {
+                  const parsed = JSON.parse(authData);
+                  if (parsed.account_type && 
+                      (parsed.account_type.toLowerCase().includes('demo') || 
+                       parsed.account_type.toLowerCase().includes('virtual'))) {
+                    accountType = 'DEMO';
+                  }
+                } catch (e) {
+                  // Ignorar erro de parsing
+                }
+              }
             }
             
             // ✅ CORREÇÃO: Atualizar interface para refletir o tipo de conta detectado
             const detectedTokenType = accountType === 'DEMO' ? 'demo' : 'real';
-            if (settings.selectedTokenType !== detectedTokenType) {
-              updateSetting('selectedTokenType', detectedTokenType);
-              addLog(\`🔄 Tipo de conta detectado: \${accountType} - Interface atualizada\`);
-            }
+            // Usar setSettings diretamente para evitar erro de "settings is not defined"
+            setSettings(prev => {
+              if (prev.selectedTokenType !== detectedTokenType) {
+                addLog(\`🔄 Tipo de conta detectado: \${accountType} - Interface atualizada\`);
+                return { ...prev, selectedTokenType: detectedTokenType };
+              }
+              return prev;
+            });
             
             document.getElementById("balance").innerText = balance;
             addLog(\`💰 Saldo: $\${balance} \${currency} (Conta \${accountType})\`);
