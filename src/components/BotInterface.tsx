@@ -1439,13 +1439,13 @@ export default function BotInterface() {
       }
 
       function calculateFinalSignal(signals) {
-        // ✅ PESOS SIMPLIFICADOS - Apenas RSI e Bollinger
+        // ✅ PESOS COM TENDÊNCIA - RSI, Bollinger e Tendência
         const weights = { 
           mhi: 0.0,        // ❌ DESABILITADO
-          trend: 0.0,      // ❌ DESABILITADO
+          trend: 0.3,      // ✅ 30% - Tendência
           ema: 0.0,        // ❌ DESABILITADO
-          rsi: 0.5,        // ✅ 50% - RSI
-          bollinger: 0.5,  // ✅ 50% - Bollinger
+          rsi: 0.35,       // ✅ 35% - RSI
+          bollinger: 0.35, // ✅ 35% - Bollinger
           volume: 0.0 
         };
         let callScore = 0, putScore = 0;
@@ -1455,18 +1455,19 @@ export default function BotInterface() {
           else if (signals[key] === "PUT") putScore += weights[key] || 0;
         });
         
-        // ✅ THRESHOLD AJUSTADO - Apenas 2 indicadores
-        if (callScore > putScore && callScore > 0.6) return "CALL";
-        if (putScore > callScore && putScore > 0.6) return "PUT";
+        // ✅ THRESHOLD AJUSTADO - 3 indicadores (Tendência + RSI + Bollinger)
+        if (callScore > putScore && callScore > 0.55) return "CALL";
+        if (putScore > callScore && putScore > 0.55) return "PUT";
         return "NEUTRO";
       }
 
       function calculateConfidence(signals, rsi) {
         let confidence = 0;
         
-        // ✅ FOCO APENAS EM RSI E BOLLINGER
-        if (signals.rsi !== "NEUTRO") confidence += 50;
-        if (signals.bollinger !== "NEUTRO") confidence += 50;
+        // ✅ FOCO EM TENDÊNCIA, RSI E BOLLINGER
+        if (signals.trend !== "NEUTRO") confidence += 30;
+        if (signals.rsi !== "NEUTRO") confidence += 35;
+        if (signals.bollinger !== "NEUTRO") confidence += 35;
         
         // ✅ BONUS POR RSI EXTREMO
         if (rsi < 20 || rsi > 80) confidence += 20;
@@ -1476,12 +1477,12 @@ export default function BotInterface() {
       }
 
       function updateSignalsDisplay(signals, confidence) {
-        // ❌ DESABILITADOS - MHI, Tendência, EMA
+        // ❌ DESABILITADOS - MHI e EMA
         document.getElementById("mhiSignal").textContent = "OFF";
-        document.getElementById("trendSignal").textContent = "OFF";
         document.getElementById("emaSignal").textContent = "OFF";
         
-        // ✅ ATIVOS - Apenas RSI e Bollinger
+        // ✅ ATIVOS - Tendência, RSI e Bollinger
+        document.getElementById("trendSignal").textContent = signals.trend || "-";
         document.getElementById("rsiValue").textContent = signals.rsi || "-";
         document.getElementById("bollingerSignal").textContent = signals.bollinger || "-";
         document.getElementById("confidenceValue").textContent = confidence ? \`\${confidence}%\` : "-";
