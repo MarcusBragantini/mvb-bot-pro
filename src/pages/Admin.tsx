@@ -461,7 +461,12 @@ export default function Admin() {
                                   {user.license_type === 'lifetime' ? (
                                     <span className="font-semibold text-yellow-600">∞ Vitalícia</span>
                                   ) : user.days_remaining > 0 ? (
-                                    <span>{user.days_remaining} dias</span>
+                                    <span>
+                                      {user.license_type === 'free' ? 
+                                        `${user.days_remaining} min` : 
+                                        `${user.days_remaining} dias`
+                                      }
+                                    </span>
                                   ) : (
                                     <span className="text-red-600">Expirada</span>
                                   )}
@@ -635,7 +640,9 @@ export default function Admin() {
                           <td className="p-3">
                             <Badge variant={getLicenseStatusColor(license)}>
                               {license.days_remaining > 0 ? (
-                                `${license.days_remaining} dias`
+                                license.license_type === 'free' ? 
+                                  `${license.days_remaining} min` : 
+                                  `${license.days_remaining} dias`
                               ) : (
                                 'Expirada'
                               )}
