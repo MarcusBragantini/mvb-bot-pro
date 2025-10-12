@@ -41,10 +41,7 @@ interface License {
 function PerformanceConfigForm({ onSave }: { onSave: (config: any) => void }) {
   const [formData, setFormData] = useState({
     initialBalance: 0,
-    currentBalance: 0,
     totalDeposits: 0,
-    totalTrades: 0,
-    winRate: 0,
     tradingDays: 30
   });
 
@@ -78,23 +75,13 @@ function PerformanceConfigForm({ onSave }: { onSave: (config: any) => void }) {
             onChange={(e) => handleChange('initialBalance', e.target.value)}
             className="h-8 text-xs"
           />
+          <p className="text-xs text-gray-500 mt-1">
+            Valor que você começou a negociar
+          </p>
         </div>
         
         <div>
-          <Label htmlFor="currentBalance" className="text-xs">Saldo Atual ($)</Label>
-          <Input
-            id="currentBalance"
-            type="number"
-            step="0.01"
-            placeholder="300.00"
-            value={formData.currentBalance || ''}
-            onChange={(e) => handleChange('currentBalance', e.target.value)}
-            className="h-8 text-xs"
-          />
-        </div>
-        
-        <div>
-          <Label htmlFor="totalDeposits" className="text-xs">Total de Depósitos ($)</Label>
+          <Label htmlFor="totalDeposits" className="text-xs">Depósitos ($)</Label>
           <Input
             id="totalDeposits"
             type="number"
@@ -105,34 +92,34 @@ function PerformanceConfigForm({ onSave }: { onSave: (config: any) => void }) {
             className="h-8 text-xs"
           />
           <p className="text-xs text-gray-500 mt-1">
-            Inclua aqui depósitos feitos durante o período
+            Total de depósitos feitos durante o período
           </p>
         </div>
         
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <Label htmlFor="totalTrades" className="text-xs">Total de Trades</Label>
-            <Input
-              id="totalTrades"
-              type="number"
-              placeholder="45"
-              value={formData.totalTrades || ''}
-              onChange={(e) => handleChange('totalTrades', e.target.value)}
-              className="h-8 text-xs"
-            />
+        <div>
+          <Label htmlFor="tradingDays" className="text-xs">Dias de Trading</Label>
+          <Input
+            id="tradingDays"
+            type="number"
+            placeholder="30"
+            value={formData.tradingDays || ''}
+            onChange={(e) => handleChange('tradingDays', e.target.value)}
+            className="h-8 text-xs"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Quantos dias você está negociando
+          </p>
+        </div>
+        
+        {/* Informações automáticas */}
+        <div className="bg-blue-50 p-3 rounded-md">
+          <div className="text-xs font-medium text-blue-800 mb-2">
+            📊 Dados automáticos:
           </div>
-          
-          <div>
-            <Label htmlFor="winRate" className="text-xs">Taxa de Vitória (%)</Label>
-            <Input
-              id="winRate"
-              type="number"
-              step="0.1"
-              placeholder="78"
-              value={formData.winRate || ''}
-              onChange={(e) => handleChange('winRate', e.target.value)}
-              className="h-8 text-xs"
-            />
+          <div className="text-xs text-blue-700 space-y-1">
+            <div>• Saldo atual: Buscado da Deriv automaticamente</div>
+            <div>• Total de trades: Calculado do histórico</div>
+            <div>• Taxa de vitória: Calculada do histórico</div>
           </div>
         </div>
       </div>
@@ -165,16 +152,16 @@ export default function Dashboard() {
   
   // ✅ NOVO: Estado para performance do bot
   const [performance, setPerformance] = useState({
-    initialBalance: 0, // Valor inicial em dólares (será carregado do banco ou configurado)
-    currentBalance: 0, // Valor atual em dólares (será carregado do banco ou configurado)
+    initialBalance: 0, // Valor inicial em dólares (manual)
+    currentBalance: 0, // Valor atual em dólares (buscar da Deriv)
     totalDeposits: 0, // Total de depósitos feitos
     totalProfit: 0,
     totalProfitPercentage: 0,
     dailyAverage: 0,
     weeklyAverage: 0,
     monthlyAverage: 0,
-    totalTrades: 0,
-    winRate: 0,
+    totalTrades: 0, // Buscar do histórico automaticamente
+    winRate: 0, // Calcular do histórico automaticamente
     isPositive: true,
     tradingDays: 0
   });
@@ -243,52 +230,89 @@ export default function Dashboard() {
     }));
   };
 
+  // ✅ NOVO: Função para buscar saldo atual da Deriv
+  const fetchDerivBalance = async () => {
+    try {
+      // Simular busca da API da Deriv (substitua pela API real)
+      const response = await fetch(`/api/data?action=deriv_balance&user_id=${user?.id}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        const currentBalance = parseFloat(data.balance) || 0;
+        
+        setPerformance(prev => ({
+          ...prev,
+          currentBalance: currentBalance
+        }));
+        
+        console.log('✅ Saldo da Deriv carregado:', currentBalance);
+        return currentBalance;
+      } else {
+        console.log('⚠️ Erro ao buscar saldo da Deriv, usando valor salvo');
+        return null;
+      }
+    } catch (error) {
+      console.log('❌ Erro ao buscar saldo da Deriv:', error);
+      return null;
+    }
+  };
+
+  // ✅ NOVO: Função para buscar dados do histórico de trading
+  const fetchTradingHistory = async () => {
+    try {
+      const response = await fetch(`/api/data?action=trading_history&user_id=${user?.id}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Calcular total de trades e taxa de vitória
+        const totalTrades = data.trades ? data.trades.length : 0;
+        const winningTrades = data.trades ? data.trades.filter((trade: any) => trade.profit > 0).length : 0;
+        const winRate = totalTrades > 0 ? ((winningTrades / totalTrades) * 100) : 0;
+        
+        setPerformance(prev => ({
+          ...prev,
+          totalTrades: totalTrades,
+          winRate: winRate
+        }));
+        
+        console.log('✅ Histórico de trading carregado:', { totalTrades, winRate });
+        return { totalTrades, winRate };
+      } else {
+        console.log('⚠️ Erro ao buscar histórico de trading');
+        return { totalTrades: 0, winRate: 0 };
+      }
+    } catch (error) {
+      console.log('❌ Erro ao buscar histórico de trading:', error);
+      return { totalTrades: 0, winRate: 0 };
+    }
+  };
+
   // ✅ NOVO: Função para carregar performance do banco de dados
   const loadPerformance = async () => {
     if (!user?.id) return;
     
     try {
-      // Tentar carregar dados reais do banco
-      const response = await fetch(`/api/data?action=performance&user_id=${user.id}`);
+      // 1. Buscar saldo atual da Deriv
+      await fetchDerivBalance();
       
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Performance carregada do banco:', data);
-        
-        // Usar dados reais do banco
+      // 2. Buscar dados do histórico de trading
+      await fetchTradingHistory();
+      
+      // 3. Tentar carregar configurações salvas
+      const savedData = localStorage.getItem(`performance_${user.id}`);
+      if (savedData) {
+        const parsed = JSON.parse(savedData);
         setPerformance(prev => ({
           ...prev,
-          initialBalance: parseFloat(data.initial_balance) || 0,
-          currentBalance: parseFloat(data.current_balance) || 0,
-          totalDeposits: parseFloat(data.total_deposits) || 0,
-          totalTrades: parseInt(data.total_trades) || 0,
-          winRate: parseFloat(data.win_rate) || 0,
-          tradingDays: parseInt(data.trading_days) || 0,
+          initialBalance: parsed.initialBalance || 0,
+          totalDeposits: parsed.totalDeposits || 0,
+          tradingDays: parsed.tradingDays || 30,
         }));
-        
-        // Calcular performance com dados reais
         calculatePerformance();
       } else {
-        console.log('⚠️ Nenhum dado de performance encontrado no banco');
-        
-        // Se não há dados no banco, verificar se há dados salvos no localStorage
-        const savedData = localStorage.getItem(`performance_${user.id}`);
-        if (savedData) {
-          const parsed = JSON.parse(savedData);
-          setPerformance(prev => ({
-            ...prev,
-            initialBalance: parsed.initialBalance || 0,
-            currentBalance: parsed.currentBalance || 0,
-            totalDeposits: parsed.totalDeposits || 0,
-            totalTrades: parsed.totalTrades || 0,
-            winRate: parsed.winRate || 0,
-            tradingDays: parsed.tradingDays || 0,
-          }));
-          calculatePerformance();
-        } else {
-          // Mostrar formulário de configuração se não há dados
-          setShowConfigForm(true);
-        }
+        // Mostrar formulário de configuração se não há dados salvos
+        setShowConfigForm(true);
       }
     } catch (error) {
       console.log('❌ Erro ao carregar performance:', error);
@@ -303,14 +327,11 @@ export default function Dashboard() {
     // Salvar no localStorage
     localStorage.setItem(`performance_${user.id}`, JSON.stringify(config));
     
-    // Atualizar estado
+    // Atualizar apenas os campos manuais (os automáticos já foram carregados)
     setPerformance(prev => ({
       ...prev,
       initialBalance: config.initialBalance,
-      currentBalance: config.currentBalance,
       totalDeposits: config.totalDeposits,
-      totalTrades: config.totalTrades,
-      winRate: config.winRate,
       tradingDays: config.tradingDays,
     }));
     
@@ -550,6 +571,9 @@ export default function Dashboard() {
                       <p className="text-xs text-muted-foreground">
                         Ganho total: ${performance.totalProfit.toFixed(2)}
                       </p>
+                      <p className="text-xs text-green-600">
+                        Saldo Deriv: ${performance.currentBalance.toFixed(2)}
+                      </p>
                       {performance.totalDeposits > 0 && (
                         <p className="text-xs text-blue-600">
                           Depósitos: ${performance.totalDeposits.toFixed(2)}
@@ -588,15 +612,26 @@ export default function Dashboard() {
                         </div>
                       )}
                       
-                      {/* Botão para reconfigurar */}
-                      <div className="mt-3 pt-2 border-t border-gray-200">
+                      {/* Botões de ação */}
+                      <div className="mt-3 pt-2 border-t border-gray-200 space-y-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => {
+                            fetchDerivBalance();
+                            fetchTradingHistory();
+                          }}
+                          className="w-full text-xs"
+                        >
+                          🔄 Atualizar da Deriv
+                        </Button>
                         <Button 
                           variant="outline" 
                           size="sm" 
                           onClick={() => setShowConfigForm(true)}
                           className="w-full text-xs"
                         >
-                          Configurar Performance
+                          ⚙️ Configurar Performance
                         </Button>
                       </div>
                     </>
