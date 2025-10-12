@@ -1003,6 +1003,24 @@ export default function BotInterface() {
       }
 
       // ===== FUNÇÕES PRINCIPAIS DO BOT =====
+      
+      // ✅ NOVA FUNÇÃO: Buscar dados históricos da Deriv
+      function loadHistoricalData(websocket, symbol) {
+        addLog(\`📊 Buscando dados históricos de \${symbol}...\`);
+        
+        // Solicitar 300 ticks históricos (suficiente para todos os indicadores)
+        const historyRequest = {
+          ticks_history: symbol,
+          adjust_start_time: 1,
+          count: 300,
+          end: "latest",
+          start: 1,
+          style: "ticks"
+        };
+        
+        websocket.send(JSON.stringify(historyRequest));
+      }
+      
       function startBot() {
         // ✅ VERIFICAR LICENÇA ANTES DE INICIAR
         if (!window.isLicenseValid) {
@@ -1139,9 +1157,41 @@ export default function BotInterface() {
               }
             }
             
+            // ✅ NOVO: Buscar dados históricos ANTES de subscrever ticks
+            loadHistoricalData(websocket, symbol);
+            
             websocket.send(JSON.stringify({ balance: 1, subscribe: 1 }));
             websocket.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
             addLog(\`📊 Monitorando: \${symbol}\`);
+          }
+
+          // ✅ NOVO: Processar dados históricos
+          if (data.msg_type === "history") {
+            const prices = data.history?.prices || [];
+            const times = data.history?.times || [];
+            
+            if (prices.length > 0) {
+              // Preencher priceData com dados históricos
+              priceData = [];
+              volumeData = [];
+              
+              for (let i = 0; i < prices.length; i++) {
+                priceData.push({
+                  high: prices[i],
+                  low: prices[i],
+                  close: prices[i],
+                  timestamp: times[i]
+                });
+                volumeData.push(1); // Volume padrão para ticks
+              }
+              
+              addLog(\`✅ \${priceData.length} ticks históricos carregados!\`);
+              addLog(\`📊 Indicadores prontos: MHI(\${mhiPeriods}) EMA(\${emaFast}/\${emaSlow}) RSI(\${rsiPeriods}) Fibonacci(50/200)\`);
+              updateDataCount();
+              document.getElementById("status").innerText = "✅ Pronto para operar";
+            } else {
+              addLog("⚠️ Nenhum dado histórico recebido");
+            }
           }
 
           if (data.msg_type === "balance") {
@@ -1658,40 +1708,40 @@ export default function BotInterface() {
       }
 
       function calculateFinalSignal(signals, fibonacciAnalysis) {
-        // ✅ SISTEMA DE PONTUAÇÃO HIERÁRQUICO - Evita conflitos
-        let callPoints = 0, putPoints = 0;
+        // ✅ SISTEMA DE PONTUAÇÃO POR CONFLUÊNCIA (0-100 pontos)
+        let callScore = 0, putScore = 0;
         
-        // 🥇 PRIORIDADE 1: TENDÊNCIA (peso maior - 2 pontos)
-        if (signals.trend === "CALL") callPoints += 2;
-        else if (signals.trend === "PUT") putPoints += 2;
+        // 🎯 PESO 1: TENDÊNCIA (40 pontos) - MHI + EMA
+        if (signals.trend === "CALL") callScore += 40;
+        else if (signals.trend === "PUT") putScore += 40;
         
-        // 🥈 PRIORIDADE 2: FIBONACCI (zonas de entrada - 2 pontos)
-        if (signals.fibonacci === "CALL") callPoints += 2;
-        else if (signals.fibonacci === "PUT") putPoints += 2;
+        // 🎯 PESO 2: FIBONACCI (25 pontos) - Zonas de entrada
+        if (signals.fibonacci === "CALL") callScore += 25;
+        else if (signals.fibonacci === "PUT") putScore += 25;
         
-        // 🥉 PRIORIDADE 3: BOLLINGER (confirmação timing - 1 ponto)
-        if (signals.bollinger === "CALL") callPoints += 1;
-        else if (signals.bollinger === "PUT") putPoints += 1;
+        // 🎯 PESO 3: BOLLINGER (20 pontos) - Confirmação de timing
+        if (signals.bollinger === "CALL") callScore += 20;
+        else if (signals.bollinger === "PUT") putScore += 20;
         
-        // 🏅 PRIORIDADE 4: RSI (filtro adicional - 1 ponto)
-        if (signals.rsi === "CALL") callPoints += 1;
-        else if (signals.rsi === "PUT") putPoints += 1;
+        // 🎯 PESO 4: RSI (15 pontos) - Filtro adicional
+        if (signals.rsi === "CALL") callScore += 15;
+        else if (signals.rsi === "PUT") putScore += 15;
         
-        // ✅ REGRA: Mínimo 4 pontos para operar (confluência forte)
-        const MIN_POINTS = 4;
+        // ✅ SCORE MÍNIMO: 80 pontos para operar (confluência forte)
+        const MIN_SCORE = 80;
         
-        if (callPoints >= MIN_POINTS && callPoints > putPoints) {
-          addLog(\`✅ Confluência CALL: \${callPoints} pontos (Tendência:\${signals.trend === "CALL" ? "✓" : "✗"} Fib:\${signals.fibonacci === "CALL" ? "✓" : "✗"} BB:\${signals.bollinger === "CALL" ? "✓" : "✗"} RSI:\${signals.rsi === "CALL" ? "✓" : "✗"})\`);
+        if (callScore >= MIN_SCORE && callScore > putScore) {
+          addLog(\`✅ CALL Score: \${callScore}/100 (Tendência:\${signals.trend === "CALL" ? "40" : "0"} + Fib:\${signals.fibonacci === "CALL" ? "25" : "0"} + BB:\${signals.bollinger === "CALL" ? "20" : "0"} + RSI:\${signals.rsi === "CALL" ? "15" : "0"})\`);
           return "CALL";
         }
         
-        if (putPoints >= MIN_POINTS && putPoints > callPoints) {
-          addLog(\`✅ Confluência PUT: \${putPoints} pontos (Tendência:\${signals.trend === "PUT" ? "✓" : "✗"} Fib:\${signals.fibonacci === "PUT" ? "✓" : "✗"} BB:\${signals.bollinger === "PUT" ? "✓" : "✗"} RSI:\${signals.rsi === "PUT" ? "✓" : "✗"})\`);
+        if (putScore >= MIN_SCORE && putScore > callScore) {
+          addLog(\`✅ PUT Score: \${putScore}/100 (Tendência:\${signals.trend === "PUT" ? "40" : "0"} + Fib:\${signals.fibonacci === "PUT" ? "25" : "0"} + BB:\${signals.bollinger === "PUT" ? "20" : "0"} + RSI:\${signals.rsi === "PUT" ? "15" : "0"})\`);
           return "PUT";
         }
         
-        // ⚠️ Sem confluência suficiente
-        addLog(\`⚠️ Sem confluência: CALL=\${callPoints}pts PUT=\${putPoints}pts (mínimo: \${MIN_POINTS}pts)\`);
+        // ⚠️ Score insuficiente
+        addLog(\`⚠️ Score insuficiente: CALL=\${callScore} PUT=\${putScore} (mínimo: \${MIN_SCORE})\`);
         return "NEUTRO";
       }
 
