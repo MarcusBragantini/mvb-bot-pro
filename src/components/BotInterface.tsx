@@ -1709,34 +1709,31 @@ export default function BotInterface() {
 
       function calculateFinalSignal(signals, fibonacciAnalysis) {
         // ✅ SISTEMA DE PONTUAÇÃO POR CONFLUÊNCIA (0-100 pontos)
+        // ❌ FIBONACCI DESATIVADO - Pesos redistribuídos
         let callScore = 0, putScore = 0;
         
-        // 🎯 PESO 1: TENDÊNCIA (40 pontos) - MHI + EMA
-        if (signals.trend === "CALL") callScore += 40;
-        else if (signals.trend === "PUT") putScore += 40;
+        // 🎯 PESO 1: TENDÊNCIA (50 pontos) - MHI + EMA (aumentado)
+        if (signals.trend === "CALL") callScore += 50;
+        else if (signals.trend === "PUT") putScore += 50;
         
-        // 🎯 PESO 2: FIBONACCI (25 pontos) - Zonas de entrada
-        if (signals.fibonacci === "CALL") callScore += 25;
-        else if (signals.fibonacci === "PUT") putScore += 25;
+        // 🎯 PESO 2: BOLLINGER (30 pontos) - Confirmação de timing (aumentado)
+        if (signals.bollinger === "CALL") callScore += 30;
+        else if (signals.bollinger === "PUT") putScore += 30;
         
-        // 🎯 PESO 3: BOLLINGER (20 pontos) - Confirmação de timing
-        if (signals.bollinger === "CALL") callScore += 20;
-        else if (signals.bollinger === "PUT") putScore += 20;
+        // 🎯 PESO 3: RSI (20 pontos) - Filtro adicional (aumentado)
+        if (signals.rsi === "CALL") callScore += 20;
+        else if (signals.rsi === "PUT") putScore += 20;
         
-        // 🎯 PESO 4: RSI (15 pontos) - Filtro adicional
-        if (signals.rsi === "CALL") callScore += 15;
-        else if (signals.rsi === "PUT") putScore += 15;
-        
-        // ✅ SCORE MÍNIMO: 80 pontos para operar (confluência forte)
-        const MIN_SCORE = 80;
+        // ✅ SCORE MÍNIMO: 70 pontos para operar (ajustado sem Fibonacci)
+        const MIN_SCORE = 70;
         
         if (callScore >= MIN_SCORE && callScore > putScore) {
-          addLog(\`✅ CALL Score: \${callScore}/100 (Tendência:\${signals.trend === "CALL" ? "40" : "0"} + Fib:\${signals.fibonacci === "CALL" ? "25" : "0"} + BB:\${signals.bollinger === "CALL" ? "20" : "0"} + RSI:\${signals.rsi === "CALL" ? "15" : "0"})\`);
+          addLog(\`✅ CALL Score: \${callScore}/100 (Tendência:\${signals.trend === "CALL" ? "50" : "0"} + BB:\${signals.bollinger === "CALL" ? "30" : "0"} + RSI:\${signals.rsi === "CALL" ? "20" : "0"})\`);
           return "CALL";
         }
         
         if (putScore >= MIN_SCORE && putScore > callScore) {
-          addLog(\`✅ PUT Score: \${putScore}/100 (Tendência:\${signals.trend === "PUT" ? "40" : "0"} + Fib:\${signals.fibonacci === "PUT" ? "25" : "0"} + BB:\${signals.bollinger === "PUT" ? "20" : "0"} + RSI:\${signals.rsi === "PUT" ? "15" : "0"})\`);
+          addLog(\`✅ PUT Score: \${putScore}/100 (Tendência:\${signals.trend === "PUT" ? "50" : "0"} + BB:\${signals.bollinger === "PUT" ? "30" : "0"} + RSI:\${signals.rsi === "PUT" ? "20" : "0"})\`);
           return "PUT";
         }
         
@@ -1777,15 +1774,15 @@ export default function BotInterface() {
       }
 
       function updateSignalsDisplay(signals, confidence) {
-        // ❌ DESABILITADOS - MHI e EMA
+        // ❌ DESABILITADOS - MHI, EMA e FIBONACCI
         document.getElementById("mhiSignal").textContent = "OFF";
         document.getElementById("emaSignal").textContent = "OFF";
+        document.getElementById("fibonacciSignal").textContent = "OFF";
         
-        // ✅ ATIVOS - Tendência, RSI, Bollinger e FIBONACCI
+        // ✅ ATIVOS - Tendência, RSI e Bollinger
         document.getElementById("trendSignal").textContent = signals.trend || "-";
         document.getElementById("rsiValue").textContent = signals.rsi || "-";
         document.getElementById("bollingerSignal").textContent = signals.bollinger || "-";
-        document.getElementById("fibonacciSignal").textContent = signals.fibonacci || "-";
         document.getElementById("confidenceValue").textContent = confidence ? \`\${confidence}%\` : "-";
         document.getElementById("finalSignal").textContent = signals.final || "-";
       }
