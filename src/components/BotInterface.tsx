@@ -971,6 +971,7 @@ export default function BotInterface() {
       let isTrading = false;
       let lastTradeTime = 0;
       let minTradeInterval = 60000;
+      let autoCloseTimer = null; // ✅ NOVO: Timer para fechamento automático em 30 segundos
 
       const WEBSOCKET_ENDPOINTS = [
         "wss://ws.binaryws.com/websockets/v3",
@@ -1494,9 +1495,26 @@ export default function BotInterface() {
 
         websocket.send(JSON.stringify(proposal));
         document.getElementById("status").innerText = \`🚀 \${signal} - $\${currentStake}\`;
+        
+        // ✅ NOVO: Fechamento automático em 30 segundos
+        if (autoCloseTimer) {
+          clearTimeout(autoCloseTimer);
+        }
+        
+        autoCloseTimer = setTimeout(() => {
+          addLog("⏰ Fechando trade automaticamente após 30 segundos...");
+          // Enviar comando para fechar o trade
+          websocket.send(JSON.stringify({ sell: 1, price: 0 }));
+        }, 30000); // 30 segundos
       }
 
       function handleTradeResult(contract) {
+        // ✅ NOVO: Limpar timer de fechamento automático se trade foi finalizado
+        if (autoCloseTimer) {
+          clearTimeout(autoCloseTimer);
+          autoCloseTimer = null;
+        }
+        
         const tradeProfit = contract.profit;
         const finalSignal = document.getElementById("finalSignal").textContent;
         const confidence = document.getElementById("confidenceValue").textContent.replace('%', '') || "0";
