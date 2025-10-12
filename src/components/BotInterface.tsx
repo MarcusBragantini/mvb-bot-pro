@@ -616,6 +616,10 @@ export default function BotInterface() {
               <div class="indicator-value" id="rsiValue" style="font-weight: bold; font-size: 1rem;">-</div>
             </div>
             <div class="indicator-card" style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
+              <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 4px;">Bollinger</div>
+              <div class="indicator-value" id="bollingerSignal" style="font-weight: bold; font-size: 1rem;">-</div>
+            </div>
+            <div class="indicator-card" style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
               <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 4px;">Confiança</div>
               <div class="indicator-value" id="confidenceValue" style="font-weight: bold; font-size: 1rem;">-</div>
             </div>
@@ -1211,7 +1215,7 @@ export default function BotInterface() {
 
       function analyzeSignals(prices, volumes) {
         try {
-          if (!prices || prices.length < Math.max(mhiPeriods, emaSlow, rsiPeriods)) {
+          if (!prices || prices.length < Math.max(mhiPeriods, emaSlow, rsiPeriods, 20)) {
             return null;
           }
           
@@ -1254,11 +1258,32 @@ export default function BotInterface() {
             rsiSignal = "PUT";
           }
           
+          // ✅ BANDAS DE BOLLINGER - NOVO
+          const bollingerBands = calculateBollingerBands(prices, 20, 2);
+          let bollingerSignal = "NEUTRO";
+          
+          if (bollingerBands) {
+            const { upper, middle, lower } = bollingerBands;
+            
+            // Sinal CALL: Preço toca banda inferior (sobrevenda)
+            if (currentPrice <= lower) {
+              bollingerSignal = "CALL";
+            }
+            // Sinal PUT: Preço toca banda superior (sobrecompra)
+            else if (currentPrice >= upper) {
+              bollingerSignal = "PUT";
+            }
+            // Sinal NEUTRO: Preço entre as bandas
+            
+            addLog(\`📊 Bollinger: Upper=\${upper.toFixed(5)}, Middle=\${middle.toFixed(5)}, Lower=\${lower.toFixed(5)}, Price=\${currentPrice.toFixed(5)}\`);
+          }
+          
           const signals = {
             mhi: mhiSignal,
             trend: trendSignal,
             ema: currentPrice > emaFastValue ? "CALL" : "PUT",
             rsi: rsiSignal,
+            bollinger: bollingerSignal, // ✅ NOVO
             volume: "NEUTRO"
           };
           
@@ -1301,8 +1326,52 @@ export default function BotInterface() {
         return 100 - (100 / (1 + rs));
       }
 
+      // ✅ BANDAS DE BOLLINGER - NOVA FUNÇÃO
+      function calculateBollingerBands(prices, period = 20, stdDev = 2) {
+        if (prices.length < period) return null;
+        
+        try {
+          // Pegar os últimos 'period' preços de fechamento
+          const recentPrices = prices.slice(-period).map(candle => candle.close);
+          
+          // Calcular média móvel simples (SMA)
+          const sma = recentPrices.reduce((sum, price) => sum + price, 0) / period;
+          
+          // Calcular desvio padrão
+          const variance = recentPrices.reduce((sum, price) => {
+            return sum + Math.pow(price - sma, 2);
+          }, 0) / period;
+          
+          const standardDeviation = Math.sqrt(variance);
+          
+          // Calcular as bandas
+          const upperBand = sma + (stdDev * standardDeviation);
+          const middleBand = sma;
+          const lowerBand = sma - (stdDev * standardDeviation);
+          
+          return {
+            upper: upperBand,
+            middle: middleBand,
+            lower: lowerBand,
+            sma: sma,
+            stdDev: standardDeviation
+          };
+        } catch (error) {
+          addLog(\`❌ Erro no cálculo Bollinger: \${error.message}\`);
+          return null;
+        }
+      }
+
       function calculateFinalSignal(signals) {
-        const weights = { mhi: 0.3, trend: 0.3, ema: 0.2, rsi: 0.2, volume: 0.0 };
+        // ✅ PESOS ATUALIZADOS - Incluindo Bollinger
+        const weights = { 
+          mhi: 0.25, 
+          trend: 0.25, 
+          ema: 0.15, 
+          rsi: 0.15, 
+          bollinger: 0.20, // ✅ NOVO - Peso importante para Bollinger
+          volume: 0.0 
+        };
         let callScore = 0, putScore = 0;
         
         Object.keys(signals).forEach(key => {
@@ -1310,8 +1379,9 @@ export default function BotInterface() {
           else if (signals[key] === "PUT") putScore += weights[key] || 0;
         });
         
-        if (callScore > putScore && callScore > 0.4) return "CALL";
-        if (putScore > callScore && putScore > 0.4) return "PUT";
+        // ✅ THRESHOLD REDUZIDO - Bollinger melhora a precisão
+        if (callScore > putScore && callScore > 0.35) return "CALL";
+        if (putScore > callScore && putScore > 0.35) return "PUT";
         return "NEUTRO";
       }
 
@@ -1330,6 +1400,8 @@ export default function BotInterface() {
         document.getElementById("trendSignal").textContent = signals.trend || "-";
         document.getElementById("emaSignal").textContent = signals.ema || "-";
         document.getElementById("rsiValue").textContent = signals.rsi || "-";
+        // ✅ NOVO - Exibir sinal das Bandas de Bollinger
+        document.getElementById("bollingerSignal").textContent = signals.bollinger || "-";
         document.getElementById("confidenceValue").textContent = confidence ? \`\${confidence}%\` : "-";
         document.getElementById("finalSignal").textContent = signals.final || "-";
       }
