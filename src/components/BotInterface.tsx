@@ -1117,6 +1117,13 @@ export default function BotInterface() {
               accountType = 'DEMO';
             }
             
+            // ✅ CORREÇÃO: Atualizar interface para refletir o tipo de conta detectado
+            const detectedTokenType = accountType === 'DEMO' ? 'demo' : 'real';
+            if (settings.selectedTokenType !== detectedTokenType) {
+              updateSetting('selectedTokenType', detectedTokenType);
+              addLog(\`🔄 Tipo de conta detectado: \${accountType} - Interface atualizada\`);
+            }
+            
             document.getElementById("balance").innerText = balance;
             addLog(\`💰 Saldo: $\${balance} \${currency} (Conta \${accountType})\`);
             
