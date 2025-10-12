@@ -205,6 +205,16 @@ module.exports = async function handler(req, res) {
           const brazilTime = new Date(now.getTime() - (3 * 60 * 60 * 1000)); // UTC-3
           const expiresAt = new Date(license.expires_at);
           const minutesRemaining = Math.floor((expiresAt - brazilTime) / (1000 * 60));
+          
+          // LOGS DETALHADOS PARA DEBUG
+          console.log('🔍 DEBUG - Validação Licença FREE:');
+          console.log('  📅 Agora (UTC):', now.toISOString());
+          console.log('  🇧🇷 Brasil (UTC-3):', brazilTime.toISOString());
+          console.log('  🎯 Expira (do banco):', license.expires_at);
+          console.log('  🎯 Expira (Date):', expiresAt.toISOString());
+          console.log('  ⏱️ Minutos restantes:', minutesRemaining);
+          console.log('  ✅ Válida?', minutesRemaining > 0);
+          
           license.days_remaining = minutesRemaining; // Pode ser negativo se expirada
         }
       }

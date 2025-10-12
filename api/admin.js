@@ -261,12 +261,29 @@ module.exports = async function handler(req, res) {
       const brazilTime = new Date(now.getTime() - (3 * 60 * 60 * 1000)); // UTC-3
       const expiresAt = new Date(brazilTime);
       
+      // LOGS DETALHADOS PARA DEBUG
+      console.log('🕐 DEBUG - Criação de Licença:');
+      console.log('  📅 Agora (UTC):', now.toISOString());
+      console.log('  🇧🇷 Brasil (UTC-3):', brazilTime.toISOString());
+      console.log('  📝 Tipo:', license_type);
+      console.log('  ⏱️ Duração:', duration_days, 'minutos/dias');
+      
       // Para licenças "free" (teste), usar minutos. Para outras, usar dias
       if (license_type === 'free') {
+        const beforeMinutes = expiresAt.getMinutes();
         expiresAt.setMinutes(expiresAt.getMinutes() + parseInt(duration_days)); // duration_days = minutos para "free"
+        console.log('  🆓 Licença FREE:');
+        console.log('    ⏰ Minutos antes:', beforeMinutes);
+        console.log('    ➕ Adicionando:', parseInt(duration_days), 'minutos');
+        console.log('    ⏰ Minutos depois:', expiresAt.getMinutes());
       } else {
         expiresAt.setDate(expiresAt.getDate() + parseInt(duration_days));
+        console.log('  📅 Licença Normal:');
+        console.log('    ➕ Adicionando:', parseInt(duration_days), 'dias');
       }
+      
+      console.log('  🎯 Expira em (UTC):', expiresAt.toISOString());
+      console.log('  🎯 Expira em (Brasil):', new Date(expiresAt.getTime() + (3 * 60 * 60 * 1000)).toISOString());
 
       const [result] = await connection.execute(
         `INSERT INTO licenses (user_id, license_key, license_type, expires_at, max_devices, is_active, created_at, updated_at)
