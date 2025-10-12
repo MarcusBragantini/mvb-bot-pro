@@ -150,6 +150,7 @@ module.exports = async function handler(req, res) {
           CASE 
             WHEN l.id IS NULL THEN 'sem_licenca'
             WHEN l.expires_at <= NOW() THEN 'expirada'
+            WHEN l.license_type = 'free' AND TIMESTAMPDIFF(MINUTE, NOW(), l.expires_at) <= 5 THEN 'expirando'
             WHEN DATEDIFF(l.expires_at, NOW()) <= 7 THEN 'expirando'
             ELSE 'ativa'
           END as license_status
@@ -167,6 +168,16 @@ module.exports = async function handler(req, res) {
         ) l ON u.id = l.user_id
         ORDER BY u.created_at DESC
       `);
+
+      // Ajustar cálculo de tempo para licenças "free"
+      for (let user of users) {
+        if (user.license_type === 'free' && user.expires_at) {
+          const now = new Date();
+          const expiresAt = new Date(user.expires_at);
+          const minutesRemaining = Math.floor((expiresAt - now) / (1000 * 60));
+          user.days_remaining = minutesRemaining; // Usar para minutos
+        }
+      }
 
       return res.status(200).json(users);
     }
