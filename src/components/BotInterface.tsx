@@ -972,6 +972,7 @@ export default function BotInterface() {
       let lastTradeTime = 0;
       let minTradeInterval = 60000;
       let autoCloseTimer = null; // ✅ NOVO: Timer para fechamento automático em 30 segundos
+      let currentContractId = null; // ✅ NOVO: ID do contrato atual para fechamento
 
       const WEBSOCKET_ENDPOINTS = [
         "wss://ws.binaryws.com/websockets/v3",
@@ -1214,6 +1215,10 @@ export default function BotInterface() {
             }
             
             addLog(\`✅ Contrato ID: \${data.buy.contract_id}\`);
+            
+            // ✅ NOVO: Salvar contract_id para fechamento automático
+            currentContractId = data.buy.contract_id;
+            
             websocket.send(JSON.stringify({ 
               proposal_open_contract: 1, 
               subscribe: 1, 
@@ -1502,9 +1507,16 @@ export default function BotInterface() {
         }
         
         autoCloseTimer = setTimeout(() => {
-          addLog("⏰ Fechando trade automaticamente após 30 segundos...");
-          // Enviar comando para fechar o trade
-          websocket.send(JSON.stringify({ sell: 1, price: 0 }));
+          if (currentContractId) {
+            addLog("⏰ Fechando trade automaticamente após 30 segundos...");
+            // Enviar comando para fechar o trade com contract_id específico
+            websocket.send(JSON.stringify({ 
+              sell: currentContractId, 
+              price: 0 
+            }));
+          } else {
+            addLog("⚠️ Não foi possível fechar trade - Contract ID não encontrado");
+          }
         }, 30000); // 30 segundos
       }
 
@@ -1514,6 +1526,9 @@ export default function BotInterface() {
           clearTimeout(autoCloseTimer);
           autoCloseTimer = null;
         }
+        
+        // ✅ NOVO: Limpar contract_id atual
+        currentContractId = null;
         
         const tradeProfit = contract.profit;
         const finalSignal = document.getElementById("finalSignal").textContent;
