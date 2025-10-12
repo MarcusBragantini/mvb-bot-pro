@@ -118,7 +118,9 @@ export default function BotInterface() {
     mhiPeriods: 20,
     emaFast: 8,
     emaSlow: 18,
-    rsiPeriods: 10
+    rsiPeriods: 10,
+    // ✅ NOVO: Tempo de fechamento automático ajustável
+    autoCloseTime: 30 // segundos
   });
   
   // ===== REFS PARA INTEGRAÇÃO COM CÓDIGO ORIGINAL =====
@@ -585,7 +587,12 @@ export default function BotInterface() {
     if (rsiPeriodsInput && settings.rsiPeriods) {
       rsiPeriodsInput.value = String(settings.rsiPeriods);
     }
-  }, [settings.duration, settings.stake, settings.martingale, settings.stopWin, settings.stopLoss, settings.confidence, settings.mhiPeriods, settings.emaFast, settings.emaSlow, settings.rsiPeriods]);
+
+    const autoCloseTimeInput = document.getElementById('autoCloseTime') as HTMLInputElement;
+    if (autoCloseTimeInput && settings.autoCloseTime) {
+      autoCloseTimeInput.value = String(settings.autoCloseTime);
+    }
+  }, [settings.duration, settings.stake, settings.martingale, settings.stopWin, settings.stopLoss, settings.confidence, settings.mhiPeriods, settings.emaFast, settings.emaSlow, settings.rsiPeriods, settings.autoCloseTime]);
 
   // ===== FUNÇÃO PARA INICIALIZAR O BOT ORIGINAL =====
   const initializeOriginalBot = () => {
@@ -746,6 +753,7 @@ export default function BotInterface() {
           <input type="number" id="emaFast" value="${settings.emaFast || 8}" min="5" max="20">
           <input type="number" id="emaSlow" value="${settings.emaSlow || 18}" min="15" max="50">
           <input type="number" id="rsiPeriods" value="${settings.rsiPeriods || 10}" min="7" max="21">
+          <input type="number" id="autoCloseTime" value="${settings.autoCloseTime || 30}" min="10" max="300">
         </div>
       </div>
     `;
@@ -776,7 +784,8 @@ export default function BotInterface() {
           mhiPeriods: document.getElementById('mhiPeriods').value,
           emaFast: document.getElementById('emaFast').value,
           emaSlow: document.getElementById('emaSlow').value,
-          rsiPeriods: document.getElementById('rsiPeriods').value
+          rsiPeriods: document.getElementById('rsiPeriods').value,
+          autoCloseTime: document.getElementById('autoCloseTime').value
         };
         
         // ✅ CORREÇÃO: Salvar com chave específica do usuário
@@ -1508,7 +1517,7 @@ export default function BotInterface() {
         
         autoCloseTimer = setTimeout(() => {
           if (currentContractId) {
-            addLog("⏰ Fechando trade automaticamente após 30 segundos...");
+            addLog(\`⏰ Fechando trade automaticamente após \${settings.autoCloseTime} segundos...\`);
             // Enviar comando para fechar o trade com contract_id específico
             websocket.send(JSON.stringify({ 
               sell: currentContractId, 
@@ -1517,7 +1526,7 @@ export default function BotInterface() {
           } else {
             addLog("⚠️ Não foi possível fechar trade - Contract ID não encontrado");
           }
-        }, 30000); // 30 segundos
+        }, settings.autoCloseTime * 1000); // Tempo configurável em segundos
       }
 
       function handleTradeResult(contract) {
@@ -2153,6 +2162,25 @@ export default function BotInterface() {
                               updateSetting('rsiPeriods', value);
                             }}
                           />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="autoclose-setting" className="text-sm font-medium">Fechamento Automático (segundos)</Label>
+                          <Input
+                            id="autoclose-setting"
+                            type="number"
+                            min="10"
+                            max="300"
+                            value={settings.autoCloseTime || 30}
+                            className="mt-1"
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 30;
+                              updateSetting('autoCloseTime', value);
+                            }}
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Tempo para fechar trade automaticamente (10-300 segundos)
+                          </p>
                         </div>
                       </CardContent>
                     </Card>
