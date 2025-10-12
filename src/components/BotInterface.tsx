@@ -391,8 +391,13 @@ export default function BotInterface() {
 
     loadUserLicenses();
     
-    // ✅ NOVO: Verificar licença a cada 30 segundos para bloquear quando expirar
-    const licenseCheckInterval = setInterval(loadUserLicenses, 30000);
+    // ✅ NOVO: Verificar licença a cada 60 segundos (menos frequente para evitar problemas)
+    const licenseCheckInterval = setInterval(() => {
+      // Só verificar se não estiver carregando para evitar conflitos
+      if (!loading) {
+        loadUserLicenses();
+      }
+    }, 60000); // 60 segundos em vez de 30
     
     return () => clearInterval(licenseCheckInterval);
   }, [isAuthenticated, user, toast]);

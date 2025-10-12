@@ -343,6 +343,98 @@ module.exports = async function handler(req, res) {
 
     return res.status(400).json({ error: 'Ação inválida' });
 
+    // ===== DERIV BALANCE =====
+    if (action === 'deriv_balance') {
+      if (req.method === 'GET') {
+        const { user_id } = req.query;
+
+        if (!user_id) {
+          return res.status(400).json({ error: 'user_id é obrigatório' });
+        }
+
+        try {
+          // Buscar saldo da Deriv do usuário
+          const [rows] = await connection.execute(`
+            SELECT 
+              deriv_balance,
+              deriv_updated_at
+            FROM user_deriv_account 
+            WHERE user_id = ?
+          `, [user_id]);
+
+          if (rows.length === 0) {
+            // Se não há dados, retornar valor padrão
+            return res.status(200).json({ 
+              balance: "0.00",
+              message: "Nenhum saldo da Deriv encontrado. Configure sua conta Deriv."
+            });
+          }
+
+          return res.status(200).json({ 
+            balance: rows[0].deriv_balance,
+            updated_at: rows[0].deriv_updated_at
+          });
+        } catch (error) {
+          console.error('Erro ao buscar saldo da Deriv:', error);
+          return res.status(500).json({ error: 'Erro interno do servidor' });
+        }
+      }
+    }
+
+    // ===== TRADING HISTORY =====
+    if (action === 'trading_history') {
+      if (req.method === 'GET') {
+        const { user_id } = req.query;
+
+        if (!user_id) {
+          return res.status(400).json({ error: 'user_id é obrigatório' });
+        }
+
+        try {
+          // Buscar histórico de trades do usuário
+          const [rows] = await connection.execute(`
+            SELECT 
+              id,
+              trade_type,
+              profit,
+              created_at,
+              status
+            FROM user_trades 
+            WHERE user_id = ?
+            ORDER BY created_at DESC
+            LIMIT 1000
+          `, [user_id]);
+
+          // Se não há trades, retornar array vazio
+          if (rows.length === 0) {
+            return res.status(200).json({ 
+              trades: [],
+              message: "Nenhum trade encontrado. Configure seu histórico de trading."
+            });
+          }
+
+          // Processar trades para calcular estatísticas
+          const trades = rows.map(trade => ({
+            id: trade.id,
+            type: trade.trade_type,
+            profit: parseFloat(trade.profit) || 0,
+            created_at: trade.created_at,
+            status: trade.status
+          }));
+
+          return res.status(200).json({ 
+            trades: trades,
+            total_trades: trades.length,
+            winning_trades: trades.filter(t => t.profit > 0).length,
+            total_profit: trades.reduce((sum, t) => sum + t.profit, 0)
+          });
+        } catch (error) {
+          console.error('Erro ao buscar histórico de trading:', error);
+          return res.status(500).json({ error: 'Erro interno do servidor' });
+        }
+      }
+    }
+
   } catch (error) {
     console.error('❌ Erro na API de dados:', error);
     return res.status(500).json({ 
