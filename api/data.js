@@ -341,8 +341,6 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    return res.status(400).json({ error: 'Ação inválida' });
-
     // ===== DERIV BALANCE =====
     if (action === 'deriv_balance') {
       if (req.method === 'GET') {
@@ -452,6 +450,9 @@ module.exports = async function handler(req, res) {
         }
       }
     }
+
+    // Se nenhuma ação foi processada, retornar erro
+    return res.status(400).json({ error: 'Ação inválida' });
 
   } catch (error) {
     console.error('❌ Erro na API de dados:', error);
