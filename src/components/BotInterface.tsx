@@ -120,7 +120,9 @@ export default function BotInterface() {
     emaSlow: 18,
     rsiPeriods: 10,
     // ✅ NOVO: Tempo de fechamento automático ajustável
-    autoCloseTime: 30 // segundos
+    autoCloseTime: 30, // segundos
+    // ✅ NOVO: Percentual de lucro para fechamento automático
+    autoCloseProfit: 30 // percentual
   });
   
   // ===== REFS PARA INTEGRAÇÃO COM CÓDIGO ORIGINAL =====
@@ -592,7 +594,12 @@ export default function BotInterface() {
     if (autoCloseTimeInput && settings.autoCloseTime) {
       autoCloseTimeInput.value = String(settings.autoCloseTime);
     }
-  }, [settings.duration, settings.stake, settings.martingale, settings.stopWin, settings.stopLoss, settings.confidence, settings.mhiPeriods, settings.emaFast, settings.emaSlow, settings.rsiPeriods, settings.autoCloseTime]);
+
+    const autoCloseProfitInput = document.getElementById('autoCloseProfit') as HTMLInputElement;
+    if (autoCloseProfitInput && settings.autoCloseProfit) {
+      autoCloseProfitInput.value = String(settings.autoCloseProfit);
+    }
+  }, [settings.duration, settings.stake, settings.martingale, settings.stopWin, settings.stopLoss, settings.confidence, settings.mhiPeriods, settings.emaFast, settings.emaSlow, settings.rsiPeriods, settings.autoCloseTime, settings.autoCloseProfit]);
 
   // ===== FUNÇÃO PARA INICIALIZAR O BOT ORIGINAL =====
   const initializeOriginalBot = () => {
@@ -758,6 +765,7 @@ export default function BotInterface() {
           <input type="number" id="emaSlow" value="${settings.emaSlow || 18}" min="15" max="50">
           <input type="number" id="rsiPeriods" value="${settings.rsiPeriods || 11}" min="7" max="21">
           <input type="number" id="autoCloseTime" value="${settings.autoCloseTime || 30}" min="10" max="300">
+          <input type="number" id="autoCloseProfit" value="${settings.autoCloseProfit || 30}" min="5" max="100">
         </div>
       </div>
     `;
@@ -789,7 +797,8 @@ export default function BotInterface() {
           emaFast: document.getElementById('emaFast').value,
           emaSlow: document.getElementById('emaSlow').value,
           rsiPeriods: document.getElementById('rsiPeriods').value,
-          autoCloseTime: document.getElementById('autoCloseTime').value
+          autoCloseTime: document.getElementById('autoCloseTime').value,
+          autoCloseProfit: document.getElementById('autoCloseProfit').value
         };
         
         // ✅ CORREÇÃO: Salvar com chave específica do usuário
@@ -2360,6 +2369,28 @@ export default function BotInterface() {
                               updateSetting('stopLoss', value);
                             }}
                           />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="autocloseprofit-setting" className="text-sm font-medium">
+                            💰 Percentual de Fechamento (%)
+                          </Label>
+                          <Input
+                            id="autocloseprofit-setting"
+                            type="number"
+                            min="5"
+                            max="100"
+                            step="5"
+                            value={settings.autoCloseProfit}
+                            className="mt-1"
+                            onChange={(e) => {
+                              const value = parseFloat(e.target.value) || 30;
+                              updateSetting('autoCloseProfit', value);
+                            }}
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Fecha automaticamente ao atingir este percentual de lucro
+                          </p>
                         </div>
                         
                         <div>
