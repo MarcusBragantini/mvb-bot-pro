@@ -1312,8 +1312,8 @@ export default function BotInterface() {
               }
               
               // ✅ FECHAR APENAS se lucro >= 30%
-              if (profitPercentage >= 40) {
-                addLog(\`🎯 META ATINGIDA! Lucro de \${profitPercentage.toFixed(1)}% >= 40% - Fechando trade!\`);
+              if (profitPercentage >= 30) {
+                addLog(\`🎯 META ATINGIDA! Lucro de \${profitPercentage.toFixed(1)}% >= 30% - Fechando trade!\`);
                 
                 // Fechar o trade
                 websocket.send(JSON.stringify({ 
