@@ -988,6 +988,8 @@ export default function BotInterface() {
       let currentContractId = null; // ID do contrato atual
       let contractBuyPrice = 0; // Preço de compra do contrato
       let profitCheckInterval = null; // Intervalo para verificar lucro
+      let velasSemOperarAposHistorico = 0; // ✅ NOVO: Contador de velas após carregar histórico
+      let historicoCarregado = false; // ✅ NOVO: Flag para saber se histórico foi carregado
 
       const WEBSOCKET_ENDPOINTS = [
         "wss://ws.binaryws.com/websockets/v3",
@@ -1006,21 +1008,23 @@ export default function BotInterface() {
 
       // ===== FUNÇÕES PRINCIPAIS DO BOT =====
       
-      // ✅ NOVA FUNÇÃO: Buscar dados históricos da Deriv
+      // ✅ FUNÇÃO: Buscar dados históricos de 1 HORA da Deriv
       function loadHistoricalData(websocket, symbol) {
-        addLog(\`📊 Buscando dados históricos de \${symbol}...\`);
+        addLog(\`📊 Buscando histórico de 1 HORA de \${symbol}...\`);
         
-        // Solicitar 300 ticks históricos (suficiente para todos os indicadores)
+        // Solicitar candles de 1 minuto das últimas 60 velas (1 hora)
+        // Isso dá uma base sólida para análise de tendência antes de operar
         const historyRequest = {
           ticks_history: symbol,
           adjust_start_time: 1,
-          count: 300,
+          count: 60, // 60 velas de 1 minuto = 1 hora
           end: "latest",
-          start: 1,
-          style: "ticks"
+          granularity: 60, // 60 segundos = 1 minuto por vela
+          style: "candles"
         };
         
         websocket.send(JSON.stringify(historyRequest));
+        addLog(\`⏳ Aguardando 60 candles de 1 minuto...\`);
       }
       
       function startBot() {
@@ -1066,6 +1070,10 @@ export default function BotInterface() {
         lastTradeTime = 0;
         stats = { total: 0, wins: 0, losses: 0, consecutiveWins: 0, consecutiveLosses: 0 };
         profit = 0;
+        
+        // ✅ RESETAR variáveis de análise de histórico
+        velasSemOperarAposHistorico = 0;
+        historicoCarregado = false;
 
         addLog(\`🚀 Iniciando Bot MVB - Par: \${symbol}\`);
         addLog(\`⚙️ Configurações: MHI(\${mhiPeriods}) | EMA(\${emaFast}/\${emaSlow}) | RSI(\${rsiPeriods})\`);
@@ -1167,13 +1175,39 @@ export default function BotInterface() {
             addLog(\`📊 Monitorando: \${symbol}\`);
           }
 
-          // ✅ NOVO: Processar dados históricos
-          if (data.msg_type === "history") {
+          // ✅ PROCESSAR DADOS HISTÓRICOS (Candles de 1 hora)
+          if (data.msg_type === "history" || data.msg_type === "candles") {
+            const candles = data.candles || [];
             const prices = data.history?.prices || [];
             const times = data.history?.times || [];
             
-            if (prices.length > 0) {
-              // Preencher priceData com dados históricos
+            if (candles.length > 0) {
+              // Preencher priceData com candles históricos (melhor para análise)
+              priceData = [];
+              volumeData = [];
+              
+              for (let i = 0; i < candles.length; i++) {
+                const candle = candles[i];
+                priceData.push({
+                  high: parseFloat(candle.high),
+                  low: parseFloat(candle.low),
+                  close: parseFloat(candle.close),
+                  open: parseFloat(candle.open),
+                  timestamp: candle.epoch
+                });
+                volumeData.push(1); // Volume padrão
+              }
+              
+              addLog(\`✅ \${priceData.length} velas históricas carregadas (1 HORA)!\`);
+              addLog(\`📊 Analisando tendência do mercado antes de operar...\`);
+              addLog(\`📈 Indicadores prontos: MHI(\${mhiPeriods}) EMA(\${emaFast}/\${emaSlow}) RSI(\${rsiPeriods}) Fibonacci\`);
+              addLog(\`⏳ Aguardando 10 velas novas antes de operar...\`);
+              historicoCarregado = true; // ✅ Marcar que histórico foi carregado
+              velasSemOperarAposHistorico = 0; // ✅ Resetar contador
+              updateDataCount();
+              document.getElementById("status").innerText = "⏳ Aguardando velas...";
+            } else if (prices.length > 0) {
+              // Fallback: processar ticks simples se candles não estiverem disponíveis
               priceData = [];
               volumeData = [];
               
@@ -1184,11 +1218,11 @@ export default function BotInterface() {
                   close: prices[i],
                   timestamp: times[i]
                 });
-                volumeData.push(1); // Volume padrão para ticks
+                volumeData.push(1);
               }
               
               addLog(\`✅ \${priceData.length} ticks históricos carregados!\`);
-              addLog(\`📊 Indicadores prontos: MHI(\${mhiPeriods}) EMA(\${emaFast}/\${emaSlow}) RSI(\${rsiPeriods}) Fibonacci(50/200)\`);
+              addLog(\`📊 Indicadores prontos: MHI(\${mhiPeriods}) EMA(\${emaFast}/\${emaSlow}) RSI(\${rsiPeriods})\`);
               updateDataCount();
               document.getElementById("status").innerText = "✅ Pronto para operar";
             } else {
@@ -1356,9 +1390,26 @@ export default function BotInterface() {
             volumeData = volumeData.slice(-maxDataPoints);
           }
           
+          // ✅ NOVO: Incrementar contador de velas após histórico
+          if (historicoCarregado && velasSemOperarAposHistorico < 10) {
+            velasSemOperarAposHistorico++;
+            addLog(\`⏳ Vela \${velasSemOperarAposHistorico}/10 após histórico...\`);
+            
+            if (velasSemOperarAposHistorico >= 10) {
+              addLog(\`✅ Histórico completo! Bot pronto para operar.\`);
+              document.getElementById("status").innerText = "✅ Pronto para operar";
+            }
+          }
+          
           updateDataCount();
           
+          // ✅ NOVO: Só operar após aguardar 10 velas do histórico
           if (priceData.length >= Math.max(mhiPeriods, emaSlow, rsiPeriods) && isRunning && !isTrading) {
+            // ✅ Verificar se já aguardou 10 velas após histórico
+            if (historicoCarregado && velasSemOperarAposHistorico < 10) {
+              return; // ⏳ Ainda aguardando velas...
+            }
+            
             const analysis = analyzeSignals(priceData, volumeData);
             
             if (analysis && analysis.finalSignal !== "NEUTRO" && analysis.confidence >= minConfidence) {
