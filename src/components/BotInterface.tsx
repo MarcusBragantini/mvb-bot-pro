@@ -997,6 +997,7 @@ export default function BotInterface() {
       let currentContractId = null; // ID do contrato atual
       let contractBuyPrice = 0; // Preço de compra do contrato
       let profitCheckInterval = null; // Intervalo para verificar lucro
+      let tentouFechar = false; // ✅ Flag para evitar múltiplas tentativas de fechamento
       let velasSemOperarAposHistorico = 0; // ✅ NOVO: Contador de velas após carregar histórico
       let historicoCarregado = false; // ✅ NOVO: Flag para saber se histórico foi carregado
 
@@ -1326,6 +1327,7 @@ export default function BotInterface() {
             
             // ✅ NOVO: Salvar contract_id para fechamento automático
             currentContractId = data.buy.contract_id;
+            tentouFechar = false; // ✅ Resetar flag de fechamento para novo contrato
             
             websocket.send(JSON.stringify({ 
               proposal_open_contract: 1, 
@@ -1343,31 +1345,69 @@ export default function BotInterface() {
               return;
             }
             
-            // ✅ ESTRATÉGIA DE FECHAMENTO: Só fechar com 40%+ de lucro
+            // ✅ ESTRATÉGIA DE FECHAMENTO: Verificar percentual de lucro configurável
             if (contract.bid_price && contract.buy_price) {
               const currentPrice = parseFloat(contract.bid_price);
               const buyPrice = parseFloat(contract.buy_price);
               const profitPercentage = ((currentPrice - buyPrice) / buyPrice) * 100;
               
-              // Log do P&L atual (a cada update)
-              if (profitPercentage > 0) {
+              // Obter percentual de fechamento configurado
+              const autoCloseProfitThreshold = parseFloat(document.getElementById('autoCloseProfit')?.value || '30');
+              
+              // Log do P&L atual (apenas quando positivo e a cada 10%)
+              if (profitPercentage > 0 && profitPercentage % 10 < 5) {
                 addLog(\`💰 Lucro atual: +\${profitPercentage.toFixed(1)}% ($\${currentPrice.toFixed(2)} / $\${buyPrice.toFixed(2)})\`);
               }
               
-              // ✅ FECHAR APENAS se lucro >= 30%
-              if (profitPercentage >= 30) {
-                addLog(\`🎯 META ATINGIDA! Lucro de \${profitPercentage.toFixed(1)}% >= 30% - Fechando trade!\`);
+              // ✅ FECHAR se lucro >= percentual configurado E ainda não tentou fechar
+              if (profitPercentage >= autoCloseProfitThreshold && !tentouFechar) {
+                addLog(\`🎯 META ATINGIDA! Lucro de \${profitPercentage.toFixed(1)}% >= \${autoCloseProfitThreshold}% - Tentando fechar trade...\`);
                 
-                // Fechar o trade
-                websocket.send(JSON.stringify({ 
-                  sell: contract.contract_id, 
-                  price: 0 
-                }));
-                
-                // Limpar timers
-                if (autoCloseTimer) clearTimeout(autoCloseTimer);
-                if (profitCheckInterval) clearInterval(profitCheckInterval);
+                // ✅ VERIFICAR se o contrato permite venda (is_valid_to_sell)
+                if (contract.is_valid_to_sell === 1 && !contract.is_expired && !contract.is_sold) {
+                  tentouFechar = true; // Marcar que já tentou fechar
+                  
+                  addLog(\`✅ Contrato permite revenda - Enviando comando de venda...\`);
+                  
+                  // Fechar o trade
+                  websocket.send(JSON.stringify({ 
+                    sell: contract.contract_id, 
+                    price: 0 
+                  }));
+                  
+                  // Limpar timers
+                  if (autoCloseTimer) clearTimeout(autoCloseTimer);
+                  if (profitCheckInterval) clearInterval(profitCheckInterval);
+                } else {
+                  // Revenda não permitida neste momento
+                  if (!tentouFechar) {
+                    addLog(\`⏳ Revenda não disponível ainda (is_valid_to_sell=\${contract.is_valid_to_sell}) - Aguardando...\`);
+                    tentouFechar = true; // Evitar spam de logs
+                    
+                    // Tentar novamente em 2 segundos
+                    setTimeout(() => {
+                      tentouFechar = false;
+                    }, 2000);
+                  }
+                }
               }
+            }
+          }
+
+          // ✅ PROCESSAR resultado de venda (sell)
+          if (data.msg_type === "sell") {
+            if (data.error) {
+              addLog(\`❌ ERRO: \${data.error.message}\`);
+              
+              // Se o erro for "resale not offered", resetar flag para tentar depois
+              if (data.error.message.includes("not offered")) {
+                setTimeout(() => {
+                  tentouFechar = false;
+                }, 2000);
+              }
+            } else {
+              addLog(\`✅ Venda realizada com sucesso! Preço: $\${data.sell?.sold_for || '0.00'}\`);
+              tentouFechar = false; // Resetar para próximo trade
             }
           }
 
