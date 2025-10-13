@@ -62,31 +62,59 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     if (!user || !sessionToken) return;
 
+    let isCheckingSession = false; // Flag para evitar verificações simultâneas
+    let consecutiveErrors = 0; // Contador de erros consecutivos
+
     const checkSession = async () => {
+      // Evitar múltiplas verificações simultâneas
+      if (isCheckingSession) return;
+      
+      isCheckingSession = true;
+
       try {
-        const response = await fetch(`/api/auth?action=check-session&user_id=${user.id}&session_token=${sessionToken}`);
+        const response = await fetch(`/api/auth?action=check-session&user_id=${user.id}&session_token=${sessionToken}`, {
+          // Não lançar erro para status 401 no console
+          signal: AbortSignal.timeout(5000), // Timeout de 5 segundos
+        }).catch(() => null); // Silenciar erros de rede
         
-        // ✅ CORREÇÃO: Se não conseguir verificar (servidor offline), não desconectar
-        if (!response.ok) {
-          console.log('⚠️ Servidor indisponível - mantendo sessão local');
+        // Se não conseguiu conectar ou timeout
+        if (!response) {
+          consecutiveErrors++;
+          if (consecutiveErrors === 1) {
+            console.log('⚠️ Servidor de sessão indisponível - mantendo sessão local');
+          }
+          isCheckingSession = false;
           return;
         }
-        
-        const data = await response.json();
 
-        if (!data.valid) {
-          console.log('⚠️ Sessão invalidada em outro dispositivo');
-          alert('Sua sessão foi encerrada porque você fez login em outro dispositivo.');
-          logout();
+        // ✅ Se resposta OK (200), verificar validade da sessão
+        if (response.ok) {
+          const data = await response.json();
+          consecutiveErrors = 0; // Resetar contador de erros
+
+          if (!data.valid) {
+            console.log('⚠️ Sessão invalidada em outro dispositivo');
+            alert('Sua sessão foi encerrada porque você fez login em outro dispositivo.');
+            logout();
+          }
+        } else if (response.status === 401) {
+          // ✅ 401 = sessão não encontrada ou expirada, mas não desconectar automaticamente
+          // (pode ser problema temporário do servidor)
+          consecutiveErrors++;
+          if (consecutiveErrors === 1) {
+            console.log('⚠️ Sessão não validada pelo servidor - mantendo sessão local');
+          }
         }
       } catch (error) {
-        // ✅ CORREÇÃO: Em caso de erro de rede, não desconectar automaticamente
-        console.log('⚠️ Erro de rede ao verificar sessão - mantendo sessão local');
+        // Silenciar completamente erros de rede
+        consecutiveErrors++;
+      } finally {
+        isCheckingSession = false;
       }
     };
 
-    // ✅ CORREÇÃO: Verificar a cada 2 minutos (menos frequente)
-    const interval = setInterval(checkSession, 120000);
+    // ✅ Verificar a cada 3 minutos (menos frequente para reduzir carga)
+    const interval = setInterval(checkSession, 180000);
     
     return () => clearInterval(interval);
   }, [user, sessionToken]);
