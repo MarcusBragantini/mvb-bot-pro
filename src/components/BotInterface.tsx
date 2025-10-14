@@ -1056,25 +1056,30 @@ export default function BotInterface() {
         let token = document.getElementById("token").value.trim();
         
         if (!token) {
-          // Tentar pegar token das configurações diretamente
-          const selectedToken = settings.selectedTokenType === 'demo' 
-            ? settings.derivTokenDemo 
-            : settings.derivTokenReal;
-          
-          if (selectedToken) {
-            token = selectedToken;
-            // Atualizar o campo para próxima vez
-            document.getElementById("token").value = token;
-            addLog('✅ Token carregado das configurações automaticamente');
+          // Tentar pegar token das configurações do localStorage
+          try {
+            const userKey = window.user?.id ? \`mvb_bot_settings_\${window.user.id}\` : 'mvb_bot_settings_temp';
+            const savedSettings = JSON.parse(localStorage.getItem(userKey) || '{}');
+            
+            const selectedToken = savedSettings.selectedTokenType === 'demo' 
+              ? savedSettings.derivTokenDemo 
+              : savedSettings.derivTokenReal;
+            
+            if (selectedToken) {
+              token = selectedToken;
+              // Atualizar o campo para próxima vez
+              document.getElementById("token").value = token;
+              addLog('✅ Token carregado das configurações automaticamente');
+            }
+          } catch (error) {
+            console.error('Erro ao carregar token das configurações:', error);
           }
         }
         
         console.log('🔍 Debug Token:', {
           token: token ? 'Token presente' : 'Token vazio',
           tokenLength: token.length,
-          selectedType: settings.selectedTokenType,
-          demoToken: settings.derivTokenDemo ? 'Configurado' : 'Vazio',
-          realToken: settings.derivTokenReal ? 'Configurado' : 'Vazio'
+          userKey: window.user?.id ? \`mvb_bot_settings_\${window.user.id}\` : 'mvb_bot_settings_temp'
         });
         
         if (!token) {
