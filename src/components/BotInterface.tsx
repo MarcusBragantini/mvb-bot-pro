@@ -1104,6 +1104,22 @@ export default function BotInterface() {
         emaSlow = parseInt(document.getElementById("emaSlow").value) || 21;
         rsiPeriods = parseInt(document.getElementById("rsiPeriods").value) || 14;
         minConfidence = parseInt(document.getElementById("minConfidence").value) || 70;
+        
+        // ✅ NOVO: Garantir que autoCloseProfit está configurado
+        const autoCloseProfitField = document.getElementById("autoCloseProfit");
+        if (autoCloseProfitField && !autoCloseProfitField.value) {
+          // Tentar carregar das configurações salvas
+          try {
+            const userKey = window.user?.id ? \`mvb_bot_settings_\${window.user.id}\` : 'mvb_bot_settings_temp';
+            const savedSettings = JSON.parse(localStorage.getItem(userKey) || '{}');
+            if (savedSettings.autoCloseProfit) {
+              autoCloseProfitField.value = savedSettings.autoCloseProfit;
+              addLog(\`✅ Percentual de fechamento carregado: \${savedSettings.autoCloseProfit}%\`);
+            }
+          } catch (error) {
+            console.error('Erro ao carregar autoCloseProfit:', error);
+          }
+        }
 
         priceData = [];
         volumeData = [];
@@ -1384,11 +1400,24 @@ export default function BotInterface() {
               const profitPercentage = ((currentPrice - buyPrice) / buyPrice) * 100;
               
               // Obter percentual de fechamento configurado
-              const autoCloseProfitThreshold = parseFloat(document.getElementById('autoCloseProfit')?.value || '30');
+              const autoCloseProfitElement = document.getElementById('autoCloseProfit');
+              const autoCloseProfitThreshold = parseFloat(autoCloseProfitElement?.value || '30');
               
-              // Log do P&L atual (apenas quando positivo e a cada 10%)
-              if (profitPercentage > 0 && profitPercentage % 10 < 5) {
-                addLog(\`💰 Lucro atual: +\${profitPercentage.toFixed(1)}% ($\${currentPrice.toFixed(2)} / $\${buyPrice.toFixed(2)})\`);
+              // Debug: Log do percentual configurado
+              if (autoCloseProfitElement) {
+                console.log('🔍 Debug AutoClose:', {
+                  elementFound: true,
+                  value: autoCloseProfitElement.value,
+                  parsed: autoCloseProfitThreshold,
+                  currentProfit: profitPercentage.toFixed(1) + '%'
+                });
+              } else {
+                console.log('⚠️ Elemento autoCloseProfit não encontrado');
+              }
+              
+              // Log do P&L atual (sempre mostrar quando positivo)
+              if (profitPercentage > 0) {
+                addLog(\`💰 Lucro atual: +\${profitPercentage.toFixed(1)}% (Meta: \${autoCloseProfitThreshold}%) - $\${currentPrice.toFixed(2)} / $\${buyPrice.toFixed(2)}\`);
               }
               
               // ✅ FECHAR se lucro >= percentual configurado E ainda não tentou fechar
