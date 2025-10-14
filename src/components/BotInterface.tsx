@@ -1949,44 +1949,32 @@ export default function BotInterface() {
           addLog(\`📊 S/R: Preço $\${currentPrice.toFixed(4)} | Dist. Suporte: \${percentualSuporte.toFixed(1)}% | Dist. Resistência: \${percentualResistencia.toFixed(1)}%\`);
         }
         
-        // ✅ REGRA FLEXÍVEL DE COMPRA:
+        // ✅ REGRA SIMPLIFICADA DE COMPRA:
         // - RSI CALL OU Bollinger CALL
-        // - E tendência 24h não seja fortemente BAIXA (> 1.5%)
-        // - E preço não esteja muito próximo da resistência (> 0.2% de distância)
+        // - E tendência 24h não seja fortemente BAIXA (> 2%)
         if ((signals.rsi === "CALL" || signals.bollinger === "CALL")) {
-          const tendenciaOk = trend24h !== "BAIXA" || trend24hStrength < 1.5;
-          const longeResistencia = sr.resistencia === 0 || percentualResistencia > 0.2;
+          const tendenciaOk = trend24h !== "BAIXA" || trend24hStrength < 2.0;
           
-          if (tendenciaOk && longeResistencia) {
-            addLog(\`✅ CALL aprovado: RSI(\${signals.rsi}) BB(\${signals.bollinger}) + Tend24h(\${trend24h} \${trend24hStrength.toFixed(2)}%) + Dist.Resist(\${percentualResistencia.toFixed(1)}%)\`);
+          if (tendenciaOk) {
+            addLog(\`✅ CALL aprovado: RSI(\${signals.rsi}) BB(\${signals.bollinger}) + Tend24h(\${trend24h} \${trend24hStrength.toFixed(2)}%)\`);
             return "CALL";
           } else {
-            if (!tendenciaOk) {
-              addLog(\`⚠️ CALL bloqueado: Tendência 24h fortemente \${trend24h} (\${trend24hStrength.toFixed(2)}%)\`);
-            } else {
-              addLog(\`⚠️ CALL bloqueado: Muito próximo da resistência (\${percentualResistencia.toFixed(1)}%)\`);
-            }
+            addLog(\`⚠️ CALL bloqueado: Tendência 24h fortemente \${trend24h} (\${trend24hStrength.toFixed(2)}%)\`);
             return "NEUTRO";
           }
         }
         
-        // ✅ REGRA FLEXÍVEL DE VENDA:
+        // ✅ REGRA SIMPLIFICADA DE VENDA:
         // - RSI PUT OU Bollinger PUT
-        // - E tendência 24h não seja fortemente ALTA (> 1.5%)
-        // - E preço não esteja muito próximo do suporte (> 0.2% de distância)
+        // - E tendência 24h não seja fortemente ALTA (> 2%)
         if ((signals.rsi === "PUT" || signals.bollinger === "PUT")) {
-          const tendenciaOk = trend24h !== "ALTA" || trend24hStrength < 1.5;
-          const longeSuporte = sr.suporte === 0 || percentualSuporte > 0.2;
+          const tendenciaOk = trend24h !== "ALTA" || trend24hStrength < 2.0;
           
-          if (tendenciaOk && longeSuporte) {
-            addLog(\`✅ PUT aprovado: RSI(\${signals.rsi}) BB(\${signals.bollinger}) + Tend24h(\${trend24h} \${trend24hStrength.toFixed(2)}%) + Dist.Suporte(\${percentualSuporte.toFixed(1)}%)\`);
+          if (tendenciaOk) {
+            addLog(\`✅ PUT aprovado: RSI(\${signals.rsi}) BB(\${signals.bollinger}) + Tend24h(\${trend24h} \${trend24hStrength.toFixed(2)}%)\`);
             return "PUT";
           } else {
-            if (!tendenciaOk) {
-              addLog(\`⚠️ PUT bloqueado: Tendência 24h fortemente \${trend24h} (\${trend24hStrength.toFixed(2)}%)\`);
-            } else {
-              addLog(\`⚠️ PUT bloqueado: Muito próximo do suporte (\${percentualSuporte.toFixed(1)}%)\`);
-            }
+            addLog(\`⚠️ PUT bloqueado: Tendência 24h fortemente \${trend24h} (\${trend24hStrength.toFixed(2)}%)\`);
             return "NEUTRO";
           }
         }
