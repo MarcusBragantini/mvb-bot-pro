@@ -1018,23 +1018,25 @@ export default function BotInterface() {
 
       // ===== FUNÇÕES PRINCIPAIS DO BOT =====
       
-      // ✅ FUNÇÃO: Buscar dados históricos de 1 HORA da Deriv
+      // ✅ FUNÇÃO: Buscar dados históricos de 24 HORAS da Deriv
       function loadHistoricalData(websocket, symbol) {
-        addLog(\`📊 Buscando histórico de 1 HORA de \${symbol}...\`);
+        addLog(\`📊 Buscando histórico de 24 HORAS de \${symbol}...\`);
         
-        // Solicitar candles de 1 minuto das últimas 60 velas (1 hora)
-        // Isso dá uma base sólida para análise de tendência antes de operar
+        // Solicitar candles de 5 minutos das últimas 288 velas (24 horas)
+        // 288 velas de 5 minutos = 24 horas (288 * 5 = 1440 minutos = 24h)
+        // Isso fornece uma análise muito mais robusta e segura
         const historyRequest = {
           ticks_history: symbol,
           adjust_start_time: 1,
-          count: 60, // 60 velas de 1 minuto = 1 hora
+          count: 288, // 288 velas de 5 minutos = 24 horas
           end: "latest",
-          granularity: 60, // 60 segundos = 1 minuto por vela
+          granularity: 300, // 300 segundos = 5 minutos por vela
           style: "candles"
         };
         
         websocket.send(JSON.stringify(historyRequest));
-        addLog(\`⏳ Aguardando 60 candles de 1 minuto...\`);
+        addLog(\`⏳ Aguardando 288 candles de 5 minutos (24 horas)...\`);
+        addLog(\`📈 Análise robusta: MHI + EMA + RSI + Fibonacci + Tendência de 24h\`);
       }
       
       function startBot() {
@@ -1208,14 +1210,14 @@ export default function BotInterface() {
                 volumeData.push(1); // Volume padrão
               }
               
-              addLog(\`✅ \${priceData.length} velas históricas carregadas (1 HORA)!\`);
-              addLog(\`📊 Analisando tendência do mercado antes de operar...\`);
-              addLog(\`📈 Indicadores prontos: MHI(\${mhiPeriods}) EMA(\${emaFast}/\${emaSlow}) RSI(\${rsiPeriods}) Fibonacci\`);
-              addLog(\`⏳ Aguardando 10 velas novas antes de operar...\`);
+              addLog(\`✅ \${priceData.length} velas históricas carregadas (24 HORAS)!\`);
+              addLog(\`📊 Analisando tendência de 24h do mercado antes de operar...\`);
+              addLog(\`📈 Indicadores robustos: MHI(\${mhiPeriods}) EMA(\${emaFast}/\${emaSlow}) RSI(\${rsiPeriods}) Fibonacci\`);
+              addLog(\`⏳ Aguardando 15 velas de 5min antes de operar (maior segurança)...\`);
               historicoCarregado = true; // ✅ Marcar que histórico foi carregado
               velasSemOperarAposHistorico = 0; // ✅ Resetar contador
               updateDataCount();
-              document.getElementById("status").innerText = "⏳ Aguardando velas...";
+              document.getElementById("status").innerText = "⏳ Analisando 24h...";
             } else if (prices.length > 0) {
               // Fallback: processar ticks simples se candles não estiverem disponíveis
               priceData = [];
@@ -1439,23 +1441,23 @@ export default function BotInterface() {
             volumeData = volumeData.slice(-maxDataPoints);
           }
           
-          // ✅ NOVO: Incrementar contador de velas após histórico
-          if (historicoCarregado && velasSemOperarAposHistorico < 10) {
+          // ✅ NOVO: Incrementar contador de velas após histórico (15 velas de 5min = 75min)
+          if (historicoCarregado && velasSemOperarAposHistorico < 15) {
             velasSemOperarAposHistorico++;
-            addLog(\`⏳ Vela \${velasSemOperarAposHistorico}/10 após histórico...\`);
+            addLog(\`⏳ Vela \${velasSemOperarAposHistorico}/15 após histórico (5min cada = \${velasSemOperarAposHistorico * 5}min)...\`);
             
-            if (velasSemOperarAposHistorico >= 10) {
-              addLog(\`✅ Histórico completo! Bot pronto para operar.\`);
+            if (velasSemOperarAposHistorico >= 15) {
+              addLog(\`✅ Análise de 24h + 75min completas! Bot pronto para operar com máxima segurança.\`);
               document.getElementById("status").innerText = "✅ Pronto para operar";
             }
           }
           
           updateDataCount();
           
-          // ✅ NOVO: Só operar após aguardar 10 velas do histórico
+          // ✅ NOVO: Só operar após aguardar 15 velas de 5min do histórico
           if (priceData.length >= Math.max(mhiPeriods, emaSlow, rsiPeriods) && isRunning && !isTrading) {
-            // ✅ Verificar se já aguardou 10 velas após histórico
-            if (historicoCarregado && velasSemOperarAposHistorico < 10) {
+            // ✅ Verificar se já aguardou 15 velas após histórico
+            if (historicoCarregado && velasSemOperarAposHistorico < 15) {
               return; // ⏳ Ainda aguardando velas...
             }
             
@@ -1477,9 +1479,21 @@ export default function BotInterface() {
 
       function analyzeSignals(prices, volumes) {
         try {
-          if (!prices || prices.length < Math.max(mhiPeriods, emaSlow, rsiPeriods, 20)) {
+          // ✅ VALIDAÇÃO ROBUSTA: Precisa de pelo menos 50 velas (4+ horas) para análise segura
+          const minRequiredCandles = Math.max(mhiPeriods, emaSlow, rsiPeriods, 50);
+          if (!prices || prices.length < minRequiredCandles) {
+            addLog(\`⚠️ Dados insuficientes: \${prices?.length || 0} velas (mínimo: \${minRequiredCandles})\`);
             return null;
           }
+          
+          // ✅ ANÁLISE DE TENDÊNCIA DE 24H: Verificar tendência geral do período
+          const last24h = prices.slice(-288); // Últimas 288 velas (24h de 5min)
+          const first24h = last24h[0]?.close || 0;
+          const last24hClose = last24h[last24h.length - 1]?.close || 0;
+          const trend24h = last24hClose > first24h ? "ALTA" : "BAIXA";
+          const trend24hStrength = Math.abs((last24hClose - first24h) / first24h * 100);
+          
+          addLog(\`📊 Tendência 24h: \${trend24h} (\${trend24hStrength.toFixed(2)}%) - \${last24h.length} velas analisadas\`);
           
           // MHI Calculation
           const mhiData = prices.slice(-mhiPeriods);
@@ -1563,7 +1577,9 @@ export default function BotInterface() {
             volume: "NEUTRO"
           };
           
-          // ✅ SEM FILTROS RESTRITIVOS - Estratégia simples
+          // ✅ ESTRATÉGIA ROBUSTA - Incluir dados de tendência 24h
+          signals.trend24h = trend24h;
+          signals.trend24hStrength = trend24hStrength;
           let finalSignal = calculateFinalSignal(signals, fibonacciAnalysis);
           
           const confidence = calculateConfidence(signals, rsi, fibonacciAnalysis);
@@ -1828,24 +1844,39 @@ export default function BotInterface() {
       }
 
       function calculateFinalSignal(signals, fibonacciAnalysis) {
-        // ✅ ESTRATÉGIA SIMPLIFICADA - Apenas RSI + Bollinger
+        // ✅ ESTRATÉGIA ROBUSTA - RSI + Bollinger + Tendência 24h
         // RSI: Indica momentum (sobrecompra/sobrevenda)
         // Bollinger: Indica volatilidade e timing
+        // Tendência 24h: Validação de direção geral do mercado
         
-        // ✅ REGRA SIMPLES DE COMPRA:
-        // - RSI entre 30-45 (saindo de oversold) OU
-        // - Preço tocando banda inferior (0-20%)
-        if (signals.rsi === "CALL" || signals.bollinger === "CALL") {
-          addLog(\`✅ CALL detectado (RSI:\${signals.rsi} | BB:\${signals.bollinger})\`);
-          return "CALL";
+        // ✅ VALIDAÇÃO DE TENDÊNCIA 24H (maior segurança)
+        const trend24h = signals.trend24h || "NEUTRO";
+        const trend24hStrength = signals.trend24hStrength || 0;
+        
+        // ✅ REGRA CONSERVADORA DE COMPRA:
+        // - RSI CALL OU Bollinger CALL
+        // - E tendência 24h ALTA (ou neutra com força > 0.5%)
+        if ((signals.rsi === "CALL" || signals.bollinger === "CALL")) {
+          if (trend24h === "ALTA" || (trend24h === "NEUTRO" && trend24hStrength > 0.5)) {
+            addLog(\`✅ CALL aprovado: RSI(\${signals.rsi}) BB(\${signals.bollinger}) + Tend24h(\${trend24h} \${trend24hStrength.toFixed(2)}%)\`);
+            return "CALL";
+          } else {
+            addLog(\`⚠️ CALL bloqueado: Tendência 24h \${trend24h} (\${trend24hStrength.toFixed(2)}%) não favorável\`);
+            return "NEUTRO";
+          }
         }
         
-        // ✅ REGRA SIMPLES DE VENDA:
-        // - RSI entre 55-70 (saindo de overbought) OU
-        // - Preço tocando banda superior (80-100%)
-        if (signals.rsi === "PUT" || signals.bollinger === "PUT") {
-          addLog(\`✅ PUT detectado (RSI:\${signals.rsi} | BB:\${signals.bollinger})\`);
-          return "PUT";
+        // ✅ REGRA CONSERVADORA DE VENDA:
+        // - RSI PUT OU Bollinger PUT
+        // - E tendência 24h BAIXA (ou neutra com força > 0.5%)
+        if ((signals.rsi === "PUT" || signals.bollinger === "PUT")) {
+          if (trend24h === "BAIXA" || (trend24h === "NEUTRO" && trend24hStrength > 0.5)) {
+            addLog(\`✅ PUT aprovado: RSI(\${signals.rsi}) BB(\${signals.bollinger}) + Tend24h(\${trend24h} \${trend24hStrength.toFixed(2)}%)\`);
+            return "PUT";
+          } else {
+            addLog(\`⚠️ PUT bloqueado: Tendência 24h \${trend24h} (\${trend24hStrength.toFixed(2)}%) não favorável\`);
+            return "NEUTRO";
+          }
         }
         
         return "NEUTRO";
