@@ -170,4 +170,4 @@ Após o deploy, seu bot estará disponível em:
 
 **🤖 Bot MVB Pro - Trading Automatizado de Alta Performance**
 
-*Desenvolvido com ❤️ pela equipe MGX*
+*Desenvolvido com ❤️ pela equipe MGX*# Teste Preview Deploy
