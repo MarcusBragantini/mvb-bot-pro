@@ -1213,7 +1213,7 @@ export default function BotInterface() {
               addLog(\`✅ \${priceData.length} velas históricas carregadas (24 HORAS)!\`);
               addLog(\`📊 Analisando tendência de 24h do mercado antes de operar...\`);
               addLog(\`📈 Indicadores robustos: MHI(\${mhiPeriods}) EMA(\${emaFast}/\${emaSlow}) RSI(\${rsiPeriods}) Fibonacci\`);
-              addLog(\`⏳ Aguardando 15 velas de 5min antes de operar (maior segurança)...\`);
+              addLog(\`⏳ Aguardando 6 velas de 5min antes de operar (30min de segurança)...\`);
               historicoCarregado = true; // ✅ Marcar que histórico foi carregado
               velasSemOperarAposHistorico = 0; // ✅ Resetar contador
               updateDataCount();
@@ -1441,23 +1441,23 @@ export default function BotInterface() {
             volumeData = volumeData.slice(-maxDataPoints);
           }
           
-          // ✅ NOVO: Incrementar contador de velas após histórico (15 velas de 5min = 75min)
-          if (historicoCarregado && velasSemOperarAposHistorico < 15) {
+          // ✅ NOVO: Incrementar contador de velas após histórico (6 velas de 5min = 30min)
+          if (historicoCarregado && velasSemOperarAposHistorico < 6) {
             velasSemOperarAposHistorico++;
-            addLog(\`⏳ Vela \${velasSemOperarAposHistorico}/15 após histórico (5min cada = \${velasSemOperarAposHistorico * 5}min)...\`);
+            addLog(\`⏳ Vela \${velasSemOperarAposHistorico}/6 após histórico (5min cada = \${velasSemOperarAposHistorico * 5}min)...\`);
             
-            if (velasSemOperarAposHistorico >= 15) {
-              addLog(\`✅ Análise de 24h + 75min completas! Bot pronto para operar com máxima segurança.\`);
+            if (velasSemOperarAposHistorico >= 6) {
+              addLog(\`✅ Análise de 24h + 30min completas! Bot pronto para operar com segurança.\`);
               document.getElementById("status").innerText = "✅ Pronto para operar";
             }
           }
           
           updateDataCount();
           
-          // ✅ NOVO: Só operar após aguardar 15 velas de 5min do histórico
+          // ✅ NOVO: Só operar após aguardar 6 velas de 5min do histórico (30min)
           if (priceData.length >= Math.max(mhiPeriods, emaSlow, rsiPeriods) && isRunning && !isTrading) {
-            // ✅ Verificar se já aguardou 15 velas após histórico
-            if (historicoCarregado && velasSemOperarAposHistorico < 15) {
+            // ✅ Verificar se já aguardou 6 velas após histórico
+            if (historicoCarregado && velasSemOperarAposHistorico < 6) {
               return; // ⏳ Ainda aguardando velas...
             }
             
