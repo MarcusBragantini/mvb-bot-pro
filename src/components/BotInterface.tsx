@@ -1052,9 +1052,34 @@ export default function BotInterface() {
           return;
         }
 
-        const token = document.getElementById("token").value.trim();
+        // ✅ CORREÇÃO: Verificar token diretamente das configurações se campo estiver vazio
+        let token = document.getElementById("token").value.trim();
+        
+        if (!token) {
+          // Tentar pegar token das configurações diretamente
+          const selectedToken = settings.selectedTokenType === 'demo' 
+            ? settings.derivTokenDemo 
+            : settings.derivTokenReal;
+          
+          if (selectedToken) {
+            token = selectedToken;
+            // Atualizar o campo para próxima vez
+            document.getElementById("token").value = token;
+            addLog('✅ Token carregado das configurações automaticamente');
+          }
+        }
+        
+        console.log('🔍 Debug Token:', {
+          token: token ? 'Token presente' : 'Token vazio',
+          tokenLength: token.length,
+          selectedType: settings.selectedTokenType,
+          demoToken: settings.derivTokenDemo ? 'Configurado' : 'Vazio',
+          realToken: settings.derivTokenReal ? 'Configurado' : 'Vazio'
+        });
+        
         if (!token) {
           window.showToast('❌ Token Necessário', 'Configure o token da Deriv na aba Configurações!', 'destructive');
+          addLog('❌ Token não encontrado. Verifique se está configurado na aba Configurações.');
           return;
         }
         
