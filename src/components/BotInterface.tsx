@@ -1000,6 +1000,7 @@ export default function BotInterface() {
       let tentouFechar = false; // ✅ Flag para evitar múltiplas tentativas de fechamento
       let velasSemOperarAposHistorico = 0; // ✅ NOVO: Contador de velas após carregar histórico
       let historicoCarregado = false; // ✅ NOVO: Flag para saber se histórico foi carregado
+      let ultimoMinutoProcessado = 0; // ✅ NOVO: Controlar contagem de velas de 1 minuto
 
       const WEBSOCKET_ENDPOINTS = [
         "wss://ws.binaryws.com/websockets/v3",
@@ -1132,6 +1133,7 @@ export default function BotInterface() {
         // ✅ RESETAR variáveis de análise de histórico
         velasSemOperarAposHistorico = 0;
         historicoCarregado = false;
+        ultimoMinutoProcessado = 0;
 
         addLog(\`🚀 Iniciando Bot MVB - Par: \${symbol}\`);
         addLog(\`⚙️ Configurações: MHI(\${mhiPeriods}) | EMA(\${emaFast}/\${emaSlow}) | RSI(\${rsiPeriods})\`);
@@ -1262,6 +1264,7 @@ export default function BotInterface() {
               addLog(\`⏳ Aguardando 10 velas de 1min antes de operar (10min prático)...\`);
               historicoCarregado = true; // ✅ Marcar que histórico foi carregado
               velasSemOperarAposHistorico = 0; // ✅ Resetar contador
+              ultimoMinutoProcessado = Math.floor(Date.now() / 1000 / 60); // ✅ Inicializar contador de minutos
               updateDataCount();
               document.getElementById("status").innerText = "⏳ Analisando 24h...";
             } else if (prices.length > 0) {
@@ -1500,14 +1503,20 @@ export default function BotInterface() {
             volumeData = volumeData.slice(-maxDataPoints);
           }
           
-          // ✅ PRÁTICO: Incrementar contador de velas após histórico (10 velas de 1min = 10min)
+          // ✅ PRÁTICO: Contar apenas velas de 1 minuto (não ticks)
           if (historicoCarregado && velasSemOperarAposHistorico < 10) {
-            velasSemOperarAposHistorico++;
-            addLog(\`⏳ Vela \${velasSemOperarAposHistorico}/10 após histórico (1min cada = \${velasSemOperarAposHistorico}min)...\`);
+            const currentMinute = Math.floor(timestamp / 60); // Minuto atual (timestamp em segundos)
             
-            if (velasSemOperarAposHistorico >= 10) {
-              addLog(\`✅ Análise de 24h + 10min completas! Bot pronto para operar.\`);
-              document.getElementById("status").innerText = "✅ Pronto para operar";
+            // Só incrementar se mudou o minuto (nova vela de 1 minuto)
+            if (currentMinute > ultimoMinutoProcessado) {
+              ultimoMinutoProcessado = currentMinute;
+              velasSemOperarAposHistorico++;
+              addLog(\`⏳ Vela \${velasSemOperarAposHistorico}/10 após histórico (1min cada = \${velasSemOperarAposHistorico}min)...\`);
+              
+              if (velasSemOperarAposHistorico >= 10) {
+                addLog(\`✅ Análise de 24h + 10min completas! Bot pronto para operar.\`);
+                document.getElementById("status").innerText = "✅ Pronto para operar";
+              }
             }
           }
           
