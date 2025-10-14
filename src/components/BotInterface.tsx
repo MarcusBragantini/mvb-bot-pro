@@ -338,17 +338,17 @@ export default function BotInterface() {
               : Math.floor((new Date(activeLicense.expires_at).getTime() - Date.now()) / (1000 * 60));
             const daysRemaining = Math.ceil((new Date(activeLicense.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
             
-            // Usuário tem licença válida, pular validação
-            const licenseInfo: LicenseInfo = {
-              type: activeLicense.license_type,
+          // Usuário tem licença válida, pular validação
+          const licenseInfo: LicenseInfo = {
+            type: activeLicense.license_type,
               days: isFreeLicense ? Math.ceil(minutesRemaining / (60 * 24)) : daysRemaining,
-              features: activeLicense.license_type === 'free' ? ['limited_features'] : ['all_features'],
-              maxDevices: activeLicense.max_devices
-            };
-            
-            setLicenseInfo(licenseInfo);
-            setLicenseKey(activeLicense.license_key);
-            setIsLicenseValid(true);
+            features: activeLicense.license_type === 'free' ? ['limited_features'] : ['all_features'],
+            maxDevices: activeLicense.max_devices
+          };
+          
+          setLicenseInfo(licenseInfo);
+          setLicenseKey(activeLicense.license_key);
+          setIsLicenseValid(true);
             
             // Mostrar tempo restante apropriado
             const timeDisplay = isFreeLicense 
@@ -358,9 +358,9 @@ export default function BotInterface() {
                 : `${daysRemaining} dia(s)`;
             
             setLicenseStatus(`Licença válida! Expira em ${timeDisplay}.`);
-            
-            toast({
-              title: "✅ Acesso liberado!",
+          
+          toast({
+            title: "✅ Acesso liberado!",
               description: `Bem-vindo ao Bot Trading, ${user.name}! Licença expira em ${timeDisplay}.`,
             });
           } else {
@@ -636,6 +636,14 @@ export default function BotInterface() {
             <div class="indicator-card" style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
               <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 4px;">🎯 Fibonacci</div>
               <div class="indicator-value" id="fibonacciSignal" style="font-weight: bold; font-size: 1rem;">-</div>
+            </div>
+            <div class="indicator-card" style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
+              <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 4px;">📊 Suporte</div>
+              <div class="indicator-value" id="suporteValue" style="font-weight: bold; font-size: 0.9rem;">-</div>
+            </div>
+            <div class="indicator-card" style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
+              <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 4px;">📈 Resistência</div>
+              <div class="indicator-value" id="resistenciaValue" style="font-weight: bold; font-size: 0.9rem;">-</div>
             </div>
             <div class="indicator-card" style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
               <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 4px;">Confiança</div>
@@ -1001,6 +1009,7 @@ export default function BotInterface() {
       let velasSemOperarAposHistorico = 0; // ✅ NOVO: Contador de velas após carregar histórico
       let historicoCarregado = false; // ✅ NOVO: Flag para saber se histórico foi carregado
       let ultimoMinutoProcessado = 0; // ✅ NOVO: Controlar contagem de velas de 1 minuto
+      let suporteResistencia = { suporte: 0, resistencia: 0, forca: 0 }; // ✅ NOVO: Suporte e resistência de 24h
 
       const WEBSOCKET_ENDPOINTS = [
         "wss://ws.binaryws.com/websockets/v3",
@@ -1433,15 +1442,15 @@ export default function BotInterface() {
                   
                   addLog(\`✅ Contrato permite revenda - Enviando comando de venda...\`);
                   
-                  // Fechar o trade
-                  websocket.send(JSON.stringify({ 
-                    sell: contract.contract_id, 
-                    price: 0 
-                  }));
-                  
-                  // Limpar timers
-                  if (autoCloseTimer) clearTimeout(autoCloseTimer);
-                  if (profitCheckInterval) clearInterval(profitCheckInterval);
+                    // Fechar o trade
+                    websocket.send(JSON.stringify({ 
+                      sell: contract.contract_id, 
+                      price: 0 
+                    }));
+                    
+                    // Limpar timers
+                    if (autoCloseTimer) clearTimeout(autoCloseTimer);
+                    if (profitCheckInterval) clearInterval(profitCheckInterval);
                 } else {
                   // Revenda não permitida neste momento
                   if (!tentouFechar) {
@@ -1515,7 +1524,7 @@ export default function BotInterface() {
               
               if (velasSemOperarAposHistorico >= 10) {
                 addLog(\`✅ Análise de 24h + 10min completas! Bot pronto para operar.\`);
-                document.getElementById("status").innerText = "✅ Pronto para operar";
+              document.getElementById("status").innerText = "✅ Pronto para operar";
               }
             }
           }
@@ -1561,7 +1570,11 @@ export default function BotInterface() {
           const trend24h = last24hClose > first24h ? "ALTA" : "BAIXA";
           const trend24hStrength = Math.abs((last24hClose - first24h) / first24h * 100);
           
+          // ✅ NOVO: Calcular suporte e resistência de 24h
+          suporteResistencia = calculateSupportResistance(prices);
+          
           addLog(\`📊 Tendência 24h: \${trend24h} (\${trend24hStrength.toFixed(2)}%) - \${last24h.length} velas analisadas\`);
+          addLog(\`🎯 Suporte: $\${suporteResistencia.suporte.toFixed(4)} | Resistência: $\${suporteResistencia.resistencia.toFixed(4)} (Força: \${suporteResistencia.forca})\`);
           
           // MHI Calculation
           const mhiData = prices.slice(-mhiPeriods);
@@ -1645,9 +1658,10 @@ export default function BotInterface() {
             volume: "NEUTRO"
           };
           
-          // ✅ ESTRATÉGIA ROBUSTA - Incluir dados de tendência 24h
+          // ✅ ESTRATÉGIA ROBUSTA - Incluir dados de tendência 24h + suporte/resistência
           signals.trend24h = trend24h;
           signals.trend24hStrength = trend24hStrength;
+          signals.suporteResistencia = suporteResistencia;
           let finalSignal = calculateFinalSignal(signals, fibonacciAnalysis);
           
           const confidence = calculateConfidence(signals, rsi, fibonacciAnalysis);
@@ -1912,42 +1926,141 @@ export default function BotInterface() {
       }
 
       function calculateFinalSignal(signals, fibonacciAnalysis) {
-        // ✅ ESTRATÉGIA ROBUSTA - RSI + Bollinger + Tendência 24h
+        // ✅ ESTRATÉGIA ROBUSTA - RSI + Bollinger + Tendência 24h + Suporte/Resistência
         // RSI: Indica momentum (sobrecompra/sobrevenda)
         // Bollinger: Indica volatilidade e timing
         // Tendência 24h: Validação de direção geral do mercado
+        // Suporte/Resistência: Níveis críticos de preço
         
         // ✅ VALIDAÇÃO DE TENDÊNCIA 24H (maior segurança)
         const trend24h = signals.trend24h || "NEUTRO";
         const trend24hStrength = signals.trend24hStrength || 0;
+        const sr = signals.suporteResistencia || { suporte: 0, resistencia: 0, forca: 0 };
         
-        // ✅ REGRA CONSERVADORA DE COMPRA:
+        // ✅ ANÁLISE DE SUPORTE E RESISTÊNCIA
+        const currentPrice = priceData[priceData.length - 1]?.close || 0;
+        const distanciaSuporte = currentPrice - sr.suporte;
+        const distanciaResistencia = sr.resistencia - currentPrice;
+        const percentualSuporte = (distanciaSuporte / sr.suporte) * 100;
+        const percentualResistencia = (distanciaResistencia / sr.resistencia) * 100;
+        
+        // Log da análise de S/R
+        if (sr.suporte > 0 && sr.resistencia > 0) {
+          addLog(\`📊 S/R: Preço $\${currentPrice.toFixed(4)} | Dist. Suporte: \${percentualSuporte.toFixed(1)}% | Dist. Resistência: \${percentualResistencia.toFixed(1)}%\`);
+        }
+        
+        // ✅ REGRA INTELIGENTE DE COMPRA:
         // - RSI CALL OU Bollinger CALL
         // - E tendência 24h ALTA (ou neutra com força > 0.5%)
+        // - E preço longe da resistência (mais de 0.5% de distância)
         if ((signals.rsi === "CALL" || signals.bollinger === "CALL")) {
-          if (trend24h === "ALTA" || (trend24h === "NEUTRO" && trend24hStrength > 0.5)) {
-            addLog(\`✅ CALL aprovado: RSI(\${signals.rsi}) BB(\${signals.bollinger}) + Tend24h(\${trend24h} \${trend24hStrength.toFixed(2)}%)\`);
+          const tendenciaOk = trend24h === "ALTA" || (trend24h === "NEUTRO" && trend24hStrength > 0.5);
+          const longeResistencia = sr.resistencia === 0 || percentualResistencia > 0.5;
+          
+          if (tendenciaOk && longeResistencia) {
+            addLog(\`✅ CALL aprovado: RSI(\${signals.rsi}) BB(\${signals.bollinger}) + Tend24h(\${trend24h}) + Longe Resistência(\${percentualResistencia.toFixed(1)}%)\`);
             return "CALL";
           } else {
-            addLog(\`⚠️ CALL bloqueado: Tendência 24h \${trend24h} (\${trend24hStrength.toFixed(2)}%) não favorável\`);
+            if (!tendenciaOk) {
+              addLog(\`⚠️ CALL bloqueado: Tendência 24h \${trend24h} (\${trend24hStrength.toFixed(2)}%) não favorável\`);
+            } else {
+              addLog(\`⚠️ CALL bloqueado: Muito próximo da resistência (\${percentualResistencia.toFixed(1)}%)\`);
+            }
             return "NEUTRO";
           }
         }
         
-        // ✅ REGRA CONSERVADORA DE VENDA:
+        // ✅ REGRA INTELIGENTE DE VENDA:
         // - RSI PUT OU Bollinger PUT
         // - E tendência 24h BAIXA (ou neutra com força > 0.5%)
+        // - E preço longe do suporte (mais de 0.5% de distância)
         if ((signals.rsi === "PUT" || signals.bollinger === "PUT")) {
-          if (trend24h === "BAIXA" || (trend24h === "NEUTRO" && trend24hStrength > 0.5)) {
-            addLog(\`✅ PUT aprovado: RSI(\${signals.rsi}) BB(\${signals.bollinger}) + Tend24h(\${trend24h} \${trend24hStrength.toFixed(2)}%)\`);
+          const tendenciaOk = trend24h === "BAIXA" || (trend24h === "NEUTRO" && trend24hStrength > 0.5);
+          const longeSuporte = sr.suporte === 0 || percentualSuporte > 0.5;
+          
+          if (tendenciaOk && longeSuporte) {
+            addLog(\`✅ PUT aprovado: RSI(\${signals.rsi}) BB(\${signals.bollinger}) + Tend24h(\${trend24h}) + Longe Suporte(\${percentualSuporte.toFixed(1)}%)\`);
             return "PUT";
           } else {
-            addLog(\`⚠️ PUT bloqueado: Tendência 24h \${trend24h} (\${trend24hStrength.toFixed(2)}%) não favorável\`);
+            if (!tendenciaOk) {
+              addLog(\`⚠️ PUT bloqueado: Tendência 24h \${trend24h} (\${trend24hStrength.toFixed(2)}%) não favorável\`);
+            } else {
+              addLog(\`⚠️ PUT bloqueado: Muito próximo do suporte (\${percentualSuporte.toFixed(1)}%)\`);
+            }
             return "NEUTRO";
           }
         }
         
         return "NEUTRO";
+      }
+
+      // ✅ NOVA FUNÇÃO: Calcular suporte e resistência baseado no histórico de 24h
+      function calculateSupportResistance(prices) {
+        try {
+          if (!prices || prices.length < 50) {
+            return { suporte: 0, resistencia: 0, forca: 0 };
+          }
+          
+          // Pegar dados das últimas 24h (288 velas de 5min)
+          const last24h = prices.slice(-288);
+          
+          // Encontrar máximos e mínimos locais
+          const highs = [];
+          const lows = [];
+          
+          for (let i = 2; i < last24h.length - 2; i++) {
+            const current = last24h[i];
+            const prev2 = last24h[i-2];
+            const prev1 = last24h[i-1];
+            const next1 = last24h[i+1];
+            const next2 = last24h[i+2];
+            
+            // Máximo local (resistência)
+            if (current.high > prev2.high && current.high > prev1.high && 
+                current.high > next1.high && current.high > next2.high) {
+              highs.push({ price: current.high, timestamp: current.timestamp });
+            }
+            
+            // Mínimo local (suporte)
+            if (current.low < prev2.low && current.low < prev1.low && 
+                current.low < next1.low && current.low < next2.low) {
+              lows.push({ price: current.low, timestamp: current.timestamp });
+            }
+          }
+          
+          // Calcular níveis de suporte e resistência mais fortes
+          let resistencia = 0;
+          let suporte = 0;
+          let forca = 0;
+          
+          if (highs.length > 0 && lows.length > 0) {
+            // Ordenar por preço
+            highs.sort((a, b) => b.price - a.price);
+            lows.sort((a, b) => a.price - b.price);
+            
+            // Pegar os níveis mais recentes e fortes
+            const resistenciaCandidata = highs[0];
+            const suporteCandidato = lows[0];
+            
+            // Calcular força baseada na frequência de toques
+            const resistenciaTouches = highs.filter(h => 
+              Math.abs(h.price - resistenciaCandidata.price) / resistenciaCandidata.price < 0.001
+            ).length;
+            
+            const suporteTouches = lows.filter(l => 
+              Math.abs(l.price - suporteCandidato.price) / suporteCandidato.price < 0.001
+            ).length;
+            
+            resistencia = resistenciaCandidata.price;
+            suporte = suporteCandidato.price;
+            forca = Math.max(resistenciaTouches, suporteTouches);
+          }
+          
+          return { suporte, resistencia, forca };
+        } catch (error) {
+          addLog(\`❌ Erro calculando suporte/resistência: \${error.message}\`);
+          return { suporte: 0, resistencia: 0, forca: 0 };
+        }
       }
 
       function calculateConfidence(signals, rsi, fibonacciAnalysis) {
@@ -1977,6 +2090,16 @@ export default function BotInterface() {
         document.getElementById("bollingerSignal").textContent = signals.bollinger || "-";
         document.getElementById("confidenceValue").textContent = confidence ? \`\${confidence}%\` : "-";
         document.getElementById("finalSignal").textContent = signals.final || "-";
+        
+        // ✅ NOVO - Suporte e Resistência
+        if (signals.suporteResistencia) {
+          const sr = signals.suporteResistencia;
+          document.getElementById("suporteValue").textContent = sr.suporte > 0 ? \`$\${sr.suporte.toFixed(4)}\` : "-";
+          document.getElementById("resistenciaValue").textContent = sr.resistencia > 0 ? \`$\${sr.resistencia.toFixed(4)}\` : "-";
+        } else {
+          document.getElementById("suporteValue").textContent = "-";
+          document.getElementById("resistenciaValue").textContent = "-";
+        }
       }
 
       function executeTrade(signal, websocket) {
