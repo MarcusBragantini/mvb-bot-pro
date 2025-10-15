@@ -394,7 +394,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-900">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-slate-800 shadow-sm border-b border-slate-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
@@ -455,46 +455,46 @@ export default function Dashboard() {
 
           <TabsContent value="overview" className="space-y-6" forceMount style={{ display: activeTab === 'overview' ? 'block' : 'none' }}>
             {/* Informações da Conta */}
-            <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+            <Card className="bg-slate-800 border-slate-700">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-blue-600" />
+                <CardTitle className="flex items-center gap-2 text-slate-100">
+                  <Shield className="h-5 w-5 text-blue-400" />
                   Minha Conta
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <p className="text-sm text-gray-600">Nome</p>
-                    <p className="font-semibold text-gray-900">{user?.name}</p>
+                    <p className="text-sm text-gray-400">Nome</p>
+                    <p className="font-semibold text-slate-100">{user?.name}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Email</p>
-                    <p className="font-semibold text-gray-900">{user?.email}</p>
+                    <p className="text-sm text-gray-400">Email</p>
+                    <p className="font-semibold text-slate-100">{user?.email}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Cliente desde</p>
-                    <p className="font-semibold text-gray-900">
+                    <p className="text-sm text-gray-400">Cliente desde</p>
+                    <p className="font-semibold text-slate-100">
                       {user?.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : '-'}
                     </p>
                   </div>
                 </div>
                 {activeLicense && (
-                  <div className="pt-4 border-t border-blue-200">
+                  <div className="pt-4 border-t border-slate-600">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <div>
-                        <p className="text-sm text-gray-600">Tipo de Licença</p>
+                        <p className="text-sm text-gray-400">Tipo de Licença</p>
                         <Badge className="mt-1 bg-blue-600 text-white">
                           {activeLicense.license_type.toUpperCase()}
                         </Badge>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600">Chave</p>
-                        <p className="font-mono text-xs font-semibold text-gray-900">{activeLicense.license_key}</p>
+                        <p className="text-sm text-gray-400">Chave</p>
+                        <p className="font-mono text-xs font-semibold text-slate-100">{activeLicense.license_key}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600">Expira em</p>
-                        <p className="font-semibold text-gray-900">
+                        <p className="text-sm text-gray-400">Expira em</p>
+                        <p className="font-semibold text-slate-100">
                           {activeLicense.license_type === 'lifetime' 
                             ? '∞ Vitalícia' 
                             : activeLicense.license_type === 'free' 
@@ -503,8 +503,8 @@ export default function Dashboard() {
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600">Dispositivos</p>
-                        <p className="font-semibold text-gray-900">{activeLicense.max_devices} permitido(s)</p>
+                        <p className="text-sm text-gray-400">Dispositivos</p>
+                        <p className="font-semibold text-slate-100">{activeLicense.max_devices} permitido(s)</p>
                       </div>
                     </div>
                   </div>
@@ -514,10 +514,10 @@ export default function Dashboard() {
 
             {/* Status Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <Card>
+              <Card className="bg-slate-800 border-slate-700">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Status da Licença</CardTitle>
-                  <Shield className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium text-slate-100">Status da Licença</CardTitle>
+                  <Shield className="h-4 w-4 text-slate-400" />
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center space-x-2">
@@ -538,10 +538,10 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="bg-slate-800 border-slate-700">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Dispositivo</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium text-slate-100">Dispositivo</CardTitle>
+                  <Users className="h-4 w-4 text-slate-400" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-blue-600">
@@ -555,10 +555,10 @@ export default function Dashboard() {
 
               {/* ✅ CORREÇÃO: Card de status do bot removido (causava problemas intermitentes) */}
 
-              <Card>
+              <Card className="bg-slate-800 border-slate-700">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Performance</CardTitle>
-                  <TrendingUp className={`h-4 w-4 ${performance.isPositive ? 'text-green-600' : 'text-red-600'}`} />
+                  <CardTitle className="text-sm font-medium text-slate-100">Performance</CardTitle>
+                  <TrendingUp className={`h-4 w-4 ${performance.isPositive ? 'text-green-400' : 'text-red-400'}`} />
                 </CardHeader>
                 <CardContent>
                   {showConfigForm ? (
@@ -642,13 +642,13 @@ export default function Dashboard() {
 
             {/* License Details */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
+              <Card className="bg-slate-800 border-slate-700">
                 <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Shield className="h-5 w-5" />
+                  <CardTitle className="flex items-center space-x-2 text-slate-100">
+                    <Shield className="h-5 w-5 text-blue-400" />
                     <span>Detalhes da Licença</span>
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-slate-400">
                     Informações sobre sua licença ativa
                   </CardDescription>
                 </CardHeader>
@@ -736,13 +736,13 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="bg-slate-800 border-slate-700">
                 <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Bot className="h-5 w-5" />
+                  <CardTitle className="flex items-center space-x-2 text-slate-100">
+                    <Bot className="h-5 w-5 text-blue-400" />
                     <span>Atividade Recente</span>
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-slate-400">
                     Últimas atividades do sistema
                   </CardDescription>
                 </CardHeader>
@@ -751,22 +751,22 @@ export default function Dashboard() {
                     <div className="flex items-center space-x-3">
                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                       <div className="flex-1">
-                        <p className="text-sm font-medium">Sistema iniciado</p>
-                        <p className="text-xs text-gray-600">Há 2 horas</p>
+                        <p className="text-sm font-medium text-slate-100">Sistema iniciado</p>
+                        <p className="text-xs text-gray-400">Há 2 horas</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
                       <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                       <div className="flex-1">
-                        <p className="text-sm font-medium">Licença validada</p>
-                        <p className="text-xs text-gray-600">Há 3 horas</p>
+                        <p className="text-sm font-medium text-slate-100">Licença validada</p>
+                        <p className="text-xs text-gray-400">Há 3 horas</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
                       <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
                       <div className="flex-1">
-                        <p className="text-sm font-medium">Configuração atualizada</p>
-                        <p className="text-xs text-gray-600">Ontem</p>
+                        <p className="text-sm font-medium text-slate-100">Configuração atualizada</p>
+                        <p className="text-xs text-gray-400">Ontem</p>
                       </div>
                     </div>
                   </div>
