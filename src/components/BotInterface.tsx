@@ -2480,10 +2480,10 @@ export default function BotInterface() {
                     <Button
                       variant={settings.selectedTokenType === 'demo' ? 'default' : 'outline'}
                       onClick={() => updateSetting('selectedTokenType', 'demo')}
-                      className={`h-auto py-3 px-2 sm:px-4 ${
+                      className={`h-auto py-3 px-2 sm:px-4 transition-all duration-200 ${
                         settings.selectedTokenType === 'demo' 
-                          ? 'bg-blue-600 hover:bg-blue-700' 
-                          : 'border-blue-300 text-blue-600 hover:bg-blue-50'
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg' 
+                          : 'border-blue-300 text-blue-600 hover:bg-blue-600 hover:text-white hover:border-blue-600 hover:shadow-md'
                       }`}
                     >
                       <div className="text-center w-full">
@@ -2496,10 +2496,10 @@ export default function BotInterface() {
                     <Button
                       variant={settings.selectedTokenType === 'real' ? 'default' : 'outline'}
                       onClick={() => updateSetting('selectedTokenType', 'real')}
-                      className={`h-auto py-3 px-2 sm:px-4 ${
+                      className={`h-auto py-3 px-2 sm:px-4 transition-all duration-200 ${
                         settings.selectedTokenType === 'real' 
-                          ? 'bg-red-600 hover:bg-red-700' 
-                          : 'border-red-300 text-red-600 hover:bg-red-50'
+                          ? 'bg-red-600 hover:bg-red-700 text-white shadow-lg' 
+                          : 'border-red-300 text-red-600 hover:bg-red-600 hover:text-white hover:border-red-600 hover:shadow-md'
                       }`}
                     >
                       <div className="text-center w-full">
