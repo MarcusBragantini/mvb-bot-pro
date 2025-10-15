@@ -1576,15 +1576,29 @@ export default function BotInterface() {
               return; // ⏳ Ainda aguardando velas...
             }
             
+            // 📊 Log de análise a cada minuto (não a cada tick)
+            const agora = new Date();
+            const minutoAtual = agora.getMinutes();
+            const segundoAtual = agora.getSeconds();
+            
+            // Só analisar e logar a cada 30 segundos para não poluir o log
+            if (segundoAtual === 0 || segundoAtual === 30) {
+              addLog(\`🔍 Analisando mercado... (Preço atual: $\${tick.quote?.toFixed(4) || 'N/A'})\`);
+            }
+            
             const analysis = analyzeSignals(priceData, volumeData);
             
             if (analysis && analysis.finalSignal !== "NEUTRO" && analysis.confidence >= minConfidence) {
               updateSignalsDisplay(analysis.signals, analysis.confidence);
               
-              addLog(\`🎯 SINAL: \${analysis.finalSignal} (\${analysis.confidence}%)\`);
+              addLog(\`🎯 SINAL DETECTADO: \${analysis.finalSignal} com \${analysis.confidence}% de confiança!\`);
+              addLog(\`📋 Resumo: RSI(\${analysis.signals.rsi}) + Bollinger(\${analysis.signals.bollinger}) + Tendência 24h(\${analysis.signals.trend24h} \${analysis.signals.trend24hStrength?.toFixed(2)}%)\`);
               
               isTrading = true;
               executeTrade(analysis.finalSignal, websocket);
+            } else if (analysis && segundoAtual === 0) {
+              // Log explicativo a cada minuto quando NÃO há sinal
+              addLog(\`⏸️ Aguardando próximo sinal... (Confiança atual: \${analysis.confidence}%, mínimo: \${minConfidence}%)\`);
             }
           }
         } catch (error) {
@@ -1987,36 +2001,45 @@ export default function BotInterface() {
           addLog(\`📊 S/R: Preço $\${currentPrice.toFixed(4)} | Dist. Suporte: \${percentualSuporte.toFixed(1)}% | Dist. Resistência: \${percentualResistencia.toFixed(1)}%\`);
         }
         
-        // ✅ REGRA SIMPLIFICADA DE COMPRA:
-        // - RSI CALL OU Bollinger CALL
-        // - E tendência 24h não seja fortemente BAIXA (> 2%)
-        if ((signals.rsi === "CALL" || signals.bollinger === "CALL")) {
-          const tendenciaOk = trend24h !== "BAIXA" || trend24hStrength < 2.0;
-          
-          if (tendenciaOk) {
-            addLog(\`✅ CALL aprovado: RSI(\${signals.rsi}) BB(\${signals.bollinger}) + Tend24h(\${trend24h} \${trend24hStrength.toFixed(2)}%)\`);
-            return "CALL";
-          } else {
-            addLog(\`⚠️ CALL bloqueado: Tendência 24h fortemente \${trend24h} (\${trend24hStrength.toFixed(2)}%)\`);
-            return "NEUTRO";
-          }
-        }
+        // ✅ ESTRATÉGIA MELHORADA: SEMPRE seguir a tendência de 24h
+        // Só opera A FAVOR da tendência principal de 24 horas
         
-        // ✅ REGRA SIMPLIFICADA DE VENDA:
-        // - RSI PUT OU Bollinger PUT
-        // - E tendência 24h não seja fortemente ALTA (> 2%)
-        if ((signals.rsi === "PUT" || signals.bollinger === "PUT")) {
-          const tendenciaOk = trend24h !== "ALTA" || trend24hStrength < 2.0;
-          
-          if (tendenciaOk) {
-            addLog(\`✅ PUT aprovado: RSI(\${signals.rsi}) BB(\${signals.bollinger}) + Tend24h(\${trend24h} \${trend24hStrength.toFixed(2)}%)\`);
+        // 🔴 REGRA 1: Se tendência 24h é BAIXA, NUNCA fazer CALL
+        if (trend24h === "BAIXA" && trend24hStrength >= 0.5) {
+          // Só permite PUT se RSI ou Bollinger confirmarem
+          if (signals.rsi === "PUT" || signals.bollinger === "PUT") {
+            addLog(\`✅ PUT aprovado: A FAVOR da tendência 24h BAIXA (\${trend24hStrength.toFixed(2)}%) + RSI(\${signals.rsi}) BB(\${signals.bollinger})\`);
             return "PUT";
           } else {
-            addLog(\`⚠️ PUT bloqueado: Tendência 24h fortemente \${trend24h} (\${trend24hStrength.toFixed(2)}%)\`);
+            addLog(\`⚠️ Operação bloqueada: Tendência 24h BAIXA (\${trend24hStrength.toFixed(2)}%), mas indicadores não confirmam PUT. Aguardando...\`);
             return "NEUTRO";
           }
         }
         
+        // 🟢 REGRA 2: Se tendência 24h é ALTA, NUNCA fazer PUT
+        if (trend24h === "ALTA" && trend24hStrength >= 0.5) {
+          // Só permite CALL se RSI ou Bollinger confirmarem
+          if (signals.rsi === "CALL" || signals.bollinger === "CALL") {
+            addLog(\`✅ CALL aprovado: A FAVOR da tendência 24h ALTA (\${trend24hStrength.toFixed(2)}%) + RSI(\${signals.rsi}) BB(\${signals.bollinger})\`);
+            return "CALL";
+          } else {
+            addLog(\`⚠️ Operação bloqueada: Tendência 24h ALTA (\${trend24hStrength.toFixed(2)}%), mas indicadores não confirmam CALL. Aguardando...\`);
+            return "NEUTRO";
+          }
+        }
+        
+        // 🟡 REGRA 3: Se tendência 24h é NEUTRA (< 0.5%), usar RSI + Bollinger
+        if (trend24hStrength < 0.5) {
+          if (signals.rsi === "CALL" || signals.bollinger === "CALL") {
+            addLog(\`✅ CALL aprovado: Tendência 24h NEUTRA (\${trend24hStrength.toFixed(2)}%) + RSI(\${signals.rsi}) BB(\${signals.bollinger})\`);
+            return "CALL";
+          } else if (signals.rsi === "PUT" || signals.bollinger === "PUT") {
+            addLog(\`✅ PUT aprovado: Tendência 24h NEUTRA (\${trend24hStrength.toFixed(2)}%) + RSI(\${signals.rsi}) BB(\${signals.bollinger})\`);
+            return "PUT";
+          }
+        }
+        
+        addLog(\`⏸️ Nenhum sinal válido: Aguardando condições favoráveis...\`);
         return "NEUTRO";
       }
 
