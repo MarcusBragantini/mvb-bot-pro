@@ -106,7 +106,7 @@ export default function BotInterface() {
   const [settings, setSettings] = useState({
     stake: 1,
     martingale: 2,
-    duration: 2,
+    duration: 15,
     stopWin: 3,
     stopLoss: -5,
     confidence: 70,
@@ -122,7 +122,7 @@ export default function BotInterface() {
     // ✅ NOVO: Tempo de fechamento automático ajustável
     autoCloseTime: 30, // segundos
     // ✅ NOVO: Percentual de lucro para fechamento automático
-    autoCloseProfit: 30 // percentual
+    autoCloseProfit: 20 // percentual (scalp 20%)
   });
   
   // ===== REFS PARA INTEGRAÇÃO COM CÓDIGO ORIGINAL =====
@@ -764,7 +764,7 @@ export default function BotInterface() {
         <div style="display: none;">
           <input type="number" id="stake" value="${settings.stake || 1}" min="1" max="1000" step="1">
           <input type="number" id="martingale" value="${settings.martingale || 2}" min="2" max="5" step="1">
-          <input type="number" id="duration" value="${settings.duration || 2}" min="1" max="5">
+          <input type="number" id="duration" value="15" min="15" max="15">
           <input type="number" id="stopWin" value="${settings.stopWin || 3}" min="1" max="1000">
           <input type="number" id="stopLoss" value="${settings.stopLoss || -5}" min="-1000" max="-1">
           <input type="number" id="minConfidence" value="${settings.confidence || 70}" min="50" max="90">
@@ -773,7 +773,7 @@ export default function BotInterface() {
           <input type="number" id="emaSlow" value="${settings.emaSlow || 18}" min="15" max="50">
           <input type="number" id="rsiPeriods" value="${settings.rsiPeriods || 11}" min="7" max="21">
           <input type="number" id="autoCloseTime" value="${settings.autoCloseTime || 30}" min="10" max="300">
-          <input type="number" id="autoCloseProfit" value="${settings.autoCloseProfit || 30}" min="5" max="100">
+          <input type="number" id="autoCloseProfit" value="${settings.autoCloseProfit || 20}" min="5" max="100">
         </div>
       </div>
     `;
@@ -2642,7 +2642,7 @@ export default function BotInterface() {
                             value={settings.autoCloseProfit}
                             className="mt-1"
                             onChange={(e) => {
-                              const value = parseFloat(e.target.value) || 30;
+                              const value = parseFloat(e.target.value) || 20;
                               updateSetting('autoCloseProfit', value);
                             }}
                           />
