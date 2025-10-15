@@ -1615,17 +1615,36 @@ export default function BotInterface() {
             return null;
           }
           
-          // ✅ ANÁLISE DE TENDÊNCIA DE 24H: Verificar tendência geral do período
-          const last24h = prices.slice(-288); // Últimas 288 velas (24h de 5min)
-          const first24h = last24h[0]?.close || 0;
-          const last24hClose = last24h[last24h.length - 1]?.close || 0;
-          const trend24h = last24hClose > first24h ? "ALTA" : "BAIXA";
-          const trend24hStrength = Math.abs((last24hClose - first24h) / first24h * 100);
+          // ✅ ANÁLISE DE TENDÊNCIA DE 24H: Usar EMA 50 e EMA 200 para tendência REAL
+          const currentPrice = prices[prices.length - 1].close;
+          
+          // Calcular EMAs de longo prazo
+          const ema50 = calculateEMA(prices.slice(-50), 50);
+          const ema100 = calculateEMA(prices.slice(-100), 100);
+          const ema200 = prices.length >= 200 ? calculateEMA(prices.slice(-200), 200) : ema100;
+          
+          // Determinar tendência baseada em EMAs (mais confiável)
+          let trend24h = "NEUTRO";
+          let trend24hStrength = 0;
+          
+          if (ema50 > ema100 && ema100 > ema200 && currentPrice > ema50) {
+            trend24h = "ALTA";
+            trend24hStrength = ((ema50 - ema200) / ema200) * 100;
+          } else if (ema50 < ema100 && ema100 < ema200 && currentPrice < ema50) {
+            trend24h = "BAIXA";
+            trend24hStrength = ((ema200 - ema50) / ema200) * 100;
+          } else {
+            // Tendência indefinida ou lateral
+            trend24h = currentPrice > ema50 ? "ALTA" : "BAIXA";
+            trend24hStrength = Math.abs((currentPrice - ema50) / ema50) * 100;
+          }
+          
+          trend24hStrength = Math.abs(trend24hStrength);
           
           // ✅ NOVO: Calcular suporte e resistência de 24h
           suporteResistencia = calculateSupportResistance(prices);
           
-          addLog(\`📊 Tendência 24h: \${trend24h} (\${trend24hStrength.toFixed(2)}%) - \${last24h.length} velas analisadas\`);
+          addLog(\`📊 Tendência REAL (EMAs): \${trend24h} (\${trend24hStrength.toFixed(2)}%) | EMA50: $\${ema50.toFixed(4)} | Preço: $\${currentPrice.toFixed(4)}\`);
           addLog(\`🎯 Suporte: $\${suporteResistencia.suporte.toFixed(4)} | Resistência: $\${suporteResistencia.resistencia.toFixed(4)} (Força: \${suporteResistencia.forca})\`);
           
           // MHI Calculation
@@ -1638,7 +1657,7 @@ export default function BotInterface() {
           
           const avgHigh = highSum / mhiPeriods;
           const avgLow = lowSum / mhiPeriods;
-          const currentPrice = mhiData[mhiData.length - 1].close;
+          // currentPrice já foi definido acima para análise de tendência
           
           let mhiSignal = "NEUTRO";
           if (currentPrice > avgHigh) {
@@ -2001,42 +2020,38 @@ export default function BotInterface() {
           addLog(\`📊 S/R: Preço $\${currentPrice.toFixed(4)} | Dist. Suporte: \${percentualSuporte.toFixed(1)}% | Dist. Resistência: \${percentualResistencia.toFixed(1)}%\`);
         }
         
-        // ✅ ESTRATÉGIA MELHORADA: SEMPRE seguir a tendência de 24h
-        // Só opera A FAVOR da tendência principal de 24 horas
+        // ✅ ESTRATÉGIA MELHORADA: SEMPRE seguir a tendência REAL (baseada em EMAs)
+        // Só opera A FAVOR da tendência principal detectada pelas EMAs
         
-        // 🔴 REGRA 1: Se tendência 24h é BAIXA, NUNCA fazer CALL
-        if (trend24h === "BAIXA" && trend24hStrength >= 0.5) {
+        // 🔴 REGRA 1: Se tendência é BAIXA (EMA50 < EMA100 < EMA200), NUNCA fazer CALL
+        if (trend24h === "BAIXA" && trend24hStrength >= 0.3) {
           // Só permite PUT se RSI ou Bollinger confirmarem
           if (signals.rsi === "PUT" || signals.bollinger === "PUT") {
-            addLog(\`✅ PUT aprovado: A FAVOR da tendência 24h BAIXA (\${trend24hStrength.toFixed(2)}%) + RSI(\${signals.rsi}) BB(\${signals.bollinger})\`);
+            addLog(\`✅ PUT aprovado: A FAVOR da tendência BAIXA (\${trend24hStrength.toFixed(2)}%) + RSI(\${signals.rsi}) BB(\${signals.bollinger})\`);
             return "PUT";
           } else {
-            addLog(\`⚠️ Operação bloqueada: Tendência 24h BAIXA (\${trend24hStrength.toFixed(2)}%), mas indicadores não confirmam PUT. Aguardando...\`);
+            addLog(\`⚠️ Operação bloqueada: Tendência BAIXA (\${trend24hStrength.toFixed(2)}%), mas indicadores não confirmam PUT. Aguardando...\`);
             return "NEUTRO";
           }
         }
         
-        // 🟢 REGRA 2: Se tendência 24h é ALTA, NUNCA fazer PUT
-        if (trend24h === "ALTA" && trend24hStrength >= 0.5) {
+        // 🟢 REGRA 2: Se tendência é ALTA (EMA50 > EMA100 > EMA200), NUNCA fazer PUT
+        if (trend24h === "ALTA" && trend24hStrength >= 0.3) {
           // Só permite CALL se RSI ou Bollinger confirmarem
           if (signals.rsi === "CALL" || signals.bollinger === "CALL") {
-            addLog(\`✅ CALL aprovado: A FAVOR da tendência 24h ALTA (\${trend24hStrength.toFixed(2)}%) + RSI(\${signals.rsi}) BB(\${signals.bollinger})\`);
+            addLog(\`✅ CALL aprovado: A FAVOR da tendência ALTA (\${trend24hStrength.toFixed(2)}%) + RSI(\${signals.rsi}) BB(\${signals.bollinger})\`);
             return "CALL";
           } else {
-            addLog(\`⚠️ Operação bloqueada: Tendência 24h ALTA (\${trend24hStrength.toFixed(2)}%), mas indicadores não confirmam CALL. Aguardando...\`);
+            addLog(\`⚠️ Operação bloqueada: Tendência ALTA (\${trend24hStrength.toFixed(2)}%), mas indicadores não confirmam CALL. Aguardando...\`);
             return "NEUTRO";
           }
         }
         
-        // 🟡 REGRA 3: Se tendência 24h é NEUTRA (< 0.5%), usar RSI + Bollinger
-        if (trend24hStrength < 0.5) {
-          if (signals.rsi === "CALL" || signals.bollinger === "CALL") {
-            addLog(\`✅ CALL aprovado: Tendência 24h NEUTRA (\${trend24hStrength.toFixed(2)}%) + RSI(\${signals.rsi}) BB(\${signals.bollinger})\`);
-            return "CALL";
-          } else if (signals.rsi === "PUT" || signals.bollinger === "PUT") {
-            addLog(\`✅ PUT aprovado: Tendência 24h NEUTRA (\${trend24hStrength.toFixed(2)}%) + RSI(\${signals.rsi}) BB(\${signals.bollinger})\`);
-            return "PUT";
-          }
+        // 🟡 REGRA 3: Se tendência é LATERAL/FRACA (< 0.3%), NÃO OPERAR
+        // Mercado lateral é muito arriscado para operações de 15 minutos
+        if (trend24hStrength < 0.3) {
+          addLog(\`⚠️ Mercado LATERAL detectado (\${trend24hStrength.toFixed(2)}%). Aguardando tendência definida...\`);
+          return "NEUTRO";
         }
         
         addLog(\`⏸️ Nenhum sinal válido: Aguardando condições favoráveis...\`);
