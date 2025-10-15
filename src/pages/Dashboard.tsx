@@ -513,7 +513,7 @@ export default function Dashboard() {
             </Card>
 
             {/* Status Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card className="bg-slate-800 border-slate-700">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-slate-100">Status da Licença</CardTitle>
@@ -522,7 +522,7 @@ export default function Dashboard() {
                 <CardContent>
                   <div className="flex items-center space-x-2">
                     {activeLicense ? getStatusIcon(activeLicense.days_remaining) : <AlertCircle className="h-4 w-4 text-red-600" />}
-                    <span className="text-2xl font-bold">
+                    <span className="text-lg font-bold">
                       {activeLicense && activeLicense.is_active ? 'Ativa' : 'Inativa'}
                     </span>
                   </div>
@@ -538,21 +538,6 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-slate-800 border-slate-700">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-100">Dispositivo</CardTitle>
-                  <Users className="h-4 w-4 text-slate-400" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-blue-600">
-                    1/1
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Dispositivo conectado
-                  </p>
-                </CardContent>
-              </Card>
-
               {/* ✅ CORREÇÃO: Card de status do bot removido (causava problemas intermitentes) */}
 
               <Card className="bg-slate-800 border-slate-700">
@@ -564,56 +549,43 @@ export default function Dashboard() {
                   {showConfigForm ? (
                     <PerformanceConfigForm onSave={savePerformanceConfig} />
                   ) : (
-                    <>
-                      <div className={`text-2xl font-bold ${performance.isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                        {performance.isPositive ? '+' : ''}{performance.totalProfitPercentage.toFixed(1)}%
+                    <div className="space-y-3">
+                      {/* Principais métricas */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className={`text-xl font-bold ${performance.isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                            {performance.isPositive ? '+' : ''}{performance.totalProfitPercentage.toFixed(1)}%
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Ganho total: ${performance.totalProfit.toFixed(2)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-semibold text-green-600">
+                            ${performance.currentBalance.toFixed(2)}
+                          </div>
+                          <p className="text-xs text-muted-foreground">Saldo Deriv</p>
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        Ganho total: ${performance.totalProfit.toFixed(2)}
-                      </p>
-                      <p className="text-xs text-green-600">
-                        Saldo Deriv: ${performance.currentBalance.toFixed(2)}
-                      </p>
-                      {performance.totalDeposits > 0 && (
-                        <p className="text-xs text-blue-600">
-                          Depósitos: ${performance.totalDeposits.toFixed(2)}
-                        </p>
-                      )}
                       
-                      {/* Detalhes de Performance */}
-                      <div className="mt-3 space-y-1 text-xs text-muted-foreground">
-                        <div className="flex justify-between">
-                          <span>Média diária:</span>
-                          <span className={performance.dailyAverage >= 0 ? 'text-green-600' : 'text-red-600'}>
+                      {/* Estatísticas compactas */}
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="bg-slate-700 p-2 rounded">
+                          <div className="text-muted-foreground">Média diária</div>
+                          <div className={`font-semibold ${performance.dailyAverage >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                             {performance.dailyAverage >= 0 ? '+' : ''}${performance.dailyAverage.toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Média semanal:</span>
-                          <span className={performance.weeklyAverage >= 0 ? 'text-green-600' : 'text-red-600'}>
-                            {performance.weeklyAverage >= 0 ? '+' : ''}${performance.weeklyAverage.toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Média mensal:</span>
-                          <span className={performance.monthlyAverage >= 0 ? 'text-green-600' : 'text-red-600'}>
-                            {performance.monthlyAverage >= 0 ? '+' : ''}${performance.monthlyAverage.toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      {/* Estatísticas de Trading */}
-                      {performance.totalTrades > 0 && (
-                        <div className="mt-3 pt-2 border-t border-gray-200">
-                          <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>Taxa de vitória: {performance.winRate}%</span>
-                            <span>{performance.totalTrades} trades</span>
                           </div>
                         </div>
-                      )}
+                        <div className="bg-slate-700 p-2 rounded">
+                          <div className="text-muted-foreground">Taxa vitória</div>
+                          <div className="font-semibold text-blue-600">
+                            {performance.winRate.toFixed(1)}%
+                          </div>
+                        </div>
+                      </div>
                       
-                      {/* Botões de ação */}
-                      <div className="mt-3 pt-2 border-t border-gray-200 space-y-2">
+                      {/* Botões compactos */}
+                      <div className="flex gap-2">
                         <Button 
                           variant="outline" 
                           size="sm" 
@@ -621,20 +593,20 @@ export default function Dashboard() {
                             fetchDerivBalance();
                             fetchTradingHistory();
                           }}
-                          className="w-full text-xs"
+                          className="flex-1 text-xs h-7"
                         >
-                          🔄 Atualizar da Deriv
+                          🔄 Atualizar
                         </Button>
                         <Button 
                           variant="outline" 
                           size="sm" 
                           onClick={() => setShowConfigForm(true)}
-                          className="w-full text-xs"
+                          className="flex-1 text-xs h-7"
                         >
-                          ⚙️ Configurar Performance
+                          ⚙️ Config
                         </Button>
                       </div>
-                    </>
+                    </div>
                   )}
                 </CardContent>
               </Card>
