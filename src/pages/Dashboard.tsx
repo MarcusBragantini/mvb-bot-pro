@@ -481,86 +481,51 @@ export default function Dashboard() {
                 </div>
                 {activeLicense && (
                   <div className="pt-4 border-t border-slate-600">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <div>
-                        <p className="text-sm text-gray-400">Tipo de Licença</p>
-                        <Badge className="mt-1 bg-blue-600 text-white">
-                          {activeLicense.license_type.toUpperCase()}
-                        </Badge>
+                    <div className="space-y-4">
+                      {/* Informações básicas da licença */}
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                          <p className="text-sm text-gray-400">Tipo de Licença</p>
+                          <Badge className="mt-1 bg-blue-600 text-white">
+                            {activeLicense.license_type === 'free' ? 'TESTE' : activeLicense.license_type.toUpperCase()}
+                          </Badge>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-400">Status</p>
+                          <Badge className={`mt-1 ${getStatusBadge(activeLicense.status)}`}>
+                            {activeLicense.status.toUpperCase()}
+                          </Badge>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-400">Chave</p>
+                          <p className="font-mono text-xs font-semibold text-slate-100">{activeLicense.license_key}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-400">Dispositivos</p>
+                          <p className="font-semibold text-slate-100">{activeLicense.max_devices} permitido(s)</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm text-gray-400">Chave</p>
-                        <p className="font-mono text-xs font-semibold text-slate-100">{activeLicense.license_key}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-400">Expira em</p>
-                        <p className="font-semibold text-slate-100">
-                          {activeLicense.license_type === 'lifetime' 
-                            ? '∞ Vitalícia' 
-                            : activeLicense.license_type === 'free' 
-                            ? `${Math.max(0, Math.ceil((new Date(activeLicense.expires_at).getTime() - Date.now()) / (1000 * 60)))} min`
-                            : `${activeLicense.days_remaining} dias`}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-400">Dispositivos</p>
-                        <p className="font-semibold text-slate-100">{activeLicense.max_devices} permitido(s)</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
 
+                      {/* Detalhes da licença */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-gray-400">Criada em</p>
+                          <p className="font-semibold text-slate-100">
+                            {new Date(activeLicense.created_at).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-400">Expira em</p>
+                          <p className="font-semibold text-slate-100">
+                            {new Date(activeLicense.expires_at).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                      </div>
 
-            {/* License Details */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="bg-slate-800 border-slate-700">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2 text-slate-100">
-                    <Shield className="h-5 w-5 text-blue-400" />
-                    <span>Detalhes da Licença</span>
-                  </CardTitle>
-                  <CardDescription className="text-slate-400">
-                    Informações sobre sua licença ativa
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {activeLicense ? (
-                    <>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Status:</span>
-                        <Badge className={getStatusBadge(activeLicense.status)}>
-                          {activeLicense.status.toUpperCase()}
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Tipo:</span>
-                        <Badge variant="secondary">
-                          {activeLicense.license_type === 'free' ? 'TESTE' : activeLicense.license_type.toUpperCase()}
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Chave:</span>
-                        <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">
-                          {activeLicense.license_key}
-                        </code>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Criada em:</span>
-                        <span className="text-sm font-medium">
-                          {new Date(activeLicense.created_at).toLocaleDateString('pt-BR')}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Expira em:</span>
-                        <span className="text-sm font-medium">
-                          {new Date(activeLicense.expires_at).toLocaleDateString('pt-BR')}
-                        </span>
-                      </div>
+                      {/* Tempo restante com progress bar */}
                       <div className="space-y-2">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-600">Tempo restante:</span>
+                          <span className="text-sm text-gray-400">Tempo restante:</span>
                           <span className={`text-sm font-bold ${
                             activeLicense.license_type === 'free' 
                               ? (Math.max(0, Math.ceil((new Date(activeLicense.expires_at).getTime() - Date.now()) / (1000 * 60))) > 2 ? 'text-green-600' : 'text-red-600')
@@ -568,8 +533,10 @@ export default function Dashboard() {
                                 activeLicense.days_remaining > 0 ? 'text-yellow-600' : 
                                 'text-red-600')
                           }`}>
-                            {activeLicense.license_type === 'free' 
-                              ? `${Math.max(0, Math.ceil((new Date(activeLicense.expires_at).getTime() - Date.now()) / (1000 * 60)))} min`
+                            {activeLicense.license_type === 'lifetime' 
+                              ? '∞ Vitalícia' 
+                              : activeLicense.license_type === 'free' 
+                              ? `${Math.max(0, Math.ceil((new Date(activeLicense.expires_at).getTime() - Date.now()) / (1000 * 60)))} minutos`
                               : `${activeLicense.days_remaining} ${activeLicense.days_remaining === 1 ? 'dia' : 'dias'}`}
                           </span>
                         </div>
@@ -593,59 +560,13 @@ export default function Dashboard() {
                           }
                         </p>
                       </div>
-                    </>
-                  ) : (
-                    <div className="text-center py-8">
-                      <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-600 mb-2">Nenhuma licença ativa encontrada</p>
-                      <p className="text-sm text-gray-500 mb-4">
-                        Entre em contato com o administrador para adquirir uma licença
-                      </p>
-                      <Badge variant="outline" className="text-xs">
-                        Total de licenças: {licenses.length}
-                      </Badge>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="bg-slate-800 border-slate-700">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2 text-slate-100">
-                    <Bot className="h-5 w-5 text-blue-400" />
-                    <span>Atividade Recente</span>
-                  </CardTitle>
-                  <CardDescription className="text-slate-400">
-                    Últimas atividades do sistema
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-slate-100">Sistema iniciado</p>
-                        <p className="text-xs text-gray-400">Há 2 horas</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-slate-100">Licença validada</p>
-                        <p className="text-xs text-gray-400">Há 3 horas</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-slate-100">Configuração atualizada</p>
-                        <p className="text-xs text-gray-400">Ontem</p>
-                      </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                )}
+              </CardContent>
+            </Card>
+
+
           </TabsContent>
 
           <TabsContent value="bot" forceMount style={{ display: activeTab === 'bot' ? 'block' : 'none' }}>
