@@ -671,10 +671,6 @@ export default function BotInterface() {
             <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px;">Dados</div>
             <div class="status-value" id="dataCount" style="font-size: 1rem; font-weight: bold; color: #f1f5f9;">0</div>
           </div>
-          <div class="status-card" style="background: #0f172a; padding: 16px; border-radius: 12px; text-align: center; border: 2px solid #ec4899;">
-            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px;">Martingale</div>
-            <div class="status-value" id="martingaleStatus" style="font-size: 1rem; font-weight: bold; color: #f1f5f9;">0/3</div>
-          </div>
           <div class="status-card" style="background: #0f172a; padding: 16px; border-radius: 12px; text-align: center; border: 2px solid #84cc16;">
             <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px;">Entrada</div>
             <div class="status-value" id="currentStake" style="font-size: 1rem; font-weight: bold; color: #f1f5f9;">$1</div>
@@ -2577,7 +2573,7 @@ export default function BotInterface() {
                       <CardHeader className="pb-4">
                         <CardTitle className="text-lg text-blue-600 flex items-center gap-2">
                           <DollarSign className="h-5 w-5" />
-                          Entrada
+                          Entrada & Martingale
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
@@ -2598,6 +2594,23 @@ export default function BotInterface() {
                           />
                         </div>
                         
+                        
+                        <div>
+                          <Label htmlFor="martingale-setting" className="text-sm font-medium">Multiplicador Martingale</Label>
+                          <Input
+                            id="martingale-setting"
+                            type="number"
+                            min="2"
+                            max="5"
+                            step="1"
+                            value={settings.martingale}
+                            className="mt-1"
+                            onChange={(e) => {
+                              const value = parseFloat(e.target.value) || 2;
+                              updateSetting('martingale', value);
+                            }}
+                          />
+                        </div>
                         
                         <div>
                           <Label htmlFor="duration-setting" className="text-sm font-medium">Duração (minutos)</Label>
