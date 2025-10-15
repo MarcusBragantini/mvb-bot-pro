@@ -2024,7 +2024,7 @@ export default function BotInterface() {
         // Só opera A FAVOR da tendência principal detectada pelas EMAs
         
         // 🔴 REGRA 1: Se tendência é BAIXA (EMA50 < EMA100 < EMA200), NUNCA fazer CALL
-        if (trend24h === "BAIXA" && trend24hStrength >= 0.3) {
+        if (trend24h === "BAIXA" && trend24hStrength >= 0.05) {
           // Só permite PUT se RSI ou Bollinger confirmarem
           if (signals.rsi === "PUT" || signals.bollinger === "PUT") {
             addLog(\`✅ PUT aprovado: A FAVOR da tendência BAIXA (\${trend24hStrength.toFixed(2)}%) + RSI(\${signals.rsi}) BB(\${signals.bollinger})\`);
@@ -2036,7 +2036,7 @@ export default function BotInterface() {
         }
         
         // 🟢 REGRA 2: Se tendência é ALTA (EMA50 > EMA100 > EMA200), NUNCA fazer PUT
-        if (trend24h === "ALTA" && trend24hStrength >= 0.3) {
+        if (trend24h === "ALTA" && trend24hStrength >= 0.05) {
           // Só permite CALL se RSI ou Bollinger confirmarem
           if (signals.rsi === "CALL" || signals.bollinger === "CALL") {
             addLog(\`✅ CALL aprovado: A FAVOR da tendência ALTA (\${trend24hStrength.toFixed(2)}%) + RSI(\${signals.rsi}) BB(\${signals.bollinger})\`);
@@ -2047,11 +2047,20 @@ export default function BotInterface() {
           }
         }
         
-        // 🟡 REGRA 3: Se tendência é LATERAL/FRACA (< 0.3%), NÃO OPERAR
-        // Mercado lateral é muito arriscado para operações de 15 minutos
-        if (trend24hStrength < 0.3) {
-          addLog(\`⚠️ Mercado LATERAL detectado (\${trend24hStrength.toFixed(2)}%). Aguardando tendência definida...\`);
-          return "NEUTRO";
+        // 🟡 REGRA 3: Se tendência é extremamente LATERAL/FRACA (< 0.05%), ser mais cauteloso
+        // Requer confirmação DUPLA de indicadores para operar em mercado lateral
+        if (trend24hStrength < 0.05) {
+          // Em mercado muito lateral, só opera se MHI + RSI confirmarem
+          if (signals.mhi === "CALL" && signals.rsi === "CALL") {
+            addLog(\`✅ CALL aprovado em mercado lateral: MHI + RSI confirmam\`);
+            return "CALL";
+          } else if (signals.mhi === "PUT" && signals.rsi === "PUT") {
+            addLog(\`✅ PUT aprovado em mercado lateral: MHI + RSI confirmam\`);
+            return "PUT";
+          } else {
+            addLog(\`⚠️ Mercado MUITO LATERAL detectado (\${trend24hStrength.toFixed(3)}%). Aguardando confirmação dupla de indicadores...\`);
+            return "NEUTRO";
+          }
         }
         
         addLog(\`⏸️ Nenhum sinal válido: Aguardando condições favoráveis...\`);
