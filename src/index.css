@@ -4,13 +4,13 @@
 
 @layer base {
   :root {
-    --background: 222 47% 11%;
+    --background: 222 47% 4%;
     --foreground: 210 40% 98%;
 
     --card: 217 33% 17%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222 47% 11%;
+    --popover: 222 47% 4%;
     --popover-foreground: 210 40% 98%;
 
     --primary: 217 91% 60%;
@@ -34,7 +34,7 @@
 
     --radius: 0.5rem;
 
-    --sidebar-background: 222 47% 11%;
+    --sidebar-background: 222 47% 4%;
 
     --sidebar-foreground: 210 40% 98%;
 
@@ -97,5 +97,15 @@
 
   body {
     @apply bg-background text-foreground;
+    background-color: hsl(222, 47%, 4%) !important;
+  }
+  
+  html {
+    background-color: hsl(222, 47%, 4%) !important;
+  }
+  
+  #root {
+    background-color: hsl(222, 47%, 4%) !important;
+    min-height: 100vh;
   }
 }
