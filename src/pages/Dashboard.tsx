@@ -513,33 +513,7 @@ export default function Dashboard() {
             </Card>
 
             {/* Status Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="bg-slate-800 border-slate-700">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-100">Status da Licença</CardTitle>
-                  <Shield className="h-4 w-4 text-slate-400" />
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center space-x-2">
-                    {activeLicense ? getStatusIcon(activeLicense.days_remaining) : <AlertCircle className="h-4 w-4 text-red-600" />}
-                    <span className="text-lg font-bold">
-                      {activeLicense && activeLicense.is_active ? 'Ativa' : 'Inativa'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {activeLicense 
-                      ? (activeLicense.license_type === 'lifetime' 
-                          ? 'Licença vitalícia' 
-                          : activeLicense.license_type === 'free' 
-                          ? `${Math.max(0, Math.ceil((new Date(activeLicense.expires_at).getTime() - Date.now()) / (1000 * 60)))} minutos restantes`
-                          : `${activeLicense.days_remaining} dias restantes`)
-                      : 'Nenhuma licença ativa'}
-                  </p>
-                </CardContent>
-              </Card>
-
-              {/* ✅ CORREÇÃO: Card de status do bot removido (causava problemas intermitentes) */}
-
+            <div className="grid grid-cols-1 gap-6">
               <Card className="bg-slate-800 border-slate-700">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-slate-100">Performance</CardTitle>
