@@ -1010,6 +1010,7 @@ export default function BotInterface() {
       let historicoCarregado = false; // ✅ NOVO: Flag para saber se histórico foi carregado
       let ultimoMinutoProcessado = 0; // ✅ NOVO: Controlar contagem de velas de 1 minuto
       let suporteResistencia = { suporte: 0, resistencia: 0, forca: 0 }; // ✅ NOVO: Suporte e resistência de 24h
+      let savedToken = ''; // ✅ NOVO: Armazenar token para reconexões automáticas
 
       const WEBSOCKET_ENDPOINTS = [
         "wss://ws.binaryws.com/websockets/v3",
@@ -1086,6 +1087,9 @@ export default function BotInterface() {
           }
         }
         
+        // ✅ Salvar token globalmente para reconexões
+        savedToken = token;
+        
         console.log('🔍 Debug Token:', {
           token: token ? 'Token presente' : 'Token vazio',
           tokenLength: token.length,
@@ -1155,9 +1159,26 @@ export default function BotInterface() {
         ws = connectWebSocket(token);
       }
 
-      function connectWebSocket(token, endpointIndex = 0) {
+      function connectWebSocket(token, endpointIndex = 0, tentativaReconexao = 0) {
+        // ✅ Usar token salvo se não foi passado (reconexão automática)
+        const tokenToUse = token || savedToken;
+        
+        if (!tokenToUse) {
+          addLog("❌ Token não disponível para reconexão.");
+          return null;
+        }
+        
         if (endpointIndex >= WEBSOCKET_ENDPOINTS.length) {
-          addLog("❌ Todos os endpoints falharam.");
+          // ✅ Se todos os endpoints falharam, reiniciar do primeiro após 5 segundos
+          if (isRunning) {
+            tentativaReconexao++;
+            addLog(\`⚠️ Todos os endpoints falharam. Tentativa \${tentativaReconexao} - Reiniciando em 5s...\`);
+            setTimeout(() => {
+              ws = connectWebSocket(tokenToUse, 0, tentativaReconexao);
+            }, 5000);
+          } else {
+            addLog("❌ Todos os endpoints falharam. Bot parado.");
+          }
           return null;
         }
 
@@ -1167,9 +1188,10 @@ export default function BotInterface() {
           const websocket = new WebSocket(endpoint);
           
           websocket.onopen = () => {
-            addLog("✅ WebSocket conectado!");
+            addLog(\`✅ WebSocket conectado! (Endpoint \${endpointIndex + 1}/\${WEBSOCKET_ENDPOINTS.length})\`);
             document.getElementById("status").innerText = "🔐 Autenticando...";
-            websocket.send(JSON.stringify({ authorize: token }));
+            websocket.send(JSON.stringify({ authorize: tokenToUse }));
+            tentativaReconexao = 0; // Reset contador ao conectar com sucesso
           };
 
           websocket.onmessage = (event) => {
@@ -1178,18 +1200,26 @@ export default function BotInterface() {
 
           websocket.onclose = (event) => {
             if (!event.wasClean && isRunning) {
-              addLog("🔴 Conexão perdida. Reconectando...");
-              setTimeout(() => connectWebSocket(token, endpointIndex + 1), 2000);
+              addLog(\`🔴 Conexão perdida (Endpoint \${endpointIndex + 1}). Tentando próximo endpoint...\`);
+              setTimeout(() => {
+                ws = connectWebSocket(tokenToUse, endpointIndex + 1, tentativaReconexao);
+              }, 2000);
+            } else if (!isRunning) {
+              addLog("ℹ️ WebSocket fechado (bot parado).");
             }
           };
 
-          websocket.onerror = () => {
-            addLog(\`❌ Erro de conexão.\`);
+          websocket.onerror = (error) => {
+            addLog(\`❌ Erro de conexão no endpoint \${endpointIndex + 1}.\`);
           };
 
           return websocket;
         } catch (error) {
-          addLog(\`❌ Erro ao criar WebSocket\`);
+          addLog(\`❌ Erro ao criar WebSocket no endpoint \${endpointIndex + 1}\`);
+          // Tentar próximo endpoint imediatamente
+          setTimeout(() => {
+            ws = connectWebSocket(tokenToUse, endpointIndex + 1, tentativaReconexao);
+          }, 1000);
           return null;
         }
       }
