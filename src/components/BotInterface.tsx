@@ -2754,88 +2754,71 @@ export default function BotInterface() {
                           Indicadores Técnicos
                         </CardTitle>
                       </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div>
-                          <Label htmlFor="mhi-setting" className="text-sm font-medium">Períodos MHI</Label>
-                          <Input
-                            id="mhi-setting"
-                            type="number"
-                            min="5"
-                            max="50"
-                            value={settings.mhiPeriods || 20}
-                            className="mt-1"
-                            onChange={(e) => {
-                              const value = parseInt(e.target.value) || 20;
-                              updateSetting('mhiPeriods', value);
-                            }}
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="emafast-setting" className="text-sm font-medium">EMA Rápida</Label>
-                          <Input
-                            id="emafast-setting"
-                            type="number"
-                            min="5"
-                            max="20"
-                            value={settings.emaFast || 8}
-                            className="mt-1"
-                            onChange={(e) => {
-                              const value = parseInt(e.target.value) || 8;
-                              updateSetting('emaFast', value);
-                            }}
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="emaslow-setting" className="text-sm font-medium">EMA Lenta</Label>
-                          <Input
-                            id="emaslow-setting"
-                            type="number"
-                            min="15"
-                            max="50"
-                            value={settings.emaSlow || 18}
-                            className="mt-1"
-                            onChange={(e) => {
-                              const value = parseInt(e.target.value) || 18;
-                              updateSetting('emaSlow', value);
-                            }}
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="rsi-setting" className="text-sm font-medium">RSI Períodos</Label>
-                          <Input
-                            id="rsi-setting"
-                            type="number"
-                            min="7"
-                            max="21"
-                            value={settings.rsiPeriods || 10}
-                            className="mt-1"
-                            onChange={(e) => {
-                              const value = parseInt(e.target.value) || 10;
-                              updateSetting('rsiPeriods', value);
-                            }}
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="autoclose-setting" className="text-sm font-medium">Fechamento Automático (segundos)</Label>
-                          <Input
-                            id="autoclose-setting"
-                            type="number"
-                            min="10"
-                            max="300"
-                            value={settings.autoCloseTime || 30}
-                            className="mt-1"
-                            onChange={(e) => {
-                              const value = parseInt(e.target.value) || 30;
-                              updateSetting('autoCloseTime', value);
-                            }}
-                          />
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Tempo para fechar trade automaticamente (10-300 segundos)
-                          </p>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                          <div>
+                            <Label htmlFor="mhi-setting" className="text-sm font-medium">Períodos MHI</Label>
+                            <Input
+                              id="mhi-setting"
+                              type="number"
+                              min="5"
+                              max="50"
+                              value={settings.mhiPeriods || 20}
+                              className="mt-1"
+                              onChange={(e) => {
+                                const value = parseInt(e.target.value) || 20;
+                                updateSetting('mhiPeriods', value);
+                              }}
+                            />
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="emafast-setting" className="text-sm font-medium">EMA Rápida</Label>
+                            <Input
+                              id="emafast-setting"
+                              type="number"
+                              min="5"
+                              max="20"
+                              value={settings.emaFast || 8}
+                              className="mt-1"
+                              onChange={(e) => {
+                                const value = parseInt(e.target.value) || 8;
+                                updateSetting('emaFast', value);
+                              }}
+                            />
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="emaslow-setting" className="text-sm font-medium">EMA Lenta</Label>
+                            <Input
+                              id="emaslow-setting"
+                              type="number"
+                              min="15"
+                              max="50"
+                              value={settings.emaSlow || 18}
+                              className="mt-1"
+                              onChange={(e) => {
+                                const value = parseInt(e.target.value) || 18;
+                                updateSetting('emaSlow', value);
+                              }}
+                            />
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="rsi-setting" className="text-sm font-medium">RSI Períodos</Label>
+                            <Input
+                              id="rsi-setting"
+                              type="number"
+                              min="7"
+                              max="21"
+                              value={settings.rsiPeriods || 10}
+                              className="mt-1"
+                              onChange={(e) => {
+                                const value = parseInt(e.target.value) || 10;
+                                updateSetting('rsiPeriods', value);
+                              }}
+                            />
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
