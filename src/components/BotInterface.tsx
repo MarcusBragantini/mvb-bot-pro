@@ -2434,7 +2434,7 @@ export default function BotInterface() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-2 sm:p-4">
+    <div className="min-h-screen bg-slate-900 p-2 sm:p-4">
       {/* Container Principal com 3 Abas React - Mobile Optimized */}
       <Card className="shadow-2xl border-0">
         <CardContent className="p-2 sm:p-6">
