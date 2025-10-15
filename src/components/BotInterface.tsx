@@ -608,61 +608,13 @@ export default function BotInterface() {
     // Inserir HTML do bot original - OTIMIZADO PARA MOBILE
     botContainerRef.current.innerHTML = `
       <div class="bot-interface-original">
-        <!-- Indicadores de Sinais - Mobile Optimized -->
-        <div class="indicators-container" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; padding: 16px; margin: 16px 0; color: #e2e8f0; border: 1px solid #334155;">
-          <h3 style="text-align: center; margin-bottom: 16px; font-size: 1.1rem; font-weight: 600; color: #cbd5e1;">📊 Sinais em Tempo Real</h3>
-          
-          <div class="indicators-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;">
-            <div class="indicator-card" style="background: rgba(15,23,42,0.6); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid #334155;">
-              <div style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 4px; color: #94a3b8;">MHI</div>
-              <div class="indicator-value" id="mhiSignal" style="font-weight: bold; font-size: 1rem; color: #e2e8f0;">-</div>
-            </div>
-            <div class="indicator-card" style="background: rgba(15,23,42,0.6); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid #334155;">
-              <div style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 4px; color: #94a3b8;">Tendência</div>
-              <div class="indicator-value" id="trendSignal" style="font-weight: bold; font-size: 1rem; color: #e2e8f0;">-</div>
-            </div>
-            <div class="indicator-card" style="background: rgba(15,23,42,0.6); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid #334155;">
-              <div style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 4px; color: #94a3b8;">EMA</div>
-              <div class="indicator-value" id="emaSignal" style="font-weight: bold; font-size: 1rem; color: #e2e8f0;">-</div>
-            </div>
-            <div class="indicator-card" style="background: rgba(15,23,42,0.6); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid #334155;">
-              <div style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 4px; color: #94a3b8;">RSI</div>
-              <div class="indicator-value" id="rsiValue" style="font-weight: bold; font-size: 1rem; color: #e2e8f0;">-</div>
-            </div>
-            <div class="indicator-card" style="background: rgba(15,23,42,0.6); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid #334155;">
-              <div style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 4px; color: #94a3b8;">Bollinger</div>
-              <div class="indicator-value" id="bollingerSignal" style="font-weight: bold; font-size: 1rem; color: #e2e8f0;">-</div>
-            </div>
-            <div class="indicator-card" style="background: rgba(15,23,42,0.6); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid #334155;">
-              <div style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 4px; color: #94a3b8;">🎯 Fibonacci</div>
-              <div class="indicator-value" id="fibonacciSignal" style="font-weight: bold; font-size: 1rem; color: #e2e8f0;">-</div>
-            </div>
-            <div class="indicator-card" style="background: rgba(15,23,42,0.6); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid #334155;">
-              <div style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 4px; color: #94a3b8;">📊 Suporte</div>
-              <div class="indicator-value" id="suporteValue" style="font-weight: bold; font-size: 0.9rem; color: #e2e8f0;">-</div>
-            </div>
-            <div class="indicator-card" style="background: rgba(15,23,42,0.6); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid #334155;">
-              <div style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 4px; color: #94a3b8;">📈 Resistência</div>
-              <div class="indicator-value" id="resistenciaValue" style="font-weight: bold; font-size: 0.9rem; color: #e2e8f0;">-</div>
-            </div>
-            <div class="indicator-card" style="background: rgba(15,23,42,0.6); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid #334155;">
-              <div style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 4px; color: #94a3b8;">Confiança</div>
-              <div class="indicator-value" id="confidenceValue" style="font-weight: bold; font-size: 1rem; color: #e2e8f0;">-</div>
-            </div>
-            <div class="indicator-card" style="background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); border-radius: 12px; padding: 12px; text-align: center; color: #e2e8f0; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2); border: 1px solid #2563eb;">
-              <div style="font-size: 0.8rem; font-weight: 600; margin-bottom: 4px;">SINAL FINAL</div>
-              <div class="indicator-value" id="finalSignal" style="font-weight: bold; font-size: 1.1rem;">-</div>
-            </div>
-          </div>
-        </div>
-
         <!-- Controles Principais - Simplified for Mobile -->
         <div class="main-controls" style="background: #1e293b; border-radius: 16px; padding: 20px; margin: 16px 0; box-shadow: 0 4px 20px rgba(0,0,0,0.3); border: 1px solid #334155;">
           <div class="control-grid" style="display: grid; gap: 16px;">
             <!-- Token oculto - será preenchido automaticamente -->
             <input type="hidden" id="token" value="">
             <div class="form-group">
-              <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #cbd5e1; font-size: 0.9rem;">📈 Símbolo:</label>
+              <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #f1f5f9; font-size: 0.9rem;">📈 Símbolo:</label>
               <select id="symbol" style="width: 100%; padding: 14px; border: 2px solid #334155; border-radius: 12px; font-size: 16px; background: #0f172a; color: #e2e8f0;">
                 <optgroup label="ÍNDICES VOLÁTEIS">
                   <option value="R_10">Volatility 10 Index</option>
@@ -699,42 +651,42 @@ export default function BotInterface() {
 
         <!-- Status Cards - Mobile Grid -->
         <div class="status-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 16px 0;">
-          <div class="status-card" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 16px; border-radius: 12px; text-align: center; color: white; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);">
-            <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 4px;">Status</div>
-            <div class="status-value" id="status" style="font-size: 1rem; font-weight: bold;">⏳ Aguardando...</div>
+          <div class="status-card" style="background: #0f172a; padding: 16px; border-radius: 12px; text-align: center; border: 2px solid #3b82f6;">
+            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px;">Status</div>
+            <div class="status-value" id="status" style="font-size: 1rem; font-weight: bold; color: #f1f5f9;">⏳ Aguardando...</div>
           </div>
-          <div class="status-card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 16px; border-radius: 12px; text-align: center; color: white; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
-            <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 4px;">Saldo</div>
-            <div class="status-value" style="font-size: 1rem; font-weight: bold;">$<span id="balance">0</span></div>
+          <div class="status-card" style="background: #0f172a; padding: 16px; border-radius: 12px; text-align: center; border: 2px solid #10b981;">
+            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px;">Saldo</div>
+            <div class="status-value" style="font-size: 1rem; font-weight: bold; color: #f1f5f9;">$<span id="balance">0</span></div>
           </div>
-          <div class="status-card" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); padding: 16px; border-radius: 12px; text-align: center; color: white; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);">
-            <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 4px;">Lucro</div>
-            <div class="status-value" id="profit" style="font-size: 1rem; font-weight: bold;">$0</div>
+          <div class="status-card" style="background: #0f172a; padding: 16px; border-radius: 12px; text-align: center; border: 2px solid #8b5cf6;">
+            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px;">Lucro</div>
+            <div class="status-value" id="profit" style="font-size: 1rem; font-weight: bold; color: #f1f5f9;">$0</div>
           </div>
-          <div class="status-card" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 16px; border-radius: 12px; text-align: center; color: white; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);">
-            <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 4px;">Precisão</div>
-            <div class="status-value" id="accuracy" style="font-size: 1rem; font-weight: bold;">0%</div>
+          <div class="status-card" style="background: #0f172a; padding: 16px; border-radius: 12px; text-align: center; border: 2px solid #f59e0b;">
+            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px;">Precisão</div>
+            <div class="status-value" id="accuracy" style="font-size: 1rem; font-weight: bold; color: #f1f5f9;">0%</div>
           </div>
-          <div class="status-card" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); padding: 16px; border-radius: 12px; text-align: center; color: white; box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3);">
-            <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 4px;">Dados</div>
-            <div class="status-value" id="dataCount" style="font-size: 1rem; font-weight: bold;">0</div>
+          <div class="status-card" style="background: #0f172a; padding: 16px; border-radius: 12px; text-align: center; border: 2px solid #06b6d4;">
+            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px;">Dados</div>
+            <div class="status-value" id="dataCount" style="font-size: 1rem; font-weight: bold; color: #f1f5f9;">0</div>
           </div>
-          <div class="status-card" style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); padding: 16px; border-radius: 12px; text-align: center; color: white; box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3);">
-            <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 4px;">Martingale</div>
-            <div class="status-value" id="martingaleStatus" style="font-size: 1rem; font-weight: bold;">0/3</div>
+          <div class="status-card" style="background: #0f172a; padding: 16px; border-radius: 12px; text-align: center; border: 2px solid #ec4899;">
+            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px;">Martingale</div>
+            <div class="status-value" id="martingaleStatus" style="font-size: 1rem; font-weight: bold; color: #f1f5f9;">0/3</div>
           </div>
-          <div class="status-card" style="background: linear-gradient(135deg, #84cc16 0%, #65a30d 100%); padding: 16px; border-radius: 12px; text-align: center; color: white; box-shadow: 0 4px 15px rgba(132, 204, 22, 0.3);">
-            <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 4px;">Entrada</div>
-            <div class="status-value" id="currentStake" style="font-size: 1rem; font-weight: bold;">$1</div>
+          <div class="status-card" style="background: #0f172a; padding: 16px; border-radius: 12px; text-align: center; border: 2px solid #84cc16;">
+            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px;">Entrada</div>
+            <div class="status-value" id="currentStake" style="font-size: 1rem; font-weight: bold; color: #f1f5f9;">$1</div>
           </div>
         </div>
 
         <!-- Log Compacto para Mobile -->
-        <div class="log-container" style="background: #1f2937; border-radius: 16px; margin: 16px 0; overflow: hidden;">
-          <div style="background: linear-gradient(135deg, #374151 0%, #1f2937 100%); padding: 12px; border-bottom: 1px solid #374151;">
-            <h3 style="color: #f9fafb; margin: 0; font-size: 1rem; font-weight: 600;">📋 Log do Sistema</h3>
+        <div class="log-container" style="background: #1e293b; border-radius: 16px; margin: 16px 0; overflow: hidden; border: 1px solid #334155;">
+          <div style="background: #0f172a; padding: 12px; border-bottom: 1px solid #334155;">
+            <h3 style="color: #f1f5f9; margin: 0; font-size: 1rem; font-weight: 600;">📋 Log do Sistema</h3>
           </div>
-          <div id="log" style="background: #111827; color: #10b981; padding: 16px; font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace; height: 200px; overflow-y: auto; font-size: 13px; line-height: 1.4;"></div>
+          <div id="log" style="background: #0f172a; color: #34d399; padding: 16px; font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace; height: 200px; overflow-y: auto; font-size: 13px; line-height: 1.4;"></div>
         </div>
 
         <!-- Histórico Responsivo -->
@@ -746,20 +698,34 @@ export default function BotInterface() {
             <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
               <thead>
                 <tr style="background: #0f172a;">
-                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #94a3b8; font-size: 0.85rem;">Contrato</th>
-                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #94a3b8; font-size: 0.85rem;">Sinal</th>
-                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #94a3b8; font-size: 0.85rem;">Confiança</th>
-                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #94a3b8; font-size: 0.85rem;">Entrada</th>
-                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #94a3b8; font-size: 0.85rem;">Resultado</th>
-                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #94a3b8; font-size: 0.85rem;">Lucro</th>
-                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #94a3b8; font-size: 0.85rem;">Hora</th>
+                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #cbd5e1; font-size: 0.85rem;">Contrato</th>
+                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #cbd5e1; font-size: 0.85rem;">Sinal</th>
+                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #cbd5e1; font-size: 0.85rem;">Confiança</th>
+                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #cbd5e1; font-size: 0.85rem;">Entrada</th>
+                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #cbd5e1; font-size: 0.85rem;">Resultado</th>
+                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #cbd5e1; font-size: 0.85rem;">Lucro</th>
+                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #cbd5e1; font-size: 0.85rem;">Hora</th>
                 </tr>
               </thead>
-              <tbody id="historyBody" style="color: #cbd5e1;"></tbody>
+              <tbody id="historyBody" style="color: #e2e8f0;"></tbody>
             </table>
           </div>
         </div>
 
+        <!-- Elementos ocultos mas necessários para o código -->
+        <div style="display: none;">
+          <div id="mhiSignal"></div>
+          <div id="trendSignal"></div>
+          <div id="emaSignal"></div>
+          <div id="rsiValue"></div>
+          <div id="bollingerSignal"></div>
+          <div id="fibonacciSignal"></div>
+          <div id="suporteValue"></div>
+          <div id="resistenciaValue"></div>
+          <div id="confidenceValue"></div>
+          <div id="finalSignal"></div>
+        </div>
+        
         <!-- Campos ocultos para configurações -->
         <div style="display: none;">
           <input type="number" id="stake" value="${settings.stake || 1}" min="1" max="1000" step="1">
