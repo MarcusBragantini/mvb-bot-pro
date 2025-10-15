@@ -607,7 +607,7 @@ export default function BotInterface() {
 
     // Inserir HTML do bot original - OTIMIZADO PARA MOBILE
     botContainerRef.current.innerHTML = `
-      <div class="bot-interface-original">
+      <div class="bot-interface-original" style="background: #0f172a; border-radius: 16px; padding: 20px; margin: 16px 0; border: 1px solid #334155;">
         <!-- Controles Principais - Simplified for Mobile -->
         <div class="main-controls" style="background: #1e293b; border-radius: 16px; padding: 20px; margin: 16px 0; box-shadow: 0 4px 20px rgba(0,0,0,0.3); border: 1px solid #334155;">
           <div class="control-grid" style="display: grid; gap: 16px;">

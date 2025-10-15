@@ -402,15 +402,15 @@ export default function Dashboard() {
                 <Bot className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Mvb Pro</h1>
-                <p className="text-sm text-gray-600">Dashboard</p>
+                <h1 className="text-xl font-bold text-slate-100">MVB Pro</h1>
+                <p className="text-sm text-gray-400">Dashboard</p>
               </div>
             </div>
             
             <div className="flex items-center space-x-4">
               <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-                <p className="text-xs text-gray-600">{user?.email}</p>
+                <p className="text-sm font-medium text-slate-100">{user?.name}</p>
+                <p className="text-xs text-gray-400">{user?.email}</p>
               </div>
               <div className="flex items-center gap-2">
                 {isAdmin && (
