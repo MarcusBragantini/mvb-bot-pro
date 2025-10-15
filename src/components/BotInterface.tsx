@@ -609,47 +609,47 @@ export default function BotInterface() {
     botContainerRef.current.innerHTML = `
       <div class="bot-interface-original">
         <!-- Indicadores de Sinais - Mobile Optimized -->
-        <div class="indicators-container" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px; padding: 16px; margin: 16px 0; color: white;">
-          <h3 style="text-align: center; margin-bottom: 16px; font-size: 1.1rem; font-weight: 600;">📊 Sinais em Tempo Real</h3>
+        <div class="indicators-container" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; padding: 16px; margin: 16px 0; color: #e2e8f0; border: 1px solid #334155;">
+          <h3 style="text-align: center; margin-bottom: 16px; font-size: 1.1rem; font-weight: 600; color: #cbd5e1;">📊 Sinais em Tempo Real</h3>
           
           <div class="indicators-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;">
-            <div class="indicator-card" style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
-              <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 4px;">MHI</div>
-              <div class="indicator-value" id="mhiSignal" style="font-weight: bold; font-size: 1rem;">-</div>
+            <div class="indicator-card" style="background: rgba(15,23,42,0.6); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid #334155;">
+              <div style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 4px; color: #94a3b8;">MHI</div>
+              <div class="indicator-value" id="mhiSignal" style="font-weight: bold; font-size: 1rem; color: #e2e8f0;">-</div>
             </div>
-            <div class="indicator-card" style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
-              <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 4px;">Tendência</div>
-              <div class="indicator-value" id="trendSignal" style="font-weight: bold; font-size: 1rem;">-</div>
+            <div class="indicator-card" style="background: rgba(15,23,42,0.6); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid #334155;">
+              <div style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 4px; color: #94a3b8;">Tendência</div>
+              <div class="indicator-value" id="trendSignal" style="font-weight: bold; font-size: 1rem; color: #e2e8f0;">-</div>
             </div>
-            <div class="indicator-card" style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
-              <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 4px;">EMA</div>
-              <div class="indicator-value" id="emaSignal" style="font-weight: bold; font-size: 1rem;">-</div>
+            <div class="indicator-card" style="background: rgba(15,23,42,0.6); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid #334155;">
+              <div style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 4px; color: #94a3b8;">EMA</div>
+              <div class="indicator-value" id="emaSignal" style="font-weight: bold; font-size: 1rem; color: #e2e8f0;">-</div>
             </div>
-            <div class="indicator-card" style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
-              <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 4px;">RSI</div>
-              <div class="indicator-value" id="rsiValue" style="font-weight: bold; font-size: 1rem;">-</div>
+            <div class="indicator-card" style="background: rgba(15,23,42,0.6); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid #334155;">
+              <div style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 4px; color: #94a3b8;">RSI</div>
+              <div class="indicator-value" id="rsiValue" style="font-weight: bold; font-size: 1rem; color: #e2e8f0;">-</div>
             </div>
-            <div class="indicator-card" style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
-              <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 4px;">Bollinger</div>
-              <div class="indicator-value" id="bollingerSignal" style="font-weight: bold; font-size: 1rem;">-</div>
+            <div class="indicator-card" style="background: rgba(15,23,42,0.6); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid #334155;">
+              <div style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 4px; color: #94a3b8;">Bollinger</div>
+              <div class="indicator-value" id="bollingerSignal" style="font-weight: bold; font-size: 1rem; color: #e2e8f0;">-</div>
             </div>
-            <div class="indicator-card" style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
-              <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 4px;">🎯 Fibonacci</div>
-              <div class="indicator-value" id="fibonacciSignal" style="font-weight: bold; font-size: 1rem;">-</div>
+            <div class="indicator-card" style="background: rgba(15,23,42,0.6); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid #334155;">
+              <div style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 4px; color: #94a3b8;">🎯 Fibonacci</div>
+              <div class="indicator-value" id="fibonacciSignal" style="font-weight: bold; font-size: 1rem; color: #e2e8f0;">-</div>
             </div>
-            <div class="indicator-card" style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
-              <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 4px;">📊 Suporte</div>
-              <div class="indicator-value" id="suporteValue" style="font-weight: bold; font-size: 0.9rem;">-</div>
+            <div class="indicator-card" style="background: rgba(15,23,42,0.6); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid #334155;">
+              <div style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 4px; color: #94a3b8;">📊 Suporte</div>
+              <div class="indicator-value" id="suporteValue" style="font-weight: bold; font-size: 0.9rem; color: #e2e8f0;">-</div>
             </div>
-            <div class="indicator-card" style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
-              <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 4px;">📈 Resistência</div>
-              <div class="indicator-value" id="resistenciaValue" style="font-weight: bold; font-size: 0.9rem;">-</div>
+            <div class="indicator-card" style="background: rgba(15,23,42,0.6); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid #334155;">
+              <div style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 4px; color: #94a3b8;">📈 Resistência</div>
+              <div class="indicator-value" id="resistenciaValue" style="font-weight: bold; font-size: 0.9rem; color: #e2e8f0;">-</div>
             </div>
-            <div class="indicator-card" style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
-              <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 4px;">Confiança</div>
-              <div class="indicator-value" id="confidenceValue" style="font-weight: bold; font-size: 1rem;">-</div>
+            <div class="indicator-card" style="background: rgba(15,23,42,0.6); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; text-align: center; border: 1px solid #334155;">
+              <div style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 4px; color: #94a3b8;">Confiança</div>
+              <div class="indicator-value" id="confidenceValue" style="font-weight: bold; font-size: 1rem; color: #e2e8f0;">-</div>
             </div>
-            <div class="indicator-card" style="background: linear-gradient(135deg, #ffd700 0%, #ffb347 100%); border-radius: 12px; padding: 12px; text-align: center; color: #333; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);">
+            <div class="indicator-card" style="background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); border-radius: 12px; padding: 12px; text-align: center; color: #e2e8f0; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2); border: 1px solid #2563eb;">
               <div style="font-size: 0.8rem; font-weight: 600; margin-bottom: 4px;">SINAL FINAL</div>
               <div class="indicator-value" id="finalSignal" style="font-weight: bold; font-size: 1.1rem;">-</div>
             </div>
@@ -657,13 +657,13 @@ export default function BotInterface() {
         </div>
 
         <!-- Controles Principais - Simplified for Mobile -->
-        <div class="main-controls" style="background: white; border-radius: 16px; padding: 20px; margin: 16px 0; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+        <div class="main-controls" style="background: #1e293b; border-radius: 16px; padding: 20px; margin: 16px 0; box-shadow: 0 4px 20px rgba(0,0,0,0.3); border: 1px solid #334155;">
           <div class="control-grid" style="display: grid; gap: 16px;">
             <!-- Token oculto - será preenchido automaticamente -->
             <input type="hidden" id="token" value="">
             <div class="form-group">
-              <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 0.9rem;">📈 Símbolo:</label>
-              <select id="symbol" style="width: 100%; padding: 14px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 16px; background: white;">
+              <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #cbd5e1; font-size: 0.9rem;">📈 Símbolo:</label>
+              <select id="symbol" style="width: 100%; padding: 14px; border: 2px solid #334155; border-radius: 12px; font-size: 16px; background: #0f172a; color: #e2e8f0;">
                 <optgroup label="ÍNDICES VOLÁTEIS">
                   <option value="R_10">Volatility 10 Index</option>
                   <option value="R_25">Volatility 25 Index</option>
@@ -738,24 +738,24 @@ export default function BotInterface() {
         </div>
 
         <!-- Histórico Responsivo -->
-        <div class="history-container" style="background: white; border-radius: 16px; margin: 16px 0; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 16px; color: white;">
+        <div class="history-container" style="background: #1e293b; border-radius: 16px; margin: 16px 0; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.3); border: 1px solid #334155;">
+          <div style="background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); padding: 16px; color: #e2e8f0; border-bottom: 1px solid #334155;">
             <h3 style="margin: 0; font-size: 1.1rem; font-weight: 600;">📊 Histórico de Operações</h3>
           </div>
           <div class="table-container" style="overflow-x: auto;">
             <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
               <thead>
-                <tr style="background: #f8fafc;">
-                  <th style="border: 1px solid #e2e8f0; padding: 12px 8px; text-align: center; font-weight: 600; color: #475569; font-size: 0.85rem;">Contrato</th>
-                  <th style="border: 1px solid #e2e8f0; padding: 12px 8px; text-align: center; font-weight: 600; color: #475569; font-size: 0.85rem;">Sinal</th>
-                  <th style="border: 1px solid #e2e8f0; padding: 12px 8px; text-align: center; font-weight: 600; color: #475569; font-size: 0.85rem;">Confiança</th>
-                  <th style="border: 1px solid #e2e8f0; padding: 12px 8px; text-align: center; font-weight: 600; color: #475569; font-size: 0.85rem;">Entrada</th>
-                  <th style="border: 1px solid #e2e8f0; padding: 12px 8px; text-align: center; font-weight: 600; color: #475569; font-size: 0.85rem;">Resultado</th>
-                  <th style="border: 1px solid #e2e8f0; padding: 12px 8px; text-align: center; font-weight: 600; color: #475569; font-size: 0.85rem;">Lucro</th>
-                  <th style="border: 1px solid #e2e8f0; padding: 12px 8px; text-align: center; font-weight: 600; color: #475569; font-size: 0.85rem;">Hora</th>
+                <tr style="background: #0f172a;">
+                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #94a3b8; font-size: 0.85rem;">Contrato</th>
+                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #94a3b8; font-size: 0.85rem;">Sinal</th>
+                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #94a3b8; font-size: 0.85rem;">Confiança</th>
+                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #94a3b8; font-size: 0.85rem;">Entrada</th>
+                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #94a3b8; font-size: 0.85rem;">Resultado</th>
+                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #94a3b8; font-size: 0.85rem;">Lucro</th>
+                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #94a3b8; font-size: 0.85rem;">Hora</th>
                 </tr>
               </thead>
-              <tbody id="historyBody"></tbody>
+              <tbody id="historyBody" style="color: #cbd5e1;"></tbody>
             </table>
           </div>
         </div>
