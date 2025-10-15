@@ -2582,9 +2582,9 @@ export default function BotInterface() {
                           <Input
                             id="stake-setting"
                             type="number"
-                            min="1"
+                            min="0.01"
                             max="1000"
-                            step="1"
+                            step="0.01"
                             value={settings.stake}
                             className="mt-1"
                             onChange={(e) => {
@@ -2645,8 +2645,9 @@ export default function BotInterface() {
                           <Input
                             id="stopwin-setting"
                             type="number"
-                            min="1"
+                            min="0.01"
                             max="1000"
+                            step="0.01"
                             value={settings.stopWin}
                             className="mt-1"
                             onChange={(e) => {
