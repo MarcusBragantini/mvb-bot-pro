@@ -2679,9 +2679,9 @@ export default function BotInterface() {
                           <Input
                             id="autocloseprofit-setting"
                             type="number"
-                            min="5"
+                            min="1"
                             max="100"
-                            step="5"
+                            step="1"
                             value={settings.autoCloseProfit}
                             className="mt-1"
                             onChange={(e) => {
@@ -2694,21 +2694,6 @@ export default function BotInterface() {
                           </p>
                         </div>
                         
-                        <div>
-                          <Label htmlFor="confidence-setting" className="text-sm font-medium">Confiança Mínima (%)</Label>
-                          <Input
-                            id="confidence-setting"
-                            type="number"
-                            min="50"
-                            max="90"
-                            value={settings.confidence}
-                            className="mt-1"
-                            onChange={(e) => {
-                              const value = parseFloat(e.target.value) || 70;
-                              updateSetting('confidence', value);
-                            }}
-                          />
-                        </div>
                       </CardContent>
                     </Card>
 
