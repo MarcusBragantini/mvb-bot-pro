@@ -1647,24 +1647,24 @@ export default function BotInterface() {
           addLog(\`📊 Tendência REAL (EMAs): \${trend24h} (\${trend24hStrength.toFixed(2)}%) | EMA50: $\${ema50.toFixed(4)} | Preço: $\${currentPrice.toFixed(4)}\`);
           addLog(\`🎯 Suporte: $\${suporteResistencia.suporte.toFixed(4)} | Resistência: $\${suporteResistencia.resistencia.toFixed(4)} (Força: \${suporteResistencia.forca})\`);
           
-          // ⏸️ MHI DESABILITADO TEMPORARIAMENTE
-          // const mhiData = prices.slice(-mhiPeriods);
-          // let highSum = 0, lowSum = 0;
-          // mhiData.forEach(candle => {
-          //   highSum += candle.high;
-          //   lowSum += candle.low;
-          // });
-          // 
-          // const avgHigh = highSum / mhiPeriods;
-          // const avgLow = lowSum / mhiPeriods;
+          // ✅ MHI REATIVADO
+          const mhiData = prices.slice(-mhiPeriods);
+          let highSum = 0, lowSum = 0;
+          mhiData.forEach(candle => {
+            highSum += candle.high;
+            lowSum += candle.low;
+          });
+          
+          const avgHigh = highSum / mhiPeriods;
+          const avgLow = lowSum / mhiPeriods;
           // currentPrice já foi definido acima para análise de tendência
           
-          let mhiSignal = "NEUTRO"; // ⏸️ MHI desabilitado
-          // if (currentPrice > avgHigh) {
-          //   mhiSignal = "CALL";
-          // } else if (currentPrice < avgLow) {
-          //   mhiSignal = "PUT";
-          // }
+          let mhiSignal = "NEUTRO";
+          if (currentPrice > avgHigh) {
+            mhiSignal = "CALL";
+          } else if (currentPrice < avgLow) {
+            mhiSignal = "PUT";
+          }
           
           // EMA Calculation
           const emaFastValue = calculateEMA(prices, emaFast);
@@ -2051,15 +2051,15 @@ export default function BotInterface() {
         // 🟡 REGRA 3: Se tendência é extremamente LATERAL/FRACA (< 0.05%), ser mais cauteloso
         // Requer confirmação DUPLA de indicadores para operar em mercado lateral
         if (trend24hStrength < 0.05) {
-          // ⏸️ MHI desabilitado - Usando RSI + Bollinger para confirmação dupla
-          if (signals.rsi === "CALL" && signals.bollinger === "CALL") {
-            addLog(\`✅ CALL aprovado em mercado lateral: RSI + Bollinger confirmam\`);
+          // ✅ MHI + RSI para confirmação dupla em mercado lateral
+          if (signals.mhi === "CALL" && signals.rsi === "CALL") {
+            addLog(\`✅ CALL aprovado em mercado lateral: MHI + RSI confirmam\`);
             return "CALL";
-          } else if (signals.rsi === "PUT" && signals.bollinger === "PUT") {
-            addLog(\`✅ PUT aprovado em mercado lateral: RSI + Bollinger confirmam\`);
+          } else if (signals.mhi === "PUT" && signals.rsi === "PUT") {
+            addLog(\`✅ PUT aprovado em mercado lateral: MHI + RSI confirmam\`);
             return "PUT";
           } else {
-            addLog(\`⚠️ Mercado MUITO LATERAL detectado (\${trend24hStrength.toFixed(3)}%). Aguardando confirmação dupla de indicadores...\`);
+            addLog(\`⚠️ Mercado MUITO LATERAL detectado (\${trend24hStrength.toFixed(3)}%). Aguardando confirmação dupla MHI + RSI...\`);
             return "NEUTRO";
           }
         }
@@ -2153,8 +2153,10 @@ export default function BotInterface() {
       }
 
       function updateSignalsDisplay(signals, confidence) {
-        // ❌ DESABILITADOS - MHI, EMA e FIBONACCI
-        document.getElementById("mhiSignal").textContent = "OFF";
+        // ✅ MHI REATIVADO
+        document.getElementById("mhiSignal").textContent = signals.mhi || "-";
+        
+        // ❌ DESABILITADOS - EMA e FIBONACCI
         document.getElementById("emaSignal").textContent = "OFF";
         document.getElementById("fibonacciSignal").textContent = "OFF";
         
