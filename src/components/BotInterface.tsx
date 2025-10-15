@@ -1229,7 +1229,9 @@ export default function BotInterface() {
               }));
               
               // Detectar se é conta demo ou real baseado no account_type
-              if (accountType.toLowerCase().includes('demo') || accountType.toLowerCase().includes('virtual')) {
+              if (accountType === 'N/A') {
+                // Ainda não recebeu informação completa da conta, não logar nada
+              } else if (accountType.toLowerCase().includes('demo') || accountType.toLowerCase().includes('virtual')) {
                 addLog("ℹ️ Conta DEMO detectada");
               } else {
                 addLog("⚠️ CONTA REAL detectada - ATENÇÃO!");
@@ -1506,7 +1508,8 @@ export default function BotInterface() {
           priceData.push({ high: price, low: price, close: price, timestamp: timestamp });
           volumeData.push(volume);
           
-          const maxDataPoints = Math.max(mhiPeriods, emaSlow, rsiPeriods) * 2;
+          // ✅ MANTER histórico de 24h (288 velas) + margem para novos ticks
+          const maxDataPoints = Math.max(mhiPeriods, emaSlow, rsiPeriods, 288) + 50;
           if (priceData.length > maxDataPoints) {
             priceData = priceData.slice(-maxDataPoints);
             volumeData = volumeData.slice(-maxDataPoints);
