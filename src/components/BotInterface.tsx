@@ -1211,29 +1211,34 @@ export default function BotInterface() {
             addLog("🔐 Autenticado com sucesso!");
             document.getElementById("status").innerText = "🔐 Autenticado";
             
-            // ✅ NOVO: Mostrar informações da conta no log
+            // ✅ Estrutura correta da API Deriv: data.authorize possui loginid, balance, currency, etc
             const accountInfo = data.authorize;
             if (accountInfo) {
-              const accountId = accountInfo.account_id || 'N/A';
-              const accountType = accountInfo.account_type || 'N/A';
+              const loginid = accountInfo.loginid || 'N/A';
               const currency = accountInfo.currency || 'USD';
               
-              addLog(\`👤 Conta: \${accountId} | Tipo: \${accountType} | Moeda: \${currency}\`);
+              // Detectar tipo de conta pelo loginid (VRTC = Virtual/Demo, CR = Real)
+              let accountType = 'N/A';
+              if (loginid.startsWith('VRTC') || loginid.startsWith('VRT')) {
+                accountType = 'DEMO';
+              } else if (loginid.startsWith('CR') || loginid.startsWith('MF')) {
+                accountType = 'REAL';
+              }
               
-              // ✅ NOVO: Salvar informações de autorização para usar na detecção
+              addLog(\`👤 Conta: \${loginid} | Tipo: \${accountType} | Moeda: \${currency}\`);
+              
+              // Salvar informações de autorização
               localStorage.setItem('deriv_auth_data', JSON.stringify({
-                account_id: accountId,
+                loginid: loginid,
                 account_type: accountType,
                 currency: currency,
                 timestamp: Date.now()
               }));
               
-              // Detectar se é conta demo ou real baseado no account_type
-              if (accountType === 'N/A') {
-                // Ainda não recebeu informação completa da conta, não logar nada
-              } else if (accountType.toLowerCase().includes('demo') || accountType.toLowerCase().includes('virtual')) {
+              // Detectar se é conta demo ou real
+              if (accountType === 'DEMO') {
                 addLog("ℹ️ Conta DEMO detectada");
-              } else {
+              } else if (accountType === 'REAL') {
                 addLog("⚠️ CONTA REAL detectada - ATENÇÃO!");
               }
             }
