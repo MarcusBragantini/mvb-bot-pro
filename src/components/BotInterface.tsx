@@ -2577,7 +2577,7 @@ export default function BotInterface() {
                       <CardHeader className="pb-4">
                         <CardTitle className="text-lg text-blue-600 flex items-center gap-2">
                           <DollarSign className="h-5 w-5" />
-                          Entrada & Martingale
+                          Entrada
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
@@ -2598,22 +2598,6 @@ export default function BotInterface() {
                           />
                         </div>
                         
-                        <div>
-                          <Label htmlFor="martingale-setting" className="text-sm font-medium">Multiplicador Martingale</Label>
-                          <Input
-                            id="martingale-setting"
-                            type="number"
-                            min="2"
-                            max="5"
-                            step="1"
-                            value={settings.martingale}
-                            className="mt-1"
-                            onChange={(e) => {
-                              const value = parseFloat(e.target.value) || 2;
-                              updateSetting('martingale', value);
-                            }}
-                          />
-                        </div>
                         
                         <div>
                           <Label htmlFor="duration-setting" className="text-sm font-medium">Duração (minutos)</Label>
