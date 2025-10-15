@@ -66,7 +66,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-center">
         {/* Hero Section */}
         <div className="hidden lg:block space-y-8">
@@ -75,43 +75,43 @@ export default function Login() {
               <div className="p-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl">
                 <Bot className="h-8 w-8 text-white" />
               </div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                 Bot MVB Pro
               </h1>
             </div>
-            <p className="text-xl text-gray-600">
+            <p className="text-xl text-gray-300">
               Sistema de Trading Automatizado com IA
             </p>
           </div>
 
           <div className="space-y-6">
             <div className="flex items-start space-x-4">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Zap className="h-6 w-6 text-green-600" />
+              <div className="p-2 bg-green-900/50 rounded-lg">
+                <Zap className="h-6 w-6 text-green-400" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900">Trading Automatizado</h3>
-                <p className="text-gray-600">Estratégias avançadas com MHI, EMA e RSI</p>
+                <h3 className="font-semibold text-slate-100">Trading Automatizado</h3>
+                <p className="text-gray-400">Estratégias avançadas com MHI, EMA e RSI</p>
               </div>
             </div>
 
             <div className="flex items-start space-x-4">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Shield className="h-6 w-6 text-blue-600" />
+              <div className="p-2 bg-blue-900/50 rounded-lg">
+                <Shield className="h-6 w-6 text-blue-400" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900">Sistema Seguro</h3>
-                <p className="text-gray-600">Controle de licenças e proteção avançada</p>
+                <h3 className="font-semibold text-slate-100">Sistema Seguro</h3>
+                <p className="text-gray-400">Controle de licenças e proteção avançada</p>
               </div>
             </div>
 
             <div className="flex items-start space-x-4">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Users className="h-6 w-6 text-purple-600" />
+              <div className="p-2 bg-purple-900/50 rounded-lg">
+                <Users className="h-6 w-6 text-purple-400" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900">Suporte Premium</h3>
-                <p className="text-gray-600">Acompanhamento e suporte especializado</p>
+                <h3 className="font-semibold text-slate-100">Suporte Premium</h3>
+                <p className="text-gray-400">Acompanhamento e suporte especializado</p>
               </div>
             </div>
           </div>
@@ -126,10 +126,10 @@ export default function Login() {
             </TabsList>
 
             <TabsContent value="login">
-              <Card>
+              <Card className="bg-slate-800 border-slate-700">
                 <CardHeader className="text-center">
-                  <CardTitle>Bem-vindo de volta</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-slate-100">Bem-vindo de volta</CardTitle>
+                  <CardDescription className="text-slate-400">
                     Entre com suas credenciais para acessar o sistema
                   </CardDescription>
                 </CardHeader>
@@ -180,10 +180,10 @@ export default function Login() {
             </TabsContent>
 
             <TabsContent value="register">
-              <Card>
+              <Card className="bg-slate-800 border-slate-700">
                 <CardHeader className="text-center">
-                  <CardTitle>Criar conta</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-slate-100">Criar conta</CardTitle>
+                  <CardDescription className="text-slate-400">
                     Cadastre-se e receba 7 dias grátis para testar
                   </CardDescription>
                 </CardHeader>
