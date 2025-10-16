@@ -724,7 +724,7 @@ export default function BotInterface() {
         
         <!-- Campos ocultos para configurações -->
         <div style="display: none;">
-          <input type="number" id="stake" value="${settings.stake || 1}" min="1" max="1000" step="1">
+          <input type="number" id="stake" value="${settings.stake || 1}" min="0.01" max="1000" step="0.01">
           <input type="number" id="martingale" value="${settings.martingale || 2}" min="2" max="5" step="1">
           <input type="number" id="duration" value="15" min="15" max="15">
           <input type="number" id="stopWin" value="${settings.stopWin || 3}" min="1" max="1000">
@@ -1067,7 +1067,7 @@ export default function BotInterface() {
         window.dispatchEvent(new Event('bot-started'));
 
         // Carregar configurações dos campos
-        initialStake = Math.round(parseFloat(document.getElementById("stake").value) || 1);
+        initialStake = parseFloat(document.getElementById("stake").value) || 1;
         currentStake = initialStake;
         martingaleMultiplier = Math.round(parseFloat(document.getElementById("martingale").value) || 2);
         const stopWin = parseFloat(document.getElementById("stopWin").value) || 10;
