@@ -973,6 +973,7 @@ export default function BotInterface() {
       let priceData = [];
       let volumeData = [];
       let priceChart = null; // Instância do Chart.js
+      let chartData = []; // Dados específicos para o gráfico
       let isTrading = false;
       let lastTradeTime = 0;
       let minTradeInterval = 60000;
@@ -1038,7 +1039,7 @@ export default function BotInterface() {
           canvas.height = 300;
           
           // Limpar dados anteriores
-          priceData = [];
+          chartData = [];
           
           // Criar instância do Chart.js
           priceChart = new Chart(ctx, {
@@ -1118,19 +1119,24 @@ export default function BotInterface() {
           const timestamp = now.getTime();
           
           // Adicionar novo ponto de preço
-          priceData.push({
+          chartData.push({
             x: timestamp,
             y: price
           });
           
           // Manter apenas os últimos 100 pontos para performance
-          if (priceData.length > 100) {
-            priceData = priceData.slice(-100);
+          if (chartData.length > 100) {
+            chartData = chartData.slice(-100);
           }
           
           // Atualizar dados do gráfico
-          priceChart.data.datasets[0].data = priceData.map(d => ({ x: d.x, y: d.y }));
+          priceChart.data.datasets[0].data = chartData;
           priceChart.update('none'); // Atualização sem animação para performance
+          
+          // Log a cada 20 pontos para não poluir console
+          if (chartData.length % 20 === 0) {
+            console.log(\`📊 Gráfico atualizado: \${chartData.length} pontos - Último preço: \${price}\`);
+          }
           
         } catch (error) {
           console.error('❌ Erro ao atualizar gráfico:', error);
