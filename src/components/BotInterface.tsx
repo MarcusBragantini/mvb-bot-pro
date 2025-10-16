@@ -849,7 +849,7 @@ export default function BotInterface() {
       let emaFast = 9;
       let emaSlow = 21;
       let rsiPeriods = 11; // ✅ AJUSTADO: Menos sensível
-      let minConfidence = 70;
+      let minConfidence = 50; // ✅ AJUSTADO: Menos restritivo para mais operações
 
       let stats = {
         total: 0,
@@ -1133,6 +1133,21 @@ export default function BotInterface() {
                     callback: function(value) {
                       return value.toFixed(2);
                     }
+                  },
+                  // Fixar escala do eixo Y para não comprimir o gráfico
+                  min: function(context) {
+                    const data = context.chart.data.datasets[0].data;
+                    if (data.length === 0) return undefined;
+                    const values = data.map(d => d.y);
+                    const min = Math.min(...values);
+                    return min - (min * 0.001); // 0.1% de margem
+                  },
+                  max: function(context) {
+                    const data = context.chart.data.datasets[0].data;
+                    if (data.length === 0) return undefined;
+                    const values = data.map(d => d.y);
+                    const max = Math.max(...values);
+                    return max + (max * 0.001); // 0.1% de margem
                   }
                 }
               },
@@ -2317,7 +2332,7 @@ export default function BotInterface() {
         // Só opera A FAVOR da tendência principal detectada pelas EMAs
         
         // 🔴 REGRA 1: Se tendência é BAIXA (EMA50 < EMA100 < EMA200), NUNCA fazer CALL
-        if (trend24h === "BAIXA" && trend24hStrength >= 0.05) {
+        if (trend24h === "BAIXA" && trend24hStrength >= 0.02) { // ✅ AJUSTADO: Menos restritivo
           // Só permite PUT se RSI ou Bollinger confirmarem
           if (signals.rsi === "PUT" || signals.bollinger === "PUT") {
             addLog(\`✅ PUT aprovado: A FAVOR da tendência BAIXA (\${trend24hStrength.toFixed(2)}%) + RSI(\${signals.rsi}) BB(\${signals.bollinger})\`);
@@ -2329,7 +2344,7 @@ export default function BotInterface() {
         }
         
         // 🟢 REGRA 2: Se tendência é ALTA (EMA50 > EMA100 > EMA200), NUNCA fazer PUT
-        if (trend24h === "ALTA" && trend24hStrength >= 0.05) {
+        if (trend24h === "ALTA" && trend24hStrength >= 0.02) { // ✅ AJUSTADO: Menos restritivo
           // Só permite CALL se RSI ou Bollinger confirmarem
           if (signals.rsi === "CALL" || signals.bollinger === "CALL") {
             addLog(\`✅ CALL aprovado: A FAVOR da tendência ALTA (\${trend24hStrength.toFixed(2)}%) + RSI(\${signals.rsi}) BB(\${signals.bollinger})\`);
@@ -2342,7 +2357,7 @@ export default function BotInterface() {
         
         // 🟡 REGRA 3: Se tendência é extremamente LATERAL/FRACA (< 0.05%), ser mais cauteloso
         // Requer confirmação DUPLA de indicadores para operar em mercado lateral
-        if (trend24hStrength < 0.05) {
+        if (trend24hStrength < 0.02) { // ✅ AJUSTADO: Mais permissivo para mercado lateral
           // ✅ MHI + RSI para confirmação dupla em mercado lateral
           if (signals.mhi === "CALL" && signals.rsi === "CALL") {
             addLog(\`✅ CALL aprovado em mercado lateral: MHI + RSI confirmam\`);
