@@ -1049,27 +1049,38 @@ export default function BotInterface() {
                 label: 'Preço',
                 data: [],
                 borderColor: '#60a5fa',
-                backgroundColor: 'transparent',
-                borderWidth: 3,
-                pointBackgroundColor: 'transparent',
-                pointBorderColor: 'transparent',
-                pointStyle: 'line',
-                segment: {
-                  borderColor: '#60a5fa'
-                },
-                tension: 0.1
+                backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                borderWidth: 2,
+                pointRadius: 2,
+                pointBackgroundColor: '#60a5fa',
+                pointBorderColor: '#60a5fa',
+                fill: true,
+                tension: 0.4
               }]
             },
             options: {
               responsive: true,
               maintainAspectRatio: false,
+              animation: false,
               plugins: {
                 legend: {
                   display: false
+                },
+                tooltip: {
+                  enabled: true,
+                  mode: 'index',
+                  intersect: false
                 }
               },
               scales: {
                 x: {
+                  type: 'time',
+                  time: {
+                    unit: 'minute',
+                    displayFormats: {
+                      minute: 'HH:mm'
+                    }
+                  },
                   display: true,
                   grid: {
                     color: '#475569',
@@ -1079,11 +1090,15 @@ export default function BotInterface() {
                     color: '#cbd5e1',
                     font: {
                       size: 10
-                    }
+                    },
+                    maxRotation: 0,
+                    autoSkip: true,
+                    maxTicksLimit: 6
                   }
                 },
                 y: {
                   display: true,
+                  position: 'right',
                   grid: {
                     color: '#475569',
                     drawBorder: false
@@ -1093,6 +1108,9 @@ export default function BotInterface() {
                     font: {
                       size: 10,
                       weight: 'bold'
+                    },
+                    callback: function(value) {
+                      return value.toFixed(2);
                     }
                   }
                 }
@@ -1104,6 +1122,8 @@ export default function BotInterface() {
             }
           });
           
+          console.log('✅ Gráfico criado, canvas width:', canvas.width, 'height:', canvas.height);
+          
           console.log('✅ Gráfico inicializado com sucesso!');
           
         } catch (error) {
@@ -1112,7 +1132,15 @@ export default function BotInterface() {
       }
       
       function updatePriceChart(price) {
-        if (!priceChart || !price) return;
+        if (!priceChart) {
+          console.warn('⚠️ priceChart não existe ainda');
+          return;
+        }
+        
+        if (!price) {
+          console.warn('⚠️ Preço inválido:', price);
+          return;
+        }
         
         try {
           const now = new Date();
@@ -1133,9 +1161,10 @@ export default function BotInterface() {
           priceChart.data.datasets[0].data = chartData;
           priceChart.update('none'); // Atualização sem animação para performance
           
-          // Log a cada 20 pontos para não poluir console
-          if (chartData.length % 20 === 0) {
+          // Log a cada 10 pontos para monitorar
+          if (chartData.length % 10 === 0) {
             console.log(\`📊 Gráfico atualizado: \${chartData.length} pontos - Último preço: \${price}\`);
+            console.log('📈 Dados do gráfico:', chartData.slice(-3)); // Últimos 3 pontos
           }
           
         } catch (error) {
