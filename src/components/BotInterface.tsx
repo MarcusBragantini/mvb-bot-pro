@@ -671,8 +671,8 @@ export default function BotInterface() {
         <!-- Gráfico de Preços em Tempo Real -->
         <div style="background: #1e293b; border: 1px solid #475569; border-radius: 12px; padding: 16px; margin: 16px 0;">
           <h3 style="color: #f1f5f9; margin-bottom: 12px; font-size: 1.1rem; font-weight: 600;">📈 Gráfico de Preços</h3>
-          <div style="position: relative; width: 100%; height: 300px; max-height: 300px; overflow: visible;">
-            <canvas id="priceChart" style="display: block; width: 100%; height: 300px; background: #0f172a; border: 1px solid #475569; border-radius: 8px;"></canvas>
+          <div style="position: relative; width: 100%; height: 500px; max-height: 500px; overflow: visible;">
+            <canvas id="priceChart" style="display: block; width: 100%; height: 500px; background: #0f172a; border: 1px solid #475569; border-radius: 8px;"></canvas>
           </div>
           <div style="display: flex; justify-content: center; gap: 20px; margin-top: 12px; font-size: 0.9rem;">
             <div style="display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-weight: 500;">
@@ -1040,7 +1040,7 @@ export default function BotInterface() {
           // Configurar dimensões do canvas
           const container = canvas.parentElement;
           canvas.width = container.offsetWidth;
-          canvas.height = 300;
+          canvas.height = 500;
           
           // Limpar dados anteriores
           chartData = [];
@@ -1139,8 +1139,7 @@ export default function BotInterface() {
           console.log('📊 Chart instance:', priceChart);
           console.log('📊 Chart data:', priceChart.data);
           
-          // Criar linha de operação fixa
-          createOperationLine();
+          // Linha de operação será criada apenas quando bot operar
           
           console.log('✅ Gráfico inicializado com sucesso!');
           
@@ -1234,6 +1233,18 @@ export default function BotInterface() {
         try {
           const color = signal === 'CALL' ? '#10b981' : '#ef4444';
           const label = signal === 'CALL' ? 'CALL' : 'PUT';
+          
+          // Criar linha de operação (amarela tracejada) se não existir
+          if (!priceChart.data.datasets[1] || priceChart.data.datasets[1].data.length === 0) {
+            const now = Date.now();
+            const operationData = [
+              { x: now - 300000, y: price }, // 5 minutos atrás
+              { x: now + 300000, y: price }  // 5 minutos no futuro
+            ];
+            
+            priceChart.data.datasets[1].data = operationData;
+            console.log('📏 Linha de operação criada em:', price);
+          }
           
           // Adicionar linha de entrada como dataset separado
           priceChart.data.datasets.push({
