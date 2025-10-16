@@ -1134,20 +1134,24 @@ export default function BotInterface() {
                       return value.toFixed(2);
                     }
                   },
-                  // Fixar escala do eixo Y para não comprimir o gráfico
+                  // Escala dinâmica do eixo Y baseada nos dados reais
                   min: function(context) {
                     const data = context.chart.data.datasets[0].data;
                     if (data.length === 0) return undefined;
                     const values = data.map(d => d.y);
                     const min = Math.min(...values);
-                    return min - (min * 0.001); // 0.1% de margem
+                    const max = Math.max(...values);
+                    const range = max - min;
+                    return min - (range * 0.1); // 10% de margem
                   },
                   max: function(context) {
                     const data = context.chart.data.datasets[0].data;
                     if (data.length === 0) return undefined;
                     const values = data.map(d => d.y);
+                    const min = Math.min(...values);
                     const max = Math.max(...values);
-                    return max + (max * 0.001); // 0.1% de margem
+                    const range = max - min;
+                    return max + (range * 0.1); // 10% de margem
                   }
                 }
               },
@@ -1273,14 +1277,20 @@ export default function BotInterface() {
           
           // Criar linha de operação (amarela tracejada) se não existir
           if (!priceChart.data.datasets[1] || priceChart.data.datasets[1].data.length === 0) {
-            const now = Date.now();
-            const operationData = [
-              { x: now - 300000, y: price }, // 5 minutos atrás
-              { x: now + 300000, y: price }  // 5 minutos no futuro
-            ];
-            
-            priceChart.data.datasets[1].data = operationData;
-            console.log('📏 Linha de operação criada em:', price);
+            // Usar dados do gráfico para definir limites da linha de operação
+            const priceData = priceChart.data.datasets[0].data;
+            if (priceData.length > 0) {
+              const firstTime = priceData[0].x;
+              const lastTime = priceData[priceData.length - 1].x;
+              
+              const operationData = [
+                { x: firstTime, y: price },
+                { x: lastTime, y: price }
+              ];
+              
+              priceChart.data.datasets[1].data = operationData;
+              console.log('📏 Linha de operação criada em:', price, 'de', new Date(firstTime).toLocaleTimeString(), 'até', new Date(lastTime).toLocaleTimeString());
+            }
           }
           
           // Adicionar linha de entrada como dataset separado
