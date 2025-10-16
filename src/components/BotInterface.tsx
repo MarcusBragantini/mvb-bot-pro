@@ -680,6 +680,10 @@ export default function BotInterface() {
               Preço do Ativo
             </div>
             <div style="display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-weight: 500;">
+              <div style="width: 16px; height: 3px; background: #f59e0b; border-radius: 2px; border: 1px dashed #f59e0b;"></div>
+              Linha de Operação
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-weight: 500;">
               <div style="width: 16px; height: 3px; background: #10b981; border-radius: 2px;"></div>
               Entrada CALL
             </div>
@@ -1045,18 +1049,32 @@ export default function BotInterface() {
           priceChart = new Chart(ctx, {
             type: 'line',
             data: {
-              datasets: [{
-                label: 'Preço',
-                data: [],
-                borderColor: '#60a5fa',
-                backgroundColor: 'rgba(96, 165, 250, 0.1)',
-                borderWidth: 2,
-                pointRadius: 2,
-                pointBackgroundColor: '#60a5fa',
-                pointBorderColor: '#60a5fa',
-                fill: true,
-                tension: 0.4
-              }]
+              datasets: [
+                {
+                  label: 'Preço do Ativo',
+                  data: [],
+                  borderColor: '#60a5fa',
+                  backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                  borderWidth: 2,
+                  pointRadius: 2,
+                  pointBackgroundColor: '#60a5fa',
+                  pointBorderColor: '#60a5fa',
+                  fill: true,
+                  tension: 0.4
+                },
+                {
+                  label: 'Linha de Operação',
+                  data: [],
+                  borderColor: '#f59e0b',
+                  backgroundColor: 'transparent',
+                  borderWidth: 2,
+                  borderDash: [5, 5],
+                  pointRadius: 0,
+                  pointHoverRadius: 0,
+                  fill: false,
+                  tension: 0
+                }
+              ]
             },
             options: {
               responsive: true,
@@ -1127,10 +1145,37 @@ export default function BotInterface() {
           console.log('📊 Chart instance:', priceChart);
           console.log('📊 Chart data:', priceChart.data);
           
+          // Criar linha de operação fixa
+          createOperationLine();
+          
           console.log('✅ Gráfico inicializado com sucesso!');
           
         } catch (error) {
           console.error('❌ Erro ao inicializar gráfico:', error);
+        }
+      }
+      
+      function createOperationLine() {
+        if (!priceChart) return;
+        
+        try {
+          const now = Date.now();
+          const operationPrice = 5700.0; // Preço de referência fixo
+          
+          // Criar pontos para linha horizontal (início e fim do gráfico)
+          const operationData = [
+            { x: now - 300000, y: operationPrice }, // 5 minutos atrás
+            { x: now + 300000, y: operationPrice }  // 5 minutos no futuro
+          ];
+          
+          // Atualizar dataset da linha de operação
+          priceChart.data.datasets[1].data = operationData;
+          priceChart.update('none');
+          
+          console.log('📏 Linha de operação criada em:', operationPrice);
+          
+        } catch (error) {
+          console.error('❌ Erro ao criar linha de operação:', error);
         }
       }
       
@@ -1160,7 +1205,7 @@ export default function BotInterface() {
             chartData = chartData.slice(-100);
           }
           
-          // Atualizar dados do gráfico
+          // Atualizar apenas dados do preço (dataset 0)
           priceChart.data.datasets[0].data = chartData;
           priceChart.update('none'); // Atualização sem animação para performance
           
