@@ -978,6 +978,7 @@ export default function BotInterface() {
       let volumeData = [];
       let priceChart = null; // Instância do Chart.js
       let chartData = []; // Dados específicos para o gráfico
+      let persistentChartData = []; // Dados persistentes do gráfico (não perdem na reconexão)
       let isTrading = false;
       let lastTradeTime = 0;
       let minTradeInterval = 60000;
@@ -1042,8 +1043,9 @@ export default function BotInterface() {
           canvas.width = container.offsetWidth;
           canvas.height = 500;
           
-          // Limpar dados anteriores
-          chartData = [];
+          // Restaurar dados persistentes ou limpar se for primeira inicialização
+          chartData = [...persistentChartData];
+          console.log('📊 Dados persistentes restaurados:', persistentChartData.length, 'pontos');
           
           // Criar instância do Chart.js
           priceChart = new Chart(ctx, {
@@ -1148,6 +1150,11 @@ export default function BotInterface() {
           
           // Linha de operação será criada apenas quando bot operar
           
+          // Se há dados persistentes, é uma reconexão
+          if (persistentChartData.length > 0) {
+            console.log('🔄 Reconexão detectada - gráfico restaurado com', persistentChartData.length, 'pontos');
+          }
+          
           console.log('✅ Gráfico inicializado com sucesso!');
           
         } catch (error) {
@@ -1204,14 +1211,22 @@ export default function BotInterface() {
           const timestamp = now.getTime();
           
           // Adicionar novo ponto de preço
-          chartData.push({
+          const newPoint = {
             x: timestamp,
             y: price
-          });
+          };
+          
+          chartData.push(newPoint);
+          persistentChartData.push(newPoint);
           
           // Manter apenas os últimos 100 pontos para performance
           if (chartData.length > 100) {
             chartData = chartData.slice(-100);
+          }
+          
+          // Manter dados persistentes também limitados
+          if (persistentChartData.length > 100) {
+            persistentChartData = persistentChartData.slice(-100);
           }
           
           // Atualizar apenas dados do preço (dataset 0)
