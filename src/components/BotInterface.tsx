@@ -1114,7 +1114,7 @@ export default function BotInterface() {
                     },
                     maxRotation: 0,
                     autoSkip: true,
-                    maxTicksLimit: 8
+                    maxTicksLimit: 12 // Mais ticks para 1 hora de dados
                   }
                 },
                 y: {
@@ -1238,23 +1238,24 @@ export default function BotInterface() {
           chartData.push(newPoint);
           persistentChartData.push(newPoint);
           
-          // Manter apenas os últimos 100 pontos para performance
-          if (chartData.length > 100) {
-            chartData = chartData.slice(-100);
+          // Manter apenas os últimos 720 pontos (1 hora de dados a cada 5 segundos)
+          if (chartData.length > 720) {
+            chartData = chartData.slice(-720);
           }
           
-          // Manter dados persistentes também limitados
-          if (persistentChartData.length > 100) {
-            persistentChartData = persistentChartData.slice(-100);
+          // Manter dados persistentes também limitados a 1 hora
+          if (persistentChartData.length > 720) {
+            persistentChartData = persistentChartData.slice(-720);
           }
           
           // Atualizar apenas dados do preço (dataset 0)
           priceChart.data.datasets[0].data = chartData;
           priceChart.update('none'); // Atualização sem animação para performance
           
-          // Log a cada 10 pontos para monitorar
-          if (chartData.length % 10 === 0) {
-            console.log(\`📊 Gráfico atualizado: \${chartData.length} pontos - Último preço: \${price}\`);
+          // Log a cada 50 pontos para monitorar (1 hora = 720 pontos)
+          if (chartData.length % 50 === 0) {
+            const timeRange = Math.round((chartData.length * 5) / 60); // Minutos
+            console.log(\`📊 Gráfico atualizado: \${chartData.length} pontos (\${timeRange}min) - Último preço: \${price}\`);
             console.log('📈 Dados do gráfico:', chartData.slice(-3)); // Últimos 3 pontos
             console.log('📊 Chart canvas renderizado?', priceChart.canvas.style.display);
             console.log('📊 Chart datasets:', priceChart.data.datasets.length);
