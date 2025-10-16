@@ -1043,9 +1043,10 @@ export default function BotInterface() {
           canvas.width = container.offsetWidth;
           canvas.height = 500;
           
-          // Restaurar dados persistentes ou limpar se for primeira inicialização
-          chartData = [...persistentChartData];
-          console.log('📊 Dados persistentes restaurados:', persistentChartData.length, 'pontos');
+          // Limpar dados - gráfico só mostra durante operação
+          chartData = [];
+          persistentChartData = [];
+          console.log('📊 Gráfico inicializado vazio - aguardando operação');
           
           // Criar instância do Chart.js
           priceChart = new Chart(ctx, {
@@ -1215,21 +1216,16 @@ export default function BotInterface() {
       }
       
       function updatePriceChart(price) {
-        if (!priceChart) {
-          console.warn('⚠️ priceChart não existe ainda');
-          return;
-        }
+        if (!priceChart) return;
+        if (!price) return;
         
-        if (!price) {
-          console.warn('⚠️ Preço inválido:', price);
-          return;
-        }
+        // Só atualizar se houver operação ativa
+        if (chartData.length === 0) return;
         
         try {
           const now = new Date();
           const timestamp = now.getTime();
           
-          // Adicionar novo ponto de preço
           const newPoint = {
             x: timestamp,
             y: price
@@ -1238,30 +1234,21 @@ export default function BotInterface() {
           chartData.push(newPoint);
           persistentChartData.push(newPoint);
           
-          // Manter apenas os últimos 720 pontos (1 hora de dados a cada 5 segundos)
-          if (chartData.length > 720) {
-            chartData = chartData.slice(-720);
+          // Limitar a 15 minutos (180 pontos)
+          if (chartData.length > 180) {
+            chartData = chartData.slice(-180);
           }
           
-          // Manter dados persistentes também limitados a 1 hora
-          if (persistentChartData.length > 720) {
-            persistentChartData = persistentChartData.slice(-720);
+          if (persistentChartData.length > 180) {
+            persistentChartData = persistentChartData.slice(-180);
           }
           
-          // Atualizar apenas dados do preço (dataset 0)
           priceChart.data.datasets[0].data = chartData;
-          priceChart.update('none'); // Atualização sem animação para performance
+          priceChart.update('none');
           
-          // Log a cada 50 pontos para monitorar (1 hora = 720 pontos)
-          if (chartData.length % 50 === 0) {
-            const timeRange = Math.round((chartData.length * 5) / 60); // Minutos
-            console.log(\`📊 Gráfico atualizado: \${chartData.length} pontos (\${timeRange}min) - Último preço: \${price}\`);
-            console.log('📈 Dados do gráfico:', chartData.slice(-3)); // Últimos 3 pontos
-            console.log('📊 Chart canvas renderizado?', priceChart.canvas.style.display);
-            console.log('📊 Chart datasets:', priceChart.data.datasets.length);
-            console.log('📊 Dataset 0 (preço) dados:', priceChart.data.datasets[0].data.length);
-            console.log('📊 Dataset 1 (operação) dados:', priceChart.data.datasets[1]?.data.length || 'não existe');
-            console.log('📊 Canvas dimensions:', priceChart.canvas.width, 'x', priceChart.canvas.height);
+          if (chartData.length % 20 === 0) {
+            const timeRange = Math.round((chartData.length * 5) / 60);
+            console.log(\`📊 Operação ativa: \${chartData.length} pontos (\${timeRange}min) - Preço: \${price}\`);
           }
           
         } catch (error) {
@@ -1276,51 +1263,49 @@ export default function BotInterface() {
           const color = signal === 'CALL' ? '#10b981' : '#ef4444';
           const label = signal === 'CALL' ? 'CALL' : 'PUT';
           
-          // Criar linha de operação (amarela tracejada) se não existir
-          if (!priceChart.data.datasets[1] || priceChart.data.datasets[1].data.length === 0) {
-            // Usar dados do gráfico para definir limites da linha de operação
-            const priceData = priceChart.data.datasets[0].data;
-            if (priceData.length > 0) {
-              const firstTime = priceData[0].x;
-              const lastTime = priceData[priceData.length - 1].x;
-              
-              const operationData = [
-                { x: firstTime, y: price },
-                { x: lastTime, y: price }
-              ];
-              
-              priceChart.data.datasets[1].data = operationData;
-              console.log('📏 Linha de operação criada em:', price, 'de', new Date(firstTime).toLocaleTimeString(), 'até', new Date(lastTime).toLocaleTimeString());
-            }
-          }
+          // Limpar dados anteriores e iniciar novo gráfico para esta operação
+          chartData = [];
+          persistentChartData = [];
           
-          // Adicionar linha de entrada como dataset separado
-          priceChart.data.datasets.push({
-            label: label,
-            data: [
-              { x: timestamp, y: price },
-              { x: timestamp + 300000, y: price } // Linha de 5 minutos
-            ],
-            borderColor: color,
-            backgroundColor: 'transparent',
-            borderWidth: 2,
-            pointRadius: 0,
-            pointHoverRadius: 5,
-            pointHoverBackgroundColor: color,
-            pointHoverBorderColor: color,
-            pointHoverBorderWidth: 2,
-            tension: 0
-          });
+          // Adicionar ponto inicial da operação
+          chartData.push({ x: timestamp, y: price });
+          persistentChartData.push({ x: timestamp, y: price });
+          
+          // Criar linha de operação (amarela tracejada) com duração de 15 minutos
+          const operationData = [
+            { x: timestamp, y: price },
+            { x: timestamp + (15 * 60 * 1000), y: price } // 15 minutos
+          ];
+          
+          priceChart.data.datasets[1].data = operationData;
+          priceChart.data.datasets[0].data = chartData;
+          console.log('📏 Gráfico iniciado - Operação', label, 'em:', price);
           
           priceChart.update('none');
           
-          // Remover linha após 5 minutos
+          // Resetar gráfico após 15 minutos (fim da operação)
           setTimeout(() => {
-            removeEntryLine(timestamp);
-          }, 300000);
+            resetChart();
+          }, 15 * 60 * 1000); // 15 minutos
           
         } catch (error) {
           console.error('❌ Erro ao adicionar linha de entrada:', error);
+        }
+      }
+      
+      function resetChart() {
+        if (!priceChart) return;
+        
+        try {
+          // Limpar todos os dados
+          chartData = [];
+          persistentChartData = [];
+          priceChart.data.datasets[0].data = [];
+          priceChart.data.datasets[1].data = [];
+          priceChart.update('none');
+          console.log('🔄 Gráfico resetado - aguardando nova operação');
+        } catch (error) {
+          console.error('❌ Erro ao resetar gráfico:', error);
         }
       }
       
