@@ -140,11 +140,7 @@ export default function BotInterface() {
             const data = await response.json();
             if (data.settings) {
               setSettings(prev => ({ ...prev, ...data.settings }));
-              console.log('✅ Configurações carregadas do SERVIDOR (seguro):', data.settings);
-              console.log('🔑 Tokens do servidor:', {
-                demo: data.settings.derivTokenDemo ? 'Configurado' : 'Vazio',
-                real: data.settings.derivTokenReal ? 'Configurado' : 'Vazio'
-              });
+              // Configurações carregadas do servidor
               return; // Sucesso, não precisa carregar do localStorage
             }
           }
@@ -159,7 +155,7 @@ export default function BotInterface() {
       if (savedSettings) {
         const parsed = JSON.parse(savedSettings);
         setSettings(parsed);
-        console.log('⚠️ Carregado do localStorage (fallback):', parsed);
+        // Configurações carregadas do localStorage
       }
     } catch (error) {
       console.error('❌ Erro ao carregar configurações:', error);
@@ -173,7 +169,7 @@ export default function BotInterface() {
       
       // Sempre salvar no localStorage primeiro (backup)
       localStorage.setItem(settingsKey, JSON.stringify(settings));
-      console.log('✅ Configurações salvas no localStorage (usuário específico):', settings);
+      // Configurações salvas localmente
       
       // Tentar salvar no servidor (sincronização)
       if (user?.id) {
@@ -194,7 +190,7 @@ export default function BotInterface() {
               title: "✅ Configurações salvas!",
               description: "Sincronizadas em todos os dispositivos!",
             });
-            console.log('✅ Configurações sincronizadas no servidor');
+            // Configurações sincronizadas no servidor
           } else {
             throw new Error('Erro na API');
           }
@@ -443,12 +439,12 @@ export default function BotInterface() {
   useEffect(() => {
     // ✅ CORREÇÃO: Criar função global para o bot usar com múltiplos sistemas de toast
     (window as any).showToast = (title: string, description: string, variant: 'default' | 'destructive' = 'default') => {
-      console.log('🔔 Toast chamado:', { title, description, variant });
+      // Toast chamado
       
       try {
         // Tentar usar o sistema React primeiro
         if (toast) {
-          console.log('🔔 Usando toast React...');
+          // Usando toast React
           toast({
             title: title,
             description: description,
@@ -458,12 +454,12 @@ export default function BotInterface() {
           return; // Se funcionou, não tentar outros métodos
         }
       } catch (error) {
-        console.log('❌ Toast React falhou:', error);
+        // Toast React falhou, tentando Sonner
       }
 
       try {
         // Fallback para Sonner
-        console.log('🔔 Tentando Sonner...');
+        // Tentando Sonner
         if (variant === 'destructive') {
           sonnerToast.error(title, {
             description: description,
@@ -477,11 +473,11 @@ export default function BotInterface() {
         }
         return; // Se funcionou, não tentar alert
       } catch (error) {
-        console.log('❌ Sonner falhou:', error);
+        // Sonner falhou
       }
 
       // Último fallback: alert nativo
-      console.log('🔔 Usando alert nativo...');
+      // Usando alert nativo
       alert(`${title}: ${description}`);
     };
 
@@ -502,7 +498,7 @@ export default function BotInterface() {
       // Aguardar um pouco para garantir que o DOM está pronto
       setTimeout(() => {
         if (botContainerRef.current && !botContainerRef.current.innerHTML.trim()) {
-          console.log('🤖 Inicializando bot pela primeira e única vez...');
+          // Inicializando bot
           isInitialized.current = true;
           initializeOriginalBot();
         }
@@ -518,12 +514,7 @@ export default function BotInterface() {
         ? settings.derivTokenDemo 
         : settings.derivTokenReal;
       tokenInput.value = selectedToken || '';
-      console.log('Token atualizado:', {
-        selectedType: settings.selectedTokenType,
-        hasToken: !!selectedToken,
-        tokenDemo: settings.derivTokenDemo ? 'Configurado' : 'Não configurado',
-        tokenReal: settings.derivTokenReal ? 'Configurado' : 'Não configurado'
-      });
+      // Token atualizado
     }
   }, [settings.selectedTokenType, settings.derivTokenDemo, settings.derivTokenReal]);
 
@@ -533,7 +524,7 @@ export default function BotInterface() {
     const durationInput = document.getElementById('duration') as HTMLInputElement;
     if (durationInput && settings.duration) {
       durationInput.value = String(settings.duration);
-      console.log('Duração atualizada:', settings.duration);
+      // Duração atualizada
     }
 
     // Atualizar stake
@@ -552,21 +543,21 @@ export default function BotInterface() {
     const stopWinInput = document.getElementById('stopWin') as HTMLInputElement;
     if (stopWinInput && settings.stopWin) {
       stopWinInput.value = String(settings.stopWin);
-      console.log('StopWin atualizado:', settings.stopWin);
+      // StopWin atualizado
     }
 
     // ✅ CORREÇÃO: Atualizar stopLoss
     const stopLossInput = document.getElementById('stopLoss') as HTMLInputElement;
     if (stopLossInput && settings.stopLoss) {
       stopLossInput.value = String(settings.stopLoss);
-      console.log('StopLoss atualizado:', settings.stopLoss);
+      // StopLoss atualizado
     }
 
     // ✅ CORREÇÃO: Atualizar minConfidence
     const minConfidenceInput = document.getElementById('minConfidence') as HTMLInputElement;
     if (minConfidenceInput && settings.confidence) {
       minConfidenceInput.value = String(settings.confidence);
-      console.log('MinConfidence atualizado:', settings.confidence);
+      // MinConfidence atualizado
     }
 
     // ✅ CORREÇÃO: Atualizar parâmetros técnicos
@@ -746,7 +737,7 @@ export default function BotInterface() {
       // ✅ CORREÇÃO: Disponibilizar dados do usuário para o bot
       window.user = ${JSON.stringify(user)};
       
-      console.log('🤖 Bot inicializado com dados do usuário:', window.user);
+      // Bot inicializado
     `;
     
     botContainerRef.current.appendChild(script);
@@ -856,7 +847,7 @@ export default function BotInterface() {
           timestamp: Date.now()
         };
         localStorage.setItem('bot_state', JSON.stringify(botState));
-        console.log('💾 Estado do bot salvo:', { profit, martingaleLevel, currentStake });
+        // Estado do bot salvo
         
         // ✅ NOVO: Salvar performance no banco de dados
         savePerformanceToDatabase();
@@ -902,16 +893,16 @@ export default function BotInterface() {
             })
           }).then(response => {
             if (response.ok) {
-              console.log('✅ Performance salva no banco de dados');
+              // Performance salva no banco
             } else {
-              console.log('⚠️ Erro ao salvar performance no banco');
+              // Erro ao salvar performance no banco
             }
           }).catch(error => {
-            console.log('⚠️ Erro de rede ao salvar performance:', error);
+            // Erro de rede ao salvar performance
           });
           
         } catch (error) {
-          console.log('❌ Erro ao salvar performance:', error);
+          // Erro ao salvar performance
         }
       }
 
@@ -943,10 +934,10 @@ export default function BotInterface() {
                 document.getElementById('accuracy').textContent = \`\${accuracy}%\`;
               }
               
-              console.log('✅ Estado do bot restaurado:', state);
+              // Estado do bot restaurado
               // ✅ CORREÇÃO: Removido log desnecessário de restauração
             } else {
-              console.log('⏰ Estado antigo descartado (mais de 30 minutos)');
+              // Estado antigo descartado
               localStorage.removeItem('bot_state');
             }
           } catch (error) {
@@ -1051,11 +1042,7 @@ export default function BotInterface() {
         // ✅ Salvar token globalmente para reconexões
         savedToken = token;
         
-        console.log('🔍 Debug Token:', {
-          token: token ? 'Token presente' : 'Token vazio',
-          tokenLength: token.length,
-          userKey: window.user?.id ? \`mvb_bot_settings_\${window.user.id}\` : 'mvb_bot_settings_temp'
-        });
+        // Debug token
         
         if (!token) {
           window.showToast('❌ Token Necessário', 'Configure o token da Deriv na aba Configurações!', 'destructive');
