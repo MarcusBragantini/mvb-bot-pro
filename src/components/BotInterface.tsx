@@ -668,6 +668,32 @@ export default function BotInterface() {
           </div>
         </div>
 
+        <!-- Gráfico de Preços em Tempo Real -->
+        <div style="background: #1e293b; border: 1px solid #475569; border-radius: 12px; padding: 16px; margin: 16px 0;">
+          <h3 style="color: #f1f5f9; margin-bottom: 12px; font-size: 1.1rem; font-weight: 600;">📈 Gráfico de Preços</h3>
+          <div style="position: relative; width: 100%; height: 500px; max-height: 500px; overflow: visible;">
+            <canvas id="priceChart" style="display: block; width: 100%; height: 500px; background: #0f172a; border: 1px solid #475569; border-radius: 8px;"></canvas>
+          </div>
+          <div style="display: flex; justify-content: center; gap: 20px; margin-top: 12px; font-size: 0.9rem;">
+            <div style="display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-weight: 500;">
+              <div style="width: 16px; height: 3px; background: #60a5fa; border-radius: 2px;"></div>
+              Preço do Ativo
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-weight: 500;">
+              <div style="width: 16px; height: 3px; background: #f59e0b; border-radius: 2px; border: 1px dashed #f59e0b;"></div>
+              Linha de Operação
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-weight: 500;">
+              <div style="width: 16px; height: 3px; background: #10b981; border-radius: 2px;"></div>
+              Entrada CALL
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-weight: 500;">
+              <div style="width: 16px; height: 3px; background: #ef4444; border-radius: 2px;"></div>
+              Entrada PUT
+            </div>
+          </div>
+        </div>
+
         <!-- Log Compacto para Mobile -->
         <div class="log-container" style="background: #1e293b; border-radius: 16px; margin: 16px 0; overflow: hidden; border: 1px solid #334155;">
           <div style="background: #0f172a; padding: 12px; border-bottom: 1px solid #334155;">
@@ -823,7 +849,7 @@ export default function BotInterface() {
       let emaFast = 9;
       let emaSlow = 21;
       let rsiPeriods = 11; // ✅ AJUSTADO: Menos sensível
-      let minConfidence = 70;
+      let minConfidence = 50; // ✅ AJUSTADO: Menos restritivo para mais operações
 
       let stats = {
         total: 0,
@@ -950,6 +976,9 @@ export default function BotInterface() {
       let maxMartingale_current = 3;
       let priceData = [];
       let volumeData = [];
+      let priceChart = null; // Instância do Chart.js
+      let chartData = []; // Dados específicos para o gráfico
+      let persistentChartData = []; // Dados persistentes do gráfico (não perdem na reconexão)
       let isTrading = false;
       let lastTradeTime = 0;
       let minTradeInterval = 60000;
@@ -976,6 +1005,339 @@ export default function BotInterface() {
           const timestamp = new Date().toLocaleTimeString();
           logElement.innerHTML += \`[\${timestamp}] \${message}<br>\`;
           logElement.scrollTop = logElement.scrollHeight;
+        }
+      }
+
+      // ===== FUNÇÕES DO GRÁFICO =====
+      
+      function initializeChart() {
+        try {
+          console.log('🚀 Inicializando gráfico...');
+          
+          // Destruir gráfico existente se houver
+          if (priceChart) {
+            priceChart.destroy();
+            priceChart = null;
+          }
+          
+          // Verificar se Chart.js está disponível
+          if (typeof Chart === 'undefined') {
+            console.error('❌ Chart.js não está carregado!');
+            return;
+          }
+          
+          const canvas = document.getElementById('priceChart');
+          if (!canvas) {
+            console.error('❌ Canvas do gráfico não encontrado!');
+            return;
+          }
+          
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            console.error('❌ Contexto do canvas não disponível!');
+            return;
+          }
+          
+          // Configurar dimensões do canvas
+          const container = canvas.parentElement;
+          canvas.width = container.offsetWidth;
+          canvas.height = 500;
+          
+          // Restaurar dados persistentes ou limpar se for primeira inicialização
+          chartData = [...persistentChartData];
+          console.log('📊 Dados persistentes restaurados:', persistentChartData.length, 'pontos');
+          
+          // Criar instância do Chart.js
+          priceChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+              datasets: [
+                {
+                  label: 'Preço do Ativo',
+                  data: [],
+                  borderColor: '#60a5fa',
+                  backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                  borderWidth: 2,
+                  pointRadius: 2,
+                  pointBackgroundColor: '#60a5fa',
+                  pointBorderColor: '#60a5fa',
+                  fill: true,
+                  tension: 0.4
+                },
+                {
+                  label: 'Linha de Operação',
+                  data: [],
+                  borderColor: '#f59e0b',
+                  backgroundColor: 'transparent',
+                  borderWidth: 2,
+                  borderDash: [5, 5],
+                  pointRadius: 0,
+                  pointHoverRadius: 0,
+                  fill: false,
+                  tension: 0
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              animation: false,
+              plugins: {
+                legend: {
+                  display: false
+                },
+                tooltip: {
+                  enabled: true,
+                  mode: 'index',
+                  intersect: false
+                }
+              },
+              scales: {
+                x: {
+                  type: 'time',
+                  time: {
+                    unit: 'second',
+                    displayFormats: {
+                      second: 'HH:mm:ss',
+                      minute: 'HH:mm'
+                    }
+                  },
+                  display: true,
+                  grid: {
+                    color: '#475569',
+                    drawBorder: false
+                  },
+                  ticks: {
+                    color: '#cbd5e1',
+                    font: {
+                      size: 10
+                    },
+                    maxRotation: 0,
+                    autoSkip: true,
+                    maxTicksLimit: 12 // Mais ticks para 1 hora de dados
+                  }
+                },
+                y: {
+                  display: true,
+                  position: 'right',
+                  grid: {
+                    color: '#475569',
+                    drawBorder: false
+                  },
+                  ticks: {
+                    color: '#cbd5e1',
+                    font: {
+                      size: 10,
+                      weight: 'bold'
+                    },
+                    callback: function(value) {
+                      return value.toFixed(2);
+                    }
+                  },
+                  // Escala dinâmica do eixo Y baseada nos dados reais
+                  min: function(context) {
+                    const data = context.chart.data.datasets[0].data;
+                    if (data.length === 0) return undefined;
+                    const values = data.map(d => d.y);
+                    const min = Math.min(...values);
+                    const max = Math.max(...values);
+                    const range = max - min;
+                    return min - (range * 0.1); // 10% de margem
+                  },
+                  max: function(context) {
+                    const data = context.chart.data.datasets[0].data;
+                    if (data.length === 0) return undefined;
+                    const values = data.map(d => d.y);
+                    const min = Math.min(...values);
+                    const max = Math.max(...values);
+                    const range = max - min;
+                    return max + (range * 0.1); // 10% de margem
+                  }
+                }
+              },
+              interaction: {
+                intersect: false,
+                mode: 'index'
+              }
+            }
+          });
+          
+          console.log('✅ Gráfico criado, canvas width:', canvas.width, 'height:', canvas.height);
+          console.log('📊 Canvas element:', canvas);
+          console.log('📊 Chart instance:', priceChart);
+          console.log('📊 Chart data:', priceChart.data);
+          
+          // Linha de operação será criada apenas quando bot operar
+          
+          // Se há dados persistentes, é uma reconexão
+          if (persistentChartData.length > 0) {
+            console.log('🔄 Reconexão detectada - gráfico restaurado com', persistentChartData.length, 'pontos');
+          }
+          
+          console.log('✅ Gráfico inicializado com sucesso!');
+          
+        } catch (error) {
+          console.error('❌ Erro ao inicializar gráfico:', error);
+        }
+      }
+      
+      function createOperationLine() {
+        if (!priceChart) {
+          console.warn('⚠️ priceChart não existe para criar linha de operação');
+          return;
+        }
+        
+        try {
+          const now = Date.now();
+          const operationPrice = 5700.0; // Preço de referência fixo
+          
+          // Criar pontos para linha horizontal (início e fim do gráfico)
+          const operationData = [
+            { x: now - 300000, y: operationPrice }, // 5 minutos atrás
+            { x: now + 300000, y: operationPrice }  // 5 minutos no futuro
+          ];
+          
+          console.log('📏 Criando linha de operação:', operationData);
+          console.log('📊 Datasets disponíveis:', priceChart.data.datasets.length);
+          
+          // Verificar se dataset 1 existe
+          if (priceChart.data.datasets[1]) {
+            priceChart.data.datasets[1].data = operationData;
+            priceChart.update('none');
+            console.log('✅ Linha de operação criada em:', operationPrice);
+          } else {
+            console.error('❌ Dataset 1 não existe!');
+          }
+          
+        } catch (error) {
+          console.error('❌ Erro ao criar linha de operação:', error);
+        }
+      }
+      
+      function updatePriceChart(price) {
+        if (!priceChart) {
+          console.warn('⚠️ priceChart não existe ainda');
+          return;
+        }
+        
+        if (!price) {
+          console.warn('⚠️ Preço inválido:', price);
+          return;
+        }
+        
+        try {
+          const now = new Date();
+          const timestamp = now.getTime();
+          
+          // Adicionar novo ponto de preço
+          const newPoint = {
+            x: timestamp,
+            y: price
+          };
+          
+          chartData.push(newPoint);
+          persistentChartData.push(newPoint);
+          
+          // Manter apenas os últimos 720 pontos (1 hora de dados a cada 5 segundos)
+          if (chartData.length > 720) {
+            chartData = chartData.slice(-720);
+          }
+          
+          // Manter dados persistentes também limitados a 1 hora
+          if (persistentChartData.length > 720) {
+            persistentChartData = persistentChartData.slice(-720);
+          }
+          
+          // Atualizar apenas dados do preço (dataset 0)
+          priceChart.data.datasets[0].data = chartData;
+          priceChart.update('none'); // Atualização sem animação para performance
+          
+          // Log a cada 50 pontos para monitorar (1 hora = 720 pontos)
+          if (chartData.length % 50 === 0) {
+            const timeRange = Math.round((chartData.length * 5) / 60); // Minutos
+            console.log(\`📊 Gráfico atualizado: \${chartData.length} pontos (\${timeRange}min) - Último preço: \${price}\`);
+            console.log('📈 Dados do gráfico:', chartData.slice(-3)); // Últimos 3 pontos
+            console.log('📊 Chart canvas renderizado?', priceChart.canvas.style.display);
+            console.log('📊 Chart datasets:', priceChart.data.datasets.length);
+            console.log('📊 Dataset 0 (preço) dados:', priceChart.data.datasets[0].data.length);
+            console.log('📊 Dataset 1 (operação) dados:', priceChart.data.datasets[1]?.data.length || 'não existe');
+            console.log('📊 Canvas dimensions:', priceChart.canvas.width, 'x', priceChart.canvas.height);
+          }
+          
+        } catch (error) {
+          console.error('❌ Erro ao atualizar gráfico:', error);
+        }
+      }
+      
+      function addEntryLine(price, signal, timestamp) {
+        if (!priceChart) return;
+        
+        try {
+          const color = signal === 'CALL' ? '#10b981' : '#ef4444';
+          const label = signal === 'CALL' ? 'CALL' : 'PUT';
+          
+          // Criar linha de operação (amarela tracejada) se não existir
+          if (!priceChart.data.datasets[1] || priceChart.data.datasets[1].data.length === 0) {
+            // Usar dados do gráfico para definir limites da linha de operação
+            const priceData = priceChart.data.datasets[0].data;
+            if (priceData.length > 0) {
+              const firstTime = priceData[0].x;
+              const lastTime = priceData[priceData.length - 1].x;
+              
+              const operationData = [
+                { x: firstTime, y: price },
+                { x: lastTime, y: price }
+              ];
+              
+              priceChart.data.datasets[1].data = operationData;
+              console.log('📏 Linha de operação criada em:', price, 'de', new Date(firstTime).toLocaleTimeString(), 'até', new Date(lastTime).toLocaleTimeString());
+            }
+          }
+          
+          // Adicionar linha de entrada como dataset separado
+          priceChart.data.datasets.push({
+            label: label,
+            data: [
+              { x: timestamp, y: price },
+              { x: timestamp + 300000, y: price } // Linha de 5 minutos
+            ],
+            borderColor: color,
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            pointRadius: 0,
+            pointHoverRadius: 5,
+            pointHoverBackgroundColor: color,
+            pointHoverBorderColor: color,
+            pointHoverBorderWidth: 2,
+            tension: 0
+          });
+          
+          priceChart.update('none');
+          
+          // Remover linha após 5 minutos
+          setTimeout(() => {
+            removeEntryLine(timestamp);
+          }, 300000);
+          
+        } catch (error) {
+          console.error('❌ Erro ao adicionar linha de entrada:', error);
+        }
+      }
+      
+      function removeEntryLine(timestamp) {
+        if (!priceChart) return;
+        
+        try {
+          // Remover dataset da linha de entrada
+          priceChart.data.datasets = priceChart.data.datasets.filter((dataset, index) => {
+            if (index === 0) return true; // Manter dataset principal do preço
+            return dataset.data[0]?.x !== timestamp;
+          });
+          
+          priceChart.update('none');
+          
+        } catch (error) {
+          console.error('❌ Erro ao remover linha de entrada:', error);
         }
       }
 
@@ -1140,6 +1502,11 @@ export default function BotInterface() {
             document.getElementById("status").innerText = "🔐 Autenticando...";
             websocket.send(JSON.stringify({ authorize: tokenToUse }));
             tentativaReconexao = 0; // Reset contador ao conectar com sucesso
+            
+            // Inicializar gráfico após conectar
+            setTimeout(() => {
+              initializeChart();
+            }, 1000);
           };
 
           websocket.onmessage = (event) => {
@@ -1490,6 +1857,9 @@ export default function BotInterface() {
           
           priceData.push({ high: price, low: price, close: price, timestamp: timestamp });
           volumeData.push(volume);
+          
+          // Atualizar gráfico com novo preço
+          updatePriceChart(price);
           
           // ✅ MANTER histórico de 24h (288 velas) + margem para novos ticks
           const maxDataPoints = Math.max(mhiPeriods, emaSlow, rsiPeriods, 288) + 50;
@@ -1973,7 +2343,7 @@ export default function BotInterface() {
         // Só opera A FAVOR da tendência principal detectada pelas EMAs
         
         // 🔴 REGRA 1: Se tendência é BAIXA (EMA50 < EMA100 < EMA200), NUNCA fazer CALL
-        if (trend24h === "BAIXA" && trend24hStrength >= 0.05) {
+        if (trend24h === "BAIXA" && trend24hStrength >= 0.02) { // ✅ AJUSTADO: Menos restritivo
           // Só permite PUT se RSI ou Bollinger confirmarem
           if (signals.rsi === "PUT" || signals.bollinger === "PUT") {
             addLog(\`✅ PUT aprovado: A FAVOR da tendência BAIXA (\${trend24hStrength.toFixed(2)}%) + RSI(\${signals.rsi}) BB(\${signals.bollinger})\`);
@@ -1985,7 +2355,7 @@ export default function BotInterface() {
         }
         
         // 🟢 REGRA 2: Se tendência é ALTA (EMA50 > EMA100 > EMA200), NUNCA fazer PUT
-        if (trend24h === "ALTA" && trend24hStrength >= 0.05) {
+        if (trend24h === "ALTA" && trend24hStrength >= 0.02) { // ✅ AJUSTADO: Menos restritivo
           // Só permite CALL se RSI ou Bollinger confirmarem
           if (signals.rsi === "CALL" || signals.bollinger === "CALL") {
             addLog(\`✅ CALL aprovado: A FAVOR da tendência ALTA (\${trend24hStrength.toFixed(2)}%) + RSI(\${signals.rsi}) BB(\${signals.bollinger})\`);
@@ -1998,7 +2368,7 @@ export default function BotInterface() {
         
         // 🟡 REGRA 3: Se tendência é extremamente LATERAL/FRACA (< 0.05%), ser mais cauteloso
         // Requer confirmação DUPLA de indicadores para operar em mercado lateral
-        if (trend24hStrength < 0.05) {
+        if (trend24hStrength < 0.02) { // ✅ AJUSTADO: Mais permissivo para mercado lateral
           // ✅ MHI + RSI para confirmação dupla em mercado lateral
           if (signals.mhi === "CALL" && signals.rsi === "CALL") {
             addLog(\`✅ CALL aprovado em mercado lateral: MHI + RSI confirmam\`);
@@ -2147,6 +2517,10 @@ export default function BotInterface() {
 
         websocket.send(JSON.stringify(proposal));
         document.getElementById("status").innerText = \`🚀 \${signal} - $\${currentStake}\`;
+        
+        // Adicionar linha de entrada no gráfico
+        const currentPrice = priceData[priceData.length - 1]?.close || 0;
+        addEntryLine(currentPrice, signal, Date.now());
         
         // Limpar timers anteriores
         if (autoCloseTimer) clearTimeout(autoCloseTimer);
