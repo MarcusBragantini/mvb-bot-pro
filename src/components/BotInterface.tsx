@@ -1092,13 +1092,7 @@ export default function BotInterface() {
               },
               scales: {
                 x: {
-                  type: 'time',
-                  time: {
-                    unit: 'minute',
-                    displayFormats: {
-                      minute: 'HH:mm'
-                    }
-                  },
+                  type: 'linear',
                   display: true,
                   grid: {
                     color: '#475569',
@@ -1156,7 +1150,10 @@ export default function BotInterface() {
       }
       
       function createOperationLine() {
-        if (!priceChart) return;
+        if (!priceChart) {
+          console.warn('⚠️ priceChart não existe para criar linha de operação');
+          return;
+        }
         
         try {
           const now = Date.now();
@@ -1168,11 +1165,17 @@ export default function BotInterface() {
             { x: now + 300000, y: operationPrice }  // 5 minutos no futuro
           ];
           
-          // Atualizar dataset da linha de operação
-          priceChart.data.datasets[1].data = operationData;
-          priceChart.update('none');
+          console.log('📏 Criando linha de operação:', operationData);
+          console.log('📊 Datasets disponíveis:', priceChart.data.datasets.length);
           
-          console.log('📏 Linha de operação criada em:', operationPrice);
+          // Verificar se dataset 1 existe
+          if (priceChart.data.datasets[1]) {
+            priceChart.data.datasets[1].data = operationData;
+            priceChart.update('none');
+            console.log('✅ Linha de operação criada em:', operationPrice);
+          } else {
+            console.error('❌ Dataset 1 não existe!');
+          }
           
         } catch (error) {
           console.error('❌ Erro ao criar linha de operação:', error);
@@ -1215,6 +1218,9 @@ export default function BotInterface() {
             console.log('📈 Dados do gráfico:', chartData.slice(-3)); // Últimos 3 pontos
             console.log('📊 Chart canvas renderizado?', priceChart.canvas.style.display);
             console.log('📊 Chart datasets:', priceChart.data.datasets.length);
+            console.log('📊 Dataset 0 (preço) dados:', priceChart.data.datasets[0].data.length);
+            console.log('📊 Dataset 1 (operação) dados:', priceChart.data.datasets[1]?.data.length || 'não existe');
+            console.log('📊 Canvas dimensions:', priceChart.canvas.width, 'x', priceChart.canvas.height);
           }
           
         } catch (error) {
