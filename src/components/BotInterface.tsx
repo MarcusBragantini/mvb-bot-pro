@@ -1092,7 +1092,14 @@ export default function BotInterface() {
               },
               scales: {
                 x: {
-                  type: 'linear',
+                  type: 'time',
+                  time: {
+                    unit: 'second',
+                    displayFormats: {
+                      second: 'HH:mm:ss',
+                      minute: 'HH:mm'
+                    }
+                  },
                   display: true,
                   grid: {
                     color: '#475569',
@@ -1105,7 +1112,7 @@ export default function BotInterface() {
                     },
                     maxRotation: 0,
                     autoSkip: true,
-                    maxTicksLimit: 6
+                    maxTicksLimit: 8
                   }
                 },
                 y: {
