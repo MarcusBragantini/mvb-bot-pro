@@ -668,6 +668,28 @@ export default function BotInterface() {
           </div>
         </div>
 
+        <!-- Gráfico de Preços em Tempo Real -->
+        <div style="background: #1e293b; border: 1px solid #475569; border-radius: 12px; padding: 16px; margin: 16px 0;">
+          <h3 style="color: #f1f5f9; margin-bottom: 12px; font-size: 1.1rem; font-weight: 600;">📈 Gráfico de Preços</h3>
+          <div style="position: relative; width: 100%; height: 300px; max-height: 300px; overflow: hidden;">
+            <canvas id="priceChart" style="background: #1e293b; border: 1px solid #475569; border-radius: 8px;"></canvas>
+          </div>
+          <div style="display: flex; justify-content: center; gap: 20px; margin-top: 12px; font-size: 0.9rem;">
+            <div style="display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-weight: 500;">
+              <div style="width: 16px; height: 3px; background: #60a5fa; border-radius: 2px;"></div>
+              Preço do Ativo
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-weight: 500;">
+              <div style="width: 16px; height: 3px; background: #10b981; border-radius: 2px;"></div>
+              Entrada CALL
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-weight: 500;">
+              <div style="width: 16px; height: 3px; background: #ef4444; border-radius: 2px;"></div>
+              Entrada PUT
+            </div>
+          </div>
+        </div>
+
         <!-- Log Compacto para Mobile -->
         <div class="log-container" style="background: #1e293b; border-radius: 16px; margin: 16px 0; overflow: hidden; border: 1px solid #334155;">
           <div style="background: #0f172a; padding: 12px; border-bottom: 1px solid #334155;">
@@ -950,6 +972,7 @@ export default function BotInterface() {
       let maxMartingale_current = 3;
       let priceData = [];
       let volumeData = [];
+      let priceChart = null; // Instância do Chart.js
       let isTrading = false;
       let lastTradeTime = 0;
       let minTradeInterval = 60000;
@@ -976,6 +999,195 @@ export default function BotInterface() {
           const timestamp = new Date().toLocaleTimeString();
           logElement.innerHTML += \`[\${timestamp}] \${message}<br>\`;
           logElement.scrollTop = logElement.scrollHeight;
+        }
+      }
+
+      // ===== FUNÇÕES DO GRÁFICO =====
+      
+      function initializeChart() {
+        try {
+          console.log('🚀 Inicializando gráfico...');
+          
+          // Destruir gráfico existente se houver
+          if (priceChart) {
+            priceChart.destroy();
+            priceChart = null;
+          }
+          
+          // Verificar se Chart.js está disponível
+          if (typeof Chart === 'undefined') {
+            console.error('❌ Chart.js não está carregado!');
+            return;
+          }
+          
+          const canvas = document.getElementById('priceChart');
+          if (!canvas) {
+            console.error('❌ Canvas do gráfico não encontrado!');
+            return;
+          }
+          
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            console.error('❌ Contexto do canvas não disponível!');
+            return;
+          }
+          
+          // Configurar dimensões do canvas
+          const container = canvas.parentElement;
+          canvas.width = container.offsetWidth;
+          canvas.height = 300;
+          
+          // Limpar dados anteriores
+          priceData = [];
+          
+          // Criar instância do Chart.js
+          priceChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+              datasets: [{
+                label: 'Preço',
+                data: [],
+                borderColor: '#60a5fa',
+                backgroundColor: 'transparent',
+                borderWidth: 3,
+                pointBackgroundColor: 'transparent',
+                pointBorderColor: 'transparent',
+                pointStyle: 'line',
+                segment: {
+                  borderColor: '#60a5fa'
+                },
+                tension: 0.1
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  display: false
+                }
+              },
+              scales: {
+                x: {
+                  display: true,
+                  grid: {
+                    color: '#475569',
+                    drawBorder: false
+                  },
+                  ticks: {
+                    color: '#cbd5e1',
+                    font: {
+                      size: 10
+                    }
+                  }
+                },
+                y: {
+                  display: true,
+                  grid: {
+                    color: '#475569',
+                    drawBorder: false
+                  },
+                  ticks: {
+                    color: '#cbd5e1',
+                    font: {
+                      size: 10,
+                      weight: 'bold'
+                    }
+                  }
+                }
+              },
+              interaction: {
+                intersect: false,
+                mode: 'index'
+              }
+            }
+          });
+          
+          console.log('✅ Gráfico inicializado com sucesso!');
+          
+        } catch (error) {
+          console.error('❌ Erro ao inicializar gráfico:', error);
+        }
+      }
+      
+      function updatePriceChart(price) {
+        if (!priceChart || !price) return;
+        
+        try {
+          const now = new Date();
+          const timestamp = now.getTime();
+          
+          // Adicionar novo ponto de preço
+          priceData.push({
+            x: timestamp,
+            y: price
+          });
+          
+          // Manter apenas os últimos 100 pontos para performance
+          if (priceData.length > 100) {
+            priceData = priceData.slice(-100);
+          }
+          
+          // Atualizar dados do gráfico
+          priceChart.data.datasets[0].data = priceData.map(d => ({ x: d.x, y: d.y }));
+          priceChart.update('none'); // Atualização sem animação para performance
+          
+        } catch (error) {
+          console.error('❌ Erro ao atualizar gráfico:', error);
+        }
+      }
+      
+      function addEntryLine(price, signal, timestamp) {
+        if (!priceChart) return;
+        
+        try {
+          const color = signal === 'CALL' ? '#10b981' : '#ef4444';
+          const label = signal === 'CALL' ? 'CALL' : 'PUT';
+          
+          // Adicionar linha de entrada como dataset separado
+          priceChart.data.datasets.push({
+            label: label,
+            data: [
+              { x: timestamp, y: price },
+              { x: timestamp + 300000, y: price } // Linha de 5 minutos
+            ],
+            borderColor: color,
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            pointRadius: 0,
+            pointHoverRadius: 5,
+            pointHoverBackgroundColor: color,
+            pointHoverBorderColor: color,
+            pointHoverBorderWidth: 2,
+            tension: 0
+          });
+          
+          priceChart.update('none');
+          
+          // Remover linha após 5 minutos
+          setTimeout(() => {
+            removeEntryLine(timestamp);
+          }, 300000);
+          
+        } catch (error) {
+          console.error('❌ Erro ao adicionar linha de entrada:', error);
+        }
+      }
+      
+      function removeEntryLine(timestamp) {
+        if (!priceChart) return;
+        
+        try {
+          // Remover dataset da linha de entrada
+          priceChart.data.datasets = priceChart.data.datasets.filter((dataset, index) => {
+            if (index === 0) return true; // Manter dataset principal do preço
+            return dataset.data[0]?.x !== timestamp;
+          });
+          
+          priceChart.update('none');
+          
+        } catch (error) {
+          console.error('❌ Erro ao remover linha de entrada:', error);
         }
       }
 
@@ -1140,6 +1352,11 @@ export default function BotInterface() {
             document.getElementById("status").innerText = "🔐 Autenticando...";
             websocket.send(JSON.stringify({ authorize: tokenToUse }));
             tentativaReconexao = 0; // Reset contador ao conectar com sucesso
+            
+            // Inicializar gráfico após conectar
+            setTimeout(() => {
+              initializeChart();
+            }, 1000);
           };
 
           websocket.onmessage = (event) => {
@@ -1490,6 +1707,9 @@ export default function BotInterface() {
           
           priceData.push({ high: price, low: price, close: price, timestamp: timestamp });
           volumeData.push(volume);
+          
+          // Atualizar gráfico com novo preço
+          updatePriceChart(price);
           
           // ✅ MANTER histórico de 24h (288 velas) + margem para novos ticks
           const maxDataPoints = Math.max(mhiPeriods, emaSlow, rsiPeriods, 288) + 50;
@@ -2147,6 +2367,10 @@ export default function BotInterface() {
 
         websocket.send(JSON.stringify(proposal));
         document.getElementById("status").innerText = \`🚀 \${signal} - $\${currentStake}\`;
+        
+        // Adicionar linha de entrada no gráfico
+        const currentPrice = priceData[priceData.length - 1]?.close || 0;
+        addEntryLine(currentPrice, signal, Date.now());
         
         // Limpar timers anteriores
         if (autoCloseTimer) clearTimeout(autoCloseTimer);
