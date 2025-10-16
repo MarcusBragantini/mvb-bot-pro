@@ -671,8 +671,8 @@ export default function BotInterface() {
         <!-- Gráfico de Preços em Tempo Real -->
         <div style="background: #1e293b; border: 1px solid #475569; border-radius: 12px; padding: 16px; margin: 16px 0;">
           <h3 style="color: #f1f5f9; margin-bottom: 12px; font-size: 1.1rem; font-weight: 600;">📈 Gráfico de Preços</h3>
-          <div style="position: relative; width: 100%; height: 300px; max-height: 300px; overflow: hidden;">
-            <canvas id="priceChart" style="background: #1e293b; border: 1px solid #475569; border-radius: 8px;"></canvas>
+          <div style="position: relative; width: 100%; height: 300px; max-height: 300px; overflow: visible;">
+            <canvas id="priceChart" style="display: block; width: 100%; height: 300px; background: #0f172a; border: 1px solid #475569; border-radius: 8px;"></canvas>
           </div>
           <div style="display: flex; justify-content: center; gap: 20px; margin-top: 12px; font-size: 0.9rem;">
             <div style="display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-weight: 500;">
@@ -1123,6 +1123,9 @@ export default function BotInterface() {
           });
           
           console.log('✅ Gráfico criado, canvas width:', canvas.width, 'height:', canvas.height);
+          console.log('📊 Canvas element:', canvas);
+          console.log('📊 Chart instance:', priceChart);
+          console.log('📊 Chart data:', priceChart.data);
           
           console.log('✅ Gráfico inicializado com sucesso!');
           
@@ -1165,6 +1168,8 @@ export default function BotInterface() {
           if (chartData.length % 10 === 0) {
             console.log(\`📊 Gráfico atualizado: \${chartData.length} pontos - Último preço: \${price}\`);
             console.log('📈 Dados do gráfico:', chartData.slice(-3)); // Últimos 3 pontos
+            console.log('📊 Chart canvas renderizado?', priceChart.canvas.style.display);
+            console.log('📊 Chart datasets:', priceChart.data.datasets.length);
           }
           
         } catch (error) {
