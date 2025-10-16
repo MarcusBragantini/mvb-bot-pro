@@ -936,7 +936,6 @@ export default function BotInterface() {
               
               // Atualizar UI
               document.getElementById('profit').innerText = "$" + profit.toFixed(2);
-              document.getElementById('martingaleStatus').textContent = \`\${martingaleLevel}/\${maxMartingale}\`;
               document.getElementById('currentStake').textContent = "$" + currentStake;
               
               if (stats.total > 0) {
@@ -2284,7 +2283,7 @@ export default function BotInterface() {
       }
 
       function updateMartingaleStatus() {
-        document.getElementById("martingaleStatus").textContent = \`\${martingaleLevel_current}/\${maxMartingale_current}\`;
+        // Atualizar apenas o stake atual (martingaleStatus foi removido)
         document.getElementById("currentStake").textContent = "$" + currentStake;
       }
 
