@@ -628,13 +628,13 @@ export default function BotInterface() {
             <button 
               onclick="startBot()" 
               ${!isLicenseValid ? 'disabled' : ''}
-              style="background: ${isLicenseValid ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#6b7280'}; color: white; border: none; padding: 18px 24px; border-radius: 14px; font-size: 18px; font-weight: 700; cursor: ${isLicenseValid ? 'pointer' : 'not-allowed'}; box-shadow: 0 4px 15px ${isLicenseValid ? 'rgba(16, 185, 129, 0.3)' : 'rgba(107, 114, 128, 0.3)'}; transition: transform 0.2s; opacity: ${isLicenseValid ? '1' : '0.5'}; width: 100%; min-height: 56px;" 
+              style="background: ${isLicenseValid ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#6b7280'}; color: white; border: none; padding: 12px 16px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: ${isLicenseValid ? 'pointer' : 'not-allowed'}; box-shadow: 0 2px 8px ${isLicenseValid ? 'rgba(16, 185, 129, 0.3)' : 'rgba(107, 114, 128, 0.3)'}; transition: transform 0.2s; opacity: ${isLicenseValid ? '1' : '0.5'}; width: 100%; min-height: 44px;" 
               onmousedown="this.style.transform='scale(0.95)'" 
               onmouseup="this.style.transform='scale(1)'"
               title="${!isLicenseValid ? 'Licença expirada - Renove para continuar' : 'Iniciar trading automático'}">
               ${isLicenseValid ? '▶ Iniciar Bot' : '🔒 Licença Expirada'}
             </button>
-            <button onclick="stopBot()" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; padding: 18px 24px; border-radius: 14px; font-size: 18px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); transition: transform 0.2s; width: 100%; min-height: 56px;" onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">
+            <button onclick="stopBot()" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; padding: 12px 16px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3); transition: transform 0.2s; width: 100%; min-height: 44px;" onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">
               ⏹ Parar Bot
             </button>
           </div>
