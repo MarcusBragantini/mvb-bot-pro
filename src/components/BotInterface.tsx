@@ -3180,20 +3180,6 @@ export default function BotInterface() {
                     </Button>
                   </div>
 
-                  {/* Informações sobre as configurações */}
-                  <Alert className="mt-6">
-                    <HelpCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      <strong>💡 Dicas de Configuração:</strong>
-                      <ul className="mt-2 space-y-1 text-sm">
-                        <li><strong>Entrada Inicial:</strong> Comece com valores baixos para testar</li>
-                        <li><strong>Martingale:</strong> Use 2x para menor risco, 3x para maior agressividade</li>
-                        <li><strong>Stop Win/Loss:</strong> Defina limites para proteger seu capital</li>
-                        <li><strong>Confiança:</strong> 75%+ recomendado para sinais mais seguros</li>
-                        <li><strong>Indicadores:</strong> Valores padrão são otimizados para a maioria dos casos</li>
-                      </ul>
-                    </AlertDescription>
-                  </Alert>
                 </CardContent>
               </Card>
             </TabsContent>
