@@ -1246,10 +1246,7 @@ export default function BotInterface() {
           priceChart.data.datasets[0].data = chartData;
           priceChart.update('none');
           
-          if (chartData.length % 20 === 0) {
-            const timeRange = Math.round((chartData.length * 5) / 60);
-            console.log(\`📊 Operação ativa: \${chartData.length} pontos (\${timeRange}min) - Preço: \${price}\`);
-          }
+          // Log removido para reduzir poluição no console
           
         } catch (error) {
           console.error('❌ Erro ao atualizar gráfico:', error);
@@ -1752,17 +1749,7 @@ export default function BotInterface() {
               const autoCloseProfitElement = document.getElementById('autoCloseProfit');
               const autoCloseProfitThreshold = parseFloat(autoCloseProfitElement?.value || '30');
               
-              // Debug: Log do percentual configurado
-              if (autoCloseProfitElement) {
-                console.log('🔍 Debug AutoClose:', {
-                  elementFound: true,
-                  value: autoCloseProfitElement.value,
-                  parsed: autoCloseProfitThreshold,
-                  currentProfit: profitPercentage.toFixed(1) + '%'
-                });
-              } else {
-                console.log('⚠️ Elemento autoCloseProfit não encontrado');
-              }
+              // Debug removido para reduzir poluição no console
               
               // Log do P&L atual (sempre mostrar quando positivo)
               if (profitPercentage > 0) {
