@@ -403,7 +403,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-slate-100">MVB Pro</h1>
-                <p className="text-sm text-gray-400">Dashboard</p>
+                <p className="text-sm text-gray-400 hidden sm:block">Dashboard</p>
               </div>
             </div>
             

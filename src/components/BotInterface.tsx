@@ -598,9 +598,9 @@ export default function BotInterface() {
 
     // Inserir HTML do bot original - OTIMIZADO PARA MOBILE
     botContainerRef.current.innerHTML = `
-      <div class="bot-interface-original" style="background: #0f172a; border-radius: 16px; padding: 20px; margin: 16px 0; border: 1px solid #334155;">
+      <div class="bot-interface-original" style="background: #0f172a; border-radius: 12px; padding: 12px; margin: 8px 0; border: 1px solid #334155;">
         <!-- Controles Principais - Simplified for Mobile -->
-        <div class="main-controls" style="background: #1e293b; border-radius: 16px; padding: 20px; margin: 16px 0; box-shadow: 0 4px 20px rgba(0,0,0,0.3); border: 1px solid #334155;">
+        <div class="main-controls" style="background: #1e293b; border-radius: 12px; padding: 16px; margin: 12px 0; box-shadow: 0 4px 20px rgba(0,0,0,0.3); border: 1px solid #334155;">
           <div class="control-grid" style="display: grid; gap: 16px;">
             <!-- Token oculto - será preenchido automaticamente -->
             <input type="hidden" id="token" value="">
@@ -628,96 +628,96 @@ export default function BotInterface() {
             <button 
               onclick="startBot()" 
               ${!isLicenseValid ? 'disabled' : ''}
-              style="background: ${isLicenseValid ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#6b7280'}; color: white; border: none; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: ${isLicenseValid ? 'pointer' : 'not-allowed'}; box-shadow: 0 4px 15px ${isLicenseValid ? 'rgba(16, 185, 129, 0.3)' : 'rgba(107, 114, 128, 0.3)'}; transition: transform 0.2s; opacity: ${isLicenseValid ? '1' : '0.5'};" 
+              style="background: ${isLicenseValid ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#6b7280'}; color: white; border: none; padding: 12px 16px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: ${isLicenseValid ? 'pointer' : 'not-allowed'}; box-shadow: 0 2px 8px ${isLicenseValid ? 'rgba(16, 185, 129, 0.3)' : 'rgba(107, 114, 128, 0.3)'}; transition: transform 0.2s; opacity: ${isLicenseValid ? '1' : '0.5'}; width: 100%; min-height: 44px;" 
               onmousedown="this.style.transform='scale(0.95)'" 
               onmouseup="this.style.transform='scale(1)'"
               title="${!isLicenseValid ? 'Licença expirada - Renove para continuar' : 'Iniciar trading automático'}">
               ${isLicenseValid ? '▶ Iniciar Bot' : '🔒 Licença Expirada'}
             </button>
-            <button onclick="stopBot()" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); transition: transform 0.2s;" onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">
+            <button onclick="stopBot()" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; padding: 12px 16px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3); transition: transform 0.2s; width: 100%; min-height: 44px;" onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">
               ⏹ Parar Bot
             </button>
           </div>
         </div>
 
         <!-- Status Cards - Mobile Grid -->
-        <div class="status-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 16px 0;">
-          <div class="status-card" style="background: #0f172a; padding: 16px; border-radius: 12px; text-align: center; border: 2px solid #3b82f6;">
-            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px;">Status</div>
-            <div class="status-value" id="status" style="font-size: 1rem; font-weight: bold; color: #f1f5f9;">⏳ Aguardando...</div>
+        <div class="status-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 12px 0;">
+          <div class="status-card" style="background: #0f172a; padding: 10px; border-radius: 10px; text-align: center; border: 2px solid #3b82f6;">
+            <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px;">Status</div>
+            <div class="status-value" id="status" style="font-size: 0.85rem; font-weight: bold; color: #f1f5f9;">⏳ Aguardando...</div>
           </div>
-          <div class="status-card" style="background: #0f172a; padding: 16px; border-radius: 12px; text-align: center; border: 2px solid #10b981;">
-            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px;">Saldo</div>
-            <div class="status-value" style="font-size: 1rem; font-weight: bold; color: #f1f5f9;">$<span id="balance">0</span></div>
+          <div class="status-card" style="background: #0f172a; padding: 10px; border-radius: 10px; text-align: center; border: 2px solid #10b981;">
+            <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px;">Saldo</div>
+            <div class="status-value" style="font-size: 0.9rem; font-weight: bold; color: #f1f5f9;">$<span id="balance">0</span></div>
           </div>
-          <div class="status-card" style="background: #0f172a; padding: 16px; border-radius: 12px; text-align: center; border: 2px solid #8b5cf6;">
-            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px;">Lucro</div>
-            <div class="status-value" id="profit" style="font-size: 1rem; font-weight: bold; color: #f1f5f9;">$0</div>
+          <div class="status-card" style="background: #0f172a; padding: 10px; border-radius: 10px; text-align: center; border: 2px solid #8b5cf6;">
+            <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px;">Lucro</div>
+            <div class="status-value" id="profit" style="font-size: 0.9rem; font-weight: bold; color: #f1f5f9;">$0</div>
           </div>
-          <div class="status-card" style="background: #0f172a; padding: 16px; border-radius: 12px; text-align: center; border: 2px solid #f59e0b;">
-            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px;">Precisão</div>
-            <div class="status-value" id="accuracy" style="font-size: 1rem; font-weight: bold; color: #f1f5f9;">0%</div>
+          <div class="status-card" style="background: #0f172a; padding: 10px; border-radius: 10px; text-align: center; border: 2px solid #f59e0b;">
+            <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px;">Precisão</div>
+            <div class="status-value" id="accuracy" style="font-size: 0.9rem; font-weight: bold; color: #f1f5f9;">0%</div>
           </div>
-          <div class="status-card" style="background: #0f172a; padding: 16px; border-radius: 12px; text-align: center; border: 2px solid #06b6d4;">
-            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px;">Dados</div>
-            <div class="status-value" id="dataCount" style="font-size: 1rem; font-weight: bold; color: #f1f5f9;">0</div>
+          <div class="status-card" style="background: #0f172a; padding: 10px; border-radius: 10px; text-align: center; border: 2px solid #06b6d4;">
+            <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px;">Dados</div>
+            <div class="status-value" id="dataCount" style="font-size: 0.9rem; font-weight: bold; color: #f1f5f9;">0</div>
           </div>
-          <div class="status-card" style="background: #0f172a; padding: 16px; border-radius: 12px; text-align: center; border: 2px solid #84cc16;">
-            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px;">Entrada</div>
-            <div class="status-value" id="currentStake" style="font-size: 1rem; font-weight: bold; color: #f1f5f9;">$1</div>
+          <div class="status-card" style="background: #0f172a; padding: 10px; border-radius: 10px; text-align: center; border: 2px solid #84cc16;">
+            <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px;">Entrada</div>
+            <div class="status-value" id="currentStake" style="font-size: 0.9rem; font-weight: bold; color: #f1f5f9;">$1</div>
           </div>
         </div>
 
         <!-- Gráfico de Preços em Tempo Real -->
-        <div style="background: #1e293b; border: 1px solid #475569; border-radius: 12px; padding: 16px; margin: 16px 0;">
-          <h3 style="color: #f1f5f9; margin-bottom: 12px; font-size: 1.1rem; font-weight: 600;">📈 Gráfico de Preços</h3>
-          <div style="position: relative; width: 100%; height: 500px; max-height: 500px; overflow: visible;">
-            <canvas id="priceChart" style="display: block; width: 100%; height: 500px; background: #0f172a; border: 1px solid #475569; border-radius: 8px;"></canvas>
+        <div style="background: #1e293b; border: 1px solid #475569; border-radius: 12px; padding: 12px; margin: 12px 0;">
+          <h3 style="color: #f1f5f9; margin-bottom: 12px; font-size: 1rem; font-weight: 600;">📈 Gráfico de Preços</h3>
+          <div style="position: relative; width: 100%; height: 300px; max-height: 300px; overflow: visible;">
+            <canvas id="priceChart" style="display: block; width: 100%; height: 300px; background: #0f172a; border: 1px solid #475569; border-radius: 8px;"></canvas>
           </div>
-          <div style="display: flex; justify-content: center; gap: 20px; margin-top: 12px; font-size: 0.9rem;">
-            <div style="display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-weight: 500;">
-              <div style="width: 16px; height: 3px; background: #60a5fa; border-radius: 2px;"></div>
-              Preço do Ativo
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 12px; font-size: 0.85rem;">
+            <div style="display: flex; align-items: center; gap: 6px; color: #cbd5e1; font-weight: 500;">
+              <div style="width: 14px; height: 3px; background: #60a5fa; border-radius: 2px; flex-shrink: 0;"></div>
+              <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Preço</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-weight: 500;">
-              <div style="width: 16px; height: 3px; background: #f59e0b; border-radius: 2px; border: 1px dashed #f59e0b;"></div>
-              Linha de Operação
+            <div style="display: flex; align-items: center; gap: 6px; color: #cbd5e1; font-weight: 500;">
+              <div style="width: 14px; height: 3px; background: #f59e0b; border-radius: 2px; border: 1px dashed #f59e0b; flex-shrink: 0;"></div>
+              <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Operação</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-weight: 500;">
-              <div style="width: 16px; height: 3px; background: #10b981; border-radius: 2px;"></div>
-              Entrada CALL
+            <div style="display: flex; align-items: center; gap: 6px; color: #cbd5e1; font-weight: 500;">
+              <div style="width: 14px; height: 3px; background: #10b981; border-radius: 2px; flex-shrink: 0;"></div>
+              <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">CALL</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-weight: 500;">
-              <div style="width: 16px; height: 3px; background: #ef4444; border-radius: 2px;"></div>
-              Entrada PUT
+            <div style="display: flex; align-items: center; gap: 6px; color: #cbd5e1; font-weight: 500;">
+              <div style="width: 14px; height: 3px; background: #ef4444; border-radius: 2px; flex-shrink: 0;"></div>
+              <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">PUT</span>
             </div>
           </div>
         </div>
 
         <!-- Log Compacto para Mobile -->
-        <div class="log-container" style="background: #1e293b; border-radius: 16px; margin: 16px 0; overflow: hidden; border: 1px solid #334155;">
-          <div style="background: #0f172a; padding: 12px; border-bottom: 1px solid #334155;">
-            <h3 style="color: #f1f5f9; margin: 0; font-size: 1rem; font-weight: 600;">📋 Log do Sistema</h3>
+        <div class="log-container" style="background: #1e293b; border-radius: 12px; margin: 12px 0; overflow: hidden; border: 1px solid #334155;">
+          <div style="background: #0f172a; padding: 10px; border-bottom: 1px solid #334155;">
+            <h3 style="color: #f1f5f9; margin: 0; font-size: 0.95rem; font-weight: 600;">📋 Log do Sistema</h3>
           </div>
-          <div id="log" style="background: #0f172a; color: #34d399; padding: 16px; font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace; height: 200px; overflow-y: auto; font-size: 13px; line-height: 1.4;"></div>
+          <div id="log" style="background: #0f172a; color: #34d399; padding: 12px; font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace; height: 180px; overflow-y: auto; font-size: 0.8rem; line-height: 1.4;"></div>
         </div>
 
         <!-- Histórico Responsivo -->
-        <div class="history-container" style="background: #1e293b; border-radius: 16px; margin: 16px 0; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.3); border: 1px solid #334155;">
-          <div style="background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); padding: 16px; color: #e2e8f0; border-bottom: 1px solid #334155;">
-            <h3 style="margin: 0; font-size: 1.1rem; font-weight: 600;">📊 Histórico de Operações</h3>
+        <div class="history-container" style="background: #1e293b; border-radius: 12px; margin: 12px 0; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.3); border: 1px solid #334155;">
+          <div style="background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); padding: 12px; color: #e2e8f0; border-bottom: 1px solid #334155;">
+            <h3 style="margin: 0; font-size: 0.95rem; font-weight: 600;">📊 Histórico</h3>
           </div>
           <div class="table-container" style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
+            <table style="width: 100%; border-collapse: collapse; min-width: 500px;">
               <thead>
                 <tr style="background: #0f172a;">
-                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #cbd5e1; font-size: 0.85rem;">Contrato</th>
-                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #cbd5e1; font-size: 0.85rem;">Sinal</th>
-                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #cbd5e1; font-size: 0.85rem;">Confiança</th>
-                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #cbd5e1; font-size: 0.85rem;">Entrada</th>
-                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #cbd5e1; font-size: 0.85rem;">Resultado</th>
-                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #cbd5e1; font-size: 0.85rem;">Lucro</th>
-                  <th style="border: 1px solid #334155; padding: 12px 8px; text-align: center; font-weight: 600; color: #cbd5e1; font-size: 0.85rem;">Hora</th>
+                  <th style="border: 1px solid #334155; padding: 8px 6px; text-align: center; font-weight: 600; color: #cbd5e1; font-size: 0.75rem;">Contrato</th>
+                  <th style="border: 1px solid #334155; padding: 8px 6px; text-align: center; font-weight: 600; color: #cbd5e1; font-size: 0.75rem;">Sinal</th>
+                  <th style="border: 1px solid #334155; padding: 8px 6px; text-align: center; font-weight: 600; color: #cbd5e1; font-size: 0.75rem;">Conf.</th>
+                  <th style="border: 1px solid #334155; padding: 8px 6px; text-align: center; font-weight: 600; color: #cbd5e1; font-size: 0.75rem;">Entrada</th>
+                  <th style="border: 1px solid #334155; padding: 8px 6px; text-align: center; font-weight: 600; color: #cbd5e1; font-size: 0.75rem;">Resultado</th>
+                  <th style="border: 1px solid #334155; padding: 8px 6px; text-align: center; font-weight: 600; color: #cbd5e1; font-size: 0.75rem;">Lucro</th>
+                  <th style="border: 1px solid #334155; padding: 8px 6px; text-align: center; font-weight: 600; color: #cbd5e1; font-size: 0.75rem;">Hora</th>
                 </tr>
               </thead>
               <tbody id="historyBody" style="color: #e2e8f0;"></tbody>
@@ -1041,11 +1041,12 @@ export default function BotInterface() {
           // Configurar dimensões do canvas
           const container = canvas.parentElement;
           canvas.width = container.offsetWidth;
-          canvas.height = 500;
+          canvas.height = 300;
           
-          // Restaurar dados persistentes ou limpar se for primeira inicialização
-          chartData = [...persistentChartData];
-          console.log('📊 Dados persistentes restaurados:', persistentChartData.length, 'pontos');
+          // Limpar dados - gráfico só mostra durante operação
+          chartData = [];
+          persistentChartData = [];
+          console.log('📊 Gráfico inicializado vazio - aguardando operação');
           
           // Criar instância do Chart.js
           priceChart = new Chart(ctx, {
@@ -1215,21 +1216,16 @@ export default function BotInterface() {
       }
       
       function updatePriceChart(price) {
-        if (!priceChart) {
-          console.warn('⚠️ priceChart não existe ainda');
-          return;
-        }
+        if (!priceChart) return;
+        if (!price) return;
         
-        if (!price) {
-          console.warn('⚠️ Preço inválido:', price);
-          return;
-        }
+        // Só atualizar se houver operação ativa
+        if (chartData.length === 0) return;
         
         try {
           const now = new Date();
           const timestamp = now.getTime();
           
-          // Adicionar novo ponto de preço
           const newPoint = {
             x: timestamp,
             y: price
@@ -1238,31 +1234,19 @@ export default function BotInterface() {
           chartData.push(newPoint);
           persistentChartData.push(newPoint);
           
-          // Manter apenas os últimos 720 pontos (1 hora de dados a cada 5 segundos)
-          if (chartData.length > 720) {
-            chartData = chartData.slice(-720);
+          // Limitar a 15 minutos (180 pontos)
+          if (chartData.length > 180) {
+            chartData = chartData.slice(-180);
           }
           
-          // Manter dados persistentes também limitados a 1 hora
-          if (persistentChartData.length > 720) {
-            persistentChartData = persistentChartData.slice(-720);
+          if (persistentChartData.length > 180) {
+            persistentChartData = persistentChartData.slice(-180);
           }
           
-          // Atualizar apenas dados do preço (dataset 0)
           priceChart.data.datasets[0].data = chartData;
-          priceChart.update('none'); // Atualização sem animação para performance
+          priceChart.update('none');
           
-          // Log a cada 50 pontos para monitorar (1 hora = 720 pontos)
-          if (chartData.length % 50 === 0) {
-            const timeRange = Math.round((chartData.length * 5) / 60); // Minutos
-            console.log(\`📊 Gráfico atualizado: \${chartData.length} pontos (\${timeRange}min) - Último preço: \${price}\`);
-            console.log('📈 Dados do gráfico:', chartData.slice(-3)); // Últimos 3 pontos
-            console.log('📊 Chart canvas renderizado?', priceChart.canvas.style.display);
-            console.log('📊 Chart datasets:', priceChart.data.datasets.length);
-            console.log('📊 Dataset 0 (preço) dados:', priceChart.data.datasets[0].data.length);
-            console.log('📊 Dataset 1 (operação) dados:', priceChart.data.datasets[1]?.data.length || 'não existe');
-            console.log('📊 Canvas dimensions:', priceChart.canvas.width, 'x', priceChart.canvas.height);
-          }
+          // Log removido para reduzir poluição no console
           
         } catch (error) {
           console.error('❌ Erro ao atualizar gráfico:', error);
@@ -1276,51 +1260,49 @@ export default function BotInterface() {
           const color = signal === 'CALL' ? '#10b981' : '#ef4444';
           const label = signal === 'CALL' ? 'CALL' : 'PUT';
           
-          // Criar linha de operação (amarela tracejada) se não existir
-          if (!priceChart.data.datasets[1] || priceChart.data.datasets[1].data.length === 0) {
-            // Usar dados do gráfico para definir limites da linha de operação
-            const priceData = priceChart.data.datasets[0].data;
-            if (priceData.length > 0) {
-              const firstTime = priceData[0].x;
-              const lastTime = priceData[priceData.length - 1].x;
-              
-              const operationData = [
-                { x: firstTime, y: price },
-                { x: lastTime, y: price }
-              ];
-              
-              priceChart.data.datasets[1].data = operationData;
-              console.log('📏 Linha de operação criada em:', price, 'de', new Date(firstTime).toLocaleTimeString(), 'até', new Date(lastTime).toLocaleTimeString());
-            }
-          }
+          // Limpar dados anteriores e iniciar novo gráfico para esta operação
+          chartData = [];
+          persistentChartData = [];
           
-          // Adicionar linha de entrada como dataset separado
-          priceChart.data.datasets.push({
-            label: label,
-            data: [
-              { x: timestamp, y: price },
-              { x: timestamp + 300000, y: price } // Linha de 5 minutos
-            ],
-            borderColor: color,
-            backgroundColor: 'transparent',
-            borderWidth: 2,
-            pointRadius: 0,
-            pointHoverRadius: 5,
-            pointHoverBackgroundColor: color,
-            pointHoverBorderColor: color,
-            pointHoverBorderWidth: 2,
-            tension: 0
-          });
+          // Adicionar ponto inicial da operação
+          chartData.push({ x: timestamp, y: price });
+          persistentChartData.push({ x: timestamp, y: price });
+          
+          // Criar linha de operação (amarela tracejada) com duração de 15 minutos
+          const operationData = [
+            { x: timestamp, y: price },
+            { x: timestamp + (15 * 60 * 1000), y: price } // 15 minutos
+          ];
+          
+          priceChart.data.datasets[1].data = operationData;
+          priceChart.data.datasets[0].data = chartData;
+          console.log('📏 Gráfico iniciado - Operação', label, 'em:', price);
           
           priceChart.update('none');
           
-          // Remover linha após 5 minutos
+          // Resetar gráfico após 15 minutos (fim da operação)
           setTimeout(() => {
-            removeEntryLine(timestamp);
-          }, 300000);
+            resetChart();
+          }, 15 * 60 * 1000); // 15 minutos
           
         } catch (error) {
           console.error('❌ Erro ao adicionar linha de entrada:', error);
+        }
+      }
+      
+      function resetChart() {
+        if (!priceChart) return;
+        
+        try {
+          // Limpar todos os dados
+          chartData = [];
+          persistentChartData = [];
+          priceChart.data.datasets[0].data = [];
+          priceChart.data.datasets[1].data = [];
+          priceChart.update('none');
+          console.log('🔄 Gráfico resetado - aguardando nova operação');
+        } catch (error) {
+          console.error('❌ Erro ao resetar gráfico:', error);
         }
       }
       
@@ -1767,17 +1749,7 @@ export default function BotInterface() {
               const autoCloseProfitElement = document.getElementById('autoCloseProfit');
               const autoCloseProfitThreshold = parseFloat(autoCloseProfitElement?.value || '30');
               
-              // Debug: Log do percentual configurado
-              if (autoCloseProfitElement) {
-                console.log('🔍 Debug AutoClose:', {
-                  elementFound: true,
-                  value: autoCloseProfitElement.value,
-                  parsed: autoCloseProfitThreshold,
-                  currentProfit: profitPercentage.toFixed(1) + '%'
-                });
-              } else {
-                console.log('⚠️ Elemento autoCloseProfit não encontrado');
-              }
+              // Debug removido para reduzir poluição no console
               
               // Log do P&L atual (sempre mostrar quando positivo)
               if (profitPercentage > 0) {
@@ -3195,20 +3167,6 @@ export default function BotInterface() {
                     </Button>
                   </div>
 
-                  {/* Informações sobre as configurações */}
-                  <Alert className="mt-6">
-                    <HelpCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      <strong>💡 Dicas de Configuração:</strong>
-                      <ul className="mt-2 space-y-1 text-sm">
-                        <li><strong>Entrada Inicial:</strong> Comece com valores baixos para testar</li>
-                        <li><strong>Martingale:</strong> Use 2x para menor risco, 3x para maior agressividade</li>
-                        <li><strong>Stop Win/Loss:</strong> Defina limites para proteger seu capital</li>
-                        <li><strong>Confiança:</strong> 75%+ recomendado para sinais mais seguros</li>
-                        <li><strong>Indicadores:</strong> Valores padrão são otimizados para a maioria dos casos</li>
-                      </ul>
-                    </AlertDescription>
-                  </Alert>
                 </CardContent>
               </Card>
             </TabsContent>
