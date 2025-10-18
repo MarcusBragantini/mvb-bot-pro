@@ -340,19 +340,19 @@ export default function Admin() {
   return (
     <div className="min-h-screen bg-slate-900">
       <header className="bg-slate-800 shadow-sm border-b border-slate-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-r from-red-600 to-pink-600 rounded-lg">
-                <Shield className="h-6 w-6 text-white" />
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-14 sm:h-16">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="p-1.5 sm:p-2 bg-gradient-to-r from-red-600 to-pink-600 rounded-lg">
+                <Shield className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-slate-100">Painel Administrativo</h1>
-                <p className="text-sm text-gray-400">Zeus - Sistema de Trading Inteligente</p>
+                <h1 className="text-sm sm:text-xl font-bold text-slate-100">Admin</h1>
+                <p className="text-xs sm:text-sm text-gray-400 hidden sm:block">Zeus - Sistema de Trading</p>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
-              <Badge variant="destructive">ADMIN</Badge>
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <Badge variant="destructive" className="text-xs">ADMIN</Badge>
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -360,10 +360,10 @@ export default function Admin() {
                   logout();
                   navigate('/dashboard');
                 }}
-                className="flex items-center space-x-2"
+                className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm px-2 sm:px-3"
               >
-                <LogOut className="h-4 w-4" />
-                <span>Sair</span>
+                <LogOut className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Sair</span>
               </Button>
             </div>
           </div>
@@ -371,52 +371,60 @@ export default function Admin() {
       </header>
 
       <main className="max-w-7xl mx-auto p-3 sm:p-6">
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
+        <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-4 sm:mb-6">
           <Card className="bg-gradient-to-br from-blue-600 to-blue-700 border-0 text-white shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-white">Total de Usuários</CardTitle>
-              <Users className="h-4 w-4 text-white opacity-80" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold text-white">{stats.totalUsers}</div>
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-white/90">Usuários</p>
+                  <p className="text-lg font-bold text-white">{stats.totalUsers}</p>
+                </div>
+                <Users className="h-5 w-5 text-white/80" />
+              </div>
             </CardContent>
           </Card>
           
           <Card className="bg-gradient-to-br from-purple-600 to-purple-700 border-0 text-white shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-white">Total de Licenças</CardTitle>
-              <Key className="h-4 w-4 text-white opacity-80" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold text-white">{stats.totalLicenses}</div>
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-white/90">Licenças</p>
+                  <p className="text-lg font-bold text-white">{stats.totalLicenses}</p>
+                </div>
+                <Key className="h-5 w-5 text-white/80" />
+              </div>
             </CardContent>
           </Card>
           
           <Card className="bg-gradient-to-br from-green-600 to-green-700 border-0 text-white shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-white">Licenças Ativas</CardTitle>
-              <CheckCircle className="h-4 w-4 text-white opacity-80" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold text-white">{stats.activeLicenses}</div>
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-white/90">Ativas</p>
+                  <p className="text-lg font-bold text-white">{stats.activeLicenses}</p>
+                </div>
+                <CheckCircle className="h-5 w-5 text-white/80" />
+              </div>
             </CardContent>
           </Card>
           
           <Card className="bg-gradient-to-br from-red-600 to-red-700 border-0 text-white shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-white">Licenças Expiradas</CardTitle>
-              <XCircle className="h-4 w-4 text-white opacity-80" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold text-white">{stats.expiredLicenses}</div>
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-white/90">Expiradas</p>
+                  <p className="text-lg font-bold text-white">{stats.expiredLicenses}</p>
+                </div>
+                <XCircle className="h-5 w-5 text-white/80" />
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        <Tabs defaultValue="users" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="users">Usuários</TabsTrigger>
-            <TabsTrigger value="licenses">Licenças</TabsTrigger>
+        <Tabs defaultValue="users" className="space-y-4 sm:space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="users" className="text-xs sm:text-sm">Usuários</TabsTrigger>
+            <TabsTrigger value="licenses" className="text-xs sm:text-sm">Licenças</TabsTrigger>
           </TabsList>
 
           <TabsContent value="users">
@@ -427,18 +435,83 @@ export default function Admin() {
                   Visualize e gerencie todos os usuários do sistema
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse" style={{ minWidth: '800px' }}>
+              <CardContent className="p-0">
+                {/* Mobile View */}
+                <div className="block sm:hidden">
+                  {users.map((user) => {
+                    const isExpiring = user.license_status === 'expirando' || user.license_status === 'expirada';
+                    return (
+                      <div key={user.id} className={`p-3 border-b ${isExpiring ? 'bg-orange-50' : 'bg-white'}`}>
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex-1">
+                            <h3 className="font-medium text-sm">{user.name}</h3>
+                            <p className="text-xs text-gray-500">{user.email}</p>
+                            <p className="text-xs text-gray-400">ID: {user.id}</p>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            {user.license_type ? (
+                              <Badge className={`text-xs ${Object.values(LICENSE_TYPES).find(lt => lt.type === user.license_type)?.color || 'bg-gray-100 text-gray-800'}`}>
+                                {Object.values(LICENSE_TYPES).find(lt => lt.type === user.license_type)?.name || user.license_type.toUpperCase()}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs text-gray-400">Sem Licença</Badge>
+                            )}
+                            {user.license_status === 'ativa' && (
+                              <Badge className="text-xs bg-green-100 text-green-800">✓ Ativa</Badge>
+                            )}
+                            {user.license_status === 'expirando' && (
+                              <Badge className="text-xs bg-orange-100 text-orange-800">⚠ Expirando</Badge>
+                            )}
+                            {user.license_status === 'expirada' && (
+                              <Badge className="text-xs bg-red-100 text-red-800">✗ Expirada</Badge>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <div className="text-xs text-gray-500">
+                            {user.expires_at && user.license_type !== 'lifetime' && user.days_remaining > 0 && (
+                              <span>
+                                {user.license_type === 'free' ? 
+                                  `${user.days_remaining} min` : 
+                                  `${user.days_remaining} dias`
+                                }
+                              </span>
+                            )}
+                            {user.license_type === 'lifetime' && (
+                              <span className="font-semibold text-yellow-600">∞ Vitalícia</span>
+                            )}
+                          </div>
+                          <Select
+                            value={user.status}
+                            onValueChange={(value) => handleUpdateUserStatus(user.id, value)}
+                          >
+                            <SelectTrigger className="w-20 h-7 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="active">Ativo</SelectItem>
+                              <SelectItem value="suspended">Suspenso</SelectItem>
+                              <SelectItem value="expired">Expirado</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop View */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full border-collapse">
                     <thead>
                       <tr className="border-b bg-slate-50">
-                        <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-semibold">Usuário</th>
-                        <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-semibold hidden sm:table-cell">Email</th>
-                        <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-semibold hidden md:table-cell">Data Cadastro</th>
-                        <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-semibold">Tipo Licença</th>
-                        <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-semibold">Status Licença</th>
-                        <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-semibold hidden lg:table-cell">Expira em</th>
-                        <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-semibold">Ações</th>
+                        <th className="text-left p-3 text-sm font-semibold">Usuário</th>
+                        <th className="text-left p-3 text-sm font-semibold">Email</th>
+                        <th className="text-left p-3 text-sm font-semibold hidden md:table-cell">Data Cadastro</th>
+                        <th className="text-left p-3 text-sm font-semibold">Tipo Licença</th>
+                        <th className="text-left p-3 text-sm font-semibold">Status Licença</th>
+                        <th className="text-left p-3 text-sm font-semibold hidden lg:table-cell">Expira em</th>
+                        <th className="text-left p-3 text-sm font-semibold">Ações</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -549,11 +622,11 @@ export default function Admin() {
                       Visualize, crie e gerencie todas as licenças do sistema
                     </CardDescription>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                       <DialogTrigger asChild>
-                        <Button>
-                          <Plus className="h-4 w-4 mr-2" />
+                        <Button className="w-full sm:w-auto text-xs sm:text-sm">
+                          <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                           Nova Licença
                         </Button>
                       </DialogTrigger>
@@ -632,26 +705,26 @@ export default function Admin() {
                       </div>
                     </DialogContent>
                   </Dialog>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <Button 
-                      variant="outline"
-                      onClick={handleCleanupExpiredLicenses}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 text-xs sm:text-sm"
-                    >
-                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                      <span className="hidden sm:inline">Limpar Expiradas</span>
-                      <span className="sm:hidden">Limpar</span>
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      onClick={handleRemoveInactiveUsers}
-                      className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 text-xs sm:text-sm"
-                    >
-                      <UserX className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                      <span className="hidden sm:inline">Remover Inativos</span>
-                      <span className="sm:hidden">Remover</span>
-                    </Button>
-                  </div>
+                    <div className="flex flex-col sm:flex-row gap-2 mt-2 sm:mt-0">
+                      <Button 
+                        variant="outline"
+                        onClick={handleCleanupExpiredLicenses}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 text-xs sm:text-sm w-full sm:w-auto"
+                      >
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                        <span className="hidden sm:inline">Limpar Expiradas</span>
+                        <span className="sm:hidden">Limpar</span>
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        onClick={handleRemoveInactiveUsers}
+                        className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 text-xs sm:text-sm w-full sm:w-auto"
+                      >
+                        <UserX className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                        <span className="hidden sm:inline">Remover Inativos</span>
+                        <span className="sm:hidden">Remover</span>
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardHeader>
