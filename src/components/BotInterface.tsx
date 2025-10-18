@@ -152,12 +152,13 @@ export default function BotInterface() {
               
               const resultColor = trade.result === 'WIN' ? '#10b981' : '#ef4444';
               const profitColor = parseFloat(trade.profit) >= 0 ? '#10b981' : '#ef4444';
-              const signalColor = trade.trade_type === 'CALL' ? '#10b981' : '#ef4444';
+              const tradeSignal = trade.trade_signal || trade.trade_type || 'N/A';
+              const signalColor = tradeSignal === 'CALL' ? '#10b981' : '#ef4444';
               
               row.innerHTML = `
                 <td style="padding: 10px 8px; fontSize: 0.8rem;">${new Date(trade.created_at).toLocaleString()}</td>
                 <td style="padding: 10px 8px; fontSize: 0.8rem; fontWeight: 600;">${trade.symbol || 'N/A'}</td>
-                <td style="padding: 10px 8px; fontSize: 0.8rem; color: ${signalColor};">${trade.trade_type}</td>
+                <td style="padding: 10px 8px; fontSize: 0.8rem; color: ${signalColor};">${tradeSignal}</td>
                 <td style="padding: 10px 8px; fontSize: 0.8rem;">$${parseFloat(trade.stake || 0).toFixed(2)}</td>
                 <td style="padding: 10px 8px; fontSize: 0.8rem; color: ${resultColor}; fontWeight: 600;">${trade.result}</td>
                 <td style="padding: 10px 8px; fontSize: 0.8rem; color: ${profitColor}; fontWeight: 600;">$${parseFloat(trade.profit || 0).toFixed(2)}</td>
