@@ -24,7 +24,8 @@ import {
   TrendingUp,
   DollarSign,
   Target,
-  Zap
+  Zap,
+  Bell
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
@@ -36,6 +37,12 @@ interface LicenseInfo {
   days: number;
   features: string[];
   maxDevices: number;
+}
+
+interface TelegramSettings {
+  botToken: string;
+  userTelegram: string;
+  notificationsEnabled: boolean;
 }
 
 // ===== SISTEMA DE LICENÇAS =====
@@ -123,6 +130,13 @@ export default function BotInterface() {
     autoCloseTime: 30, // segundos
     // ✅ NOVO: Percentual de lucro para fechamento automático
     autoCloseProfit: 20 // percentual (scalp 20%)
+  });
+
+  // ===== ESTADOS DO TELEGRAM =====
+  const [telegramSettings, setTelegramSettings] = useState<TelegramSettings>({
+    botToken: '',
+    userTelegram: '',
+    notificationsEnabled: false
   });
   
   // ===== REFS PARA INTEGRAÇÃO COM CÓDIGO ORIGINAL =====
@@ -227,6 +241,93 @@ export default function BotInterface() {
     // Salvar imediatamente no localStorage com chave do usuário
     const settingsKey = user?.id ? `mvb_bot_settings_${user.id}` : 'mvb_bot_settings_temp';
     localStorage.setItem(settingsKey, JSON.stringify(newSettings));
+  };
+
+  // ===== FUNÇÕES DO TELEGRAM =====
+  const sendTelegramNotification = async (message: string) => {
+    try {
+      if (!telegramSettings.notificationsEnabled || !telegramSettings.userTelegram) {
+        return;
+      }
+
+      // Token padrão - SUBSTITUA pelo token do seu bot
+      const botToken = telegramSettings.botToken || '7546983142:AAH0_2e6abcdEFG567hijklMNOPQRSTUVWXYZ';
+      
+      if (!botToken) {
+        console.log('❌ Token do bot não configurado');
+        return;
+      }
+
+      const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: `@${telegramSettings.userTelegram}`,
+          text: message,
+          parse_mode: 'HTML'
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.ok) {
+        console.log('✅ Notificação Telegram enviada');
+        return true;
+      } else {
+        console.error('❌ Erro ao enviar notificação:', data);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Erro Telegram:', error);
+      return false;
+    }
+  };
+
+  const testTelegramNotification = async () => {
+    if (!telegramSettings.userTelegram) {
+      toast({
+        title: "❌ Username não configurado",
+        description: "Por favor, insira seu @username do Telegram",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const success = await sendTelegramNotification(`
+🤖 <b>Teste de Notificação - Bot Trading</b>
+
+✅ Sistema de notificações funcionando perfeitamente!
+📊 Agora você receberá atualizações automáticas:
+• Bot iniciado/parado
+• Sinais detectados
+• Resultados de trades
+• Alertas importantes
+
+⏰ ${new Date().toLocaleString()}
+    `.trim());
+
+    if (success) {
+      toast({
+        title: "✅ Teste enviado!",
+        description: "Verifique seu Telegram para confirmar o recebimento.",
+      });
+    } else {
+      toast({
+        title: "❌ Erro no envio",
+        description: "Verifique o token do bot e seu username.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const saveTelegramSettings = () => {
+    localStorage.setItem('telegram_settings', JSON.stringify(telegramSettings));
+    toast({
+      title: "✅ Configurações do Telegram salvas!",
+      description: "Notificações configuradas com sucesso.",
+    });
   };
 
   // ===== FUNÇÕES DE LICENÇA =====
@@ -409,6 +510,14 @@ export default function BotInterface() {
     }
   }, [user?.id]);
 
+  // ===== CARREGAR CONFIGURAÇÕES DO TELEGRAM =====
+  useEffect(() => {
+    const savedTelegramSettings = localStorage.getItem('telegram_settings');
+    if (savedTelegramSettings) {
+      setTelegramSettings(JSON.parse(savedTelegramSettings));
+    }
+  }, []);
+
   // ===== MONITORAR EXPIRAÇÃO DE LICENÇA E PARAR BOT =====
   useEffect(() => {
     if (!isLicenseValid) {
@@ -486,11 +595,60 @@ export default function BotInterface() {
       (window as any).showToast('Teste Toast', 'Se você está vendo isso, o sistema está funcionando!', 'default');
     };
 
+    // Exportar função do Telegram para o bot usar
+    (window as any).sendTelegramNotification = sendTelegramNotification;
+
     return () => {
       delete (window as any).showToast;
       delete (window as any).testToast;
+      delete (window as any).sendTelegramNotification;
     };
   }, [toast]);
+
+  // ===== NOTIFICAÇÕES AUTOMÁTICAS DO BOT =====
+  useEffect(() => {
+    const handleBotStarted = () => {
+      if (telegramSettings.notificationsEnabled && telegramSettings.userTelegram) {
+        sendTelegramNotification(`
+🚀 <b>Bot Trading Iniciado</b>
+
+✅ Bot conectado e analisando mercado
+📊 Par: ${(document.getElementById('symbol') as HTMLSelectElement)?.value || 'R_10'}
+💰 Entrada: $${settings.stake}
+⚙️ Estratégia: MHI + EMA + RSI
+
+⏰ ${new Date().toLocaleString()}
+        `.trim());
+      }
+    };
+
+    const handleBotStopped = () => {
+      if (telegramSettings.notificationsEnabled && telegramSettings.userTelegram) {
+        const profitElement = document.getElementById('profit');
+        const accuracyElement = document.getElementById('accuracy');
+        const profit = profitElement?.textContent || '$0';
+        const accuracy = accuracyElement?.textContent || '0%';
+
+        sendTelegramNotification(`
+⏹️ <b>Bot Trading Parado</b>
+
+📊 Sessão finalizada
+💰 Lucro final: ${profit}
+📈 Precisão: ${accuracy}
+
+⏰ ${new Date().toLocaleString()}
+        `.trim());
+      }
+    };
+
+    window.addEventListener('bot-started', handleBotStarted);
+    window.addEventListener('bot-stopped', handleBotStopped);
+
+    return () => {
+      window.removeEventListener('bot-started', handleBotStarted);
+      window.removeEventListener('bot-stopped', handleBotStopped);
+    };
+  }, [telegramSettings.notificationsEnabled, telegramSettings.userTelegram, settings.stake]);
 
   // ===== INICIALIZAR BOT UMA ÚNICA VEZ (NUNCA REINICIALIZAR) =====
   useEffect(() => {
