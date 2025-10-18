@@ -217,6 +217,36 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ message: 'Status atualizado com sucesso' });
     }
 
+    // ===== REMOVE INACTIVE USERS =====
+    if (path === '/users/remove-inactive' && req.method === 'DELETE') {
+      // Buscar usuários inativos
+      const [inactiveUsers] = await connection.execute(
+        'SELECT id FROM users WHERE status IN (?, ?)',
+        ['suspended', 'expired']
+      );
+
+      if (inactiveUsers.length === 0) {
+        return res.status(200).json({ 
+          message: 'Nenhum usuário inativo encontrado',
+          removedCount: 0 
+        });
+      }
+
+      // Remover usuários inativos (cascade delete das licenças e sessões)
+      const userIds = inactiveUsers.map(user => user.id);
+      const placeholders = userIds.map(() => '?').join(',');
+      
+      await connection.execute(
+        `DELETE FROM users WHERE id IN (${placeholders})`,
+        userIds
+      );
+
+      return res.status(200).json({ 
+        message: `${inactiveUsers.length} usuário(s) inativo(s) removido(s) com sucesso`,
+        removedCount: inactiveUsers.length 
+      });
+    }
+
     // ===== GET ALL LICENSES =====
     if (path === '/licenses' && req.method === 'GET') {
       // ✅ MOSTRAR APENAS LICENÇAS ATIVAS E NÃO EXPIRADAS

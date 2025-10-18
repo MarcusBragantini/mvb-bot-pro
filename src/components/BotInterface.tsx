@@ -207,12 +207,12 @@ export default function BotInterface() {
               const signalColor = tradeSignal === 'CALL' ? '#10b981' : '#ef4444';
               
               row.innerHTML = `
-                <td style="padding: 10px 8px; fontSize: 0.8rem;">${new Date(trade.created_at).toLocaleString()}</td>
-                <td style="padding: 10px 8px; fontSize: 0.8rem; fontWeight: 600;">${tradeSymbol}</td>
-                <td style="padding: 10px 8px; fontSize: 0.8rem; color: ${signalColor};">${tradeSignal}</td>
-                <td style="padding: 10px 8px; fontSize: 0.8rem;">$${tradeStake.toFixed(2)}</td>
-                <td style="padding: 10px 8px; fontSize: 0.8rem; color: ${resultColor}; fontWeight: 600;">${tradeResult}</td>
-                <td style="padding: 10px 8px; fontSize: 0.8rem; color: ${profitColor}; fontWeight: 600;">$${tradeProfit.toFixed(2)}</td>
+                <td class="hidden sm:table-cell" style="padding: 12px 8px; fontSize: 0.8rem; color: #f1f5f9;">${new Date(trade.created_at).toLocaleString()}</td>
+                <td style="padding: 12px 8px; fontSize: 0.8rem; fontWeight: 600; color: #f1f5f9;">${tradeSymbol}</td>
+                <td style="padding: 12px 8px; fontSize: 0.8rem; color: ${signalColor}; fontWeight: 600;">${tradeSignal}</td>
+                <td class="hidden md:table-cell" style="padding: 12px 8px; fontSize: 0.8rem; color: #f1f5f9;">$${tradeStake.toFixed(2)}</td>
+                <td style="padding: 12px 8px; fontSize: 0.8rem; color: ${resultColor}; fontWeight: 600;">${tradeResult}</td>
+                <td style="padding: 12px 8px; fontSize: 0.8rem; color: ${profitColor}; fontWeight: 600;">$${tradeProfit.toFixed(2)}</td>
               `;
               
               historyBody.appendChild(row);
@@ -3448,51 +3448,51 @@ ${tradesList || 'Nenhuma operação realizada'}
             
             <TabsContent value="analytics" className="space-y-4">
               {/* Estatísticas Gerais */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="bg-gradient-to-br from-blue-500 to-blue-600 border-0 text-white">
-                  <CardContent className="p-4">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+                <Card className="bg-gradient-to-br from-blue-600 to-blue-700 border-0 text-white shadow-lg">
+                  <CardContent className="p-3 sm:p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm opacity-90">Total de Trades</p>
-                        <p className="text-3xl font-bold" id="analytics-total-trades">0</p>
+                        <p className="text-xs sm:text-sm opacity-95 font-medium">Total de Trades</p>
+                        <p className="text-xl sm:text-3xl font-bold text-white" id="analytics-total-trades">0</p>
                       </div>
-                      <Target className="h-10 w-10 opacity-80" />
+                      <Target className="h-6 w-6 sm:h-10 sm:w-10 opacity-90" />
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-green-500 to-green-600 border-0 text-white">
-                  <CardContent className="p-4">
+                <Card className="bg-gradient-to-br from-green-600 to-green-700 border-0 text-white shadow-lg">
+                  <CardContent className="p-3 sm:p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm opacity-90">Taxa de Acerto</p>
-                        <p className="text-3xl font-bold" id="analytics-win-rate">0%</p>
+                        <p className="text-xs sm:text-sm opacity-95 font-medium">Taxa de Acerto</p>
+                        <p className="text-xl sm:text-3xl font-bold text-white" id="analytics-win-rate">0%</p>
                       </div>
-                      <TrendingUp className="h-10 w-10 opacity-80" />
+                      <TrendingUp className="h-6 w-6 sm:h-10 sm:w-10 opacity-90" />
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-purple-500 to-purple-600 border-0 text-white">
-                  <CardContent className="p-4">
+                <Card className="bg-gradient-to-br from-purple-600 to-purple-700 border-0 text-white shadow-lg">
+                  <CardContent className="p-3 sm:p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm opacity-90">Lucro Total</p>
-                        <p className="text-3xl font-bold" id="analytics-profit">$0.00</p>
+                        <p className="text-xs sm:text-sm opacity-95 font-medium">Lucro Total</p>
+                        <p className="text-xl sm:text-3xl font-bold text-white" id="analytics-profit">$0.00</p>
                       </div>
-                      <DollarSign className="h-10 w-10 opacity-80" />
+                      <DollarSign className="h-6 w-6 sm:h-10 sm:w-10 opacity-90" />
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-orange-500 to-orange-600 border-0 text-white">
-                  <CardContent className="p-4">
+                <Card className="bg-gradient-to-br from-orange-600 to-orange-700 border-0 text-white shadow-lg">
+                  <CardContent className="p-3 sm:p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm opacity-90">Melhor Sequência</p>
-                        <p className="text-3xl font-bold" id="analytics-best-streak">0</p>
+                        <p className="text-xs sm:text-sm opacity-95 font-medium">Melhor Sequência</p>
+                        <p className="text-xl sm:text-3xl font-bold text-white" id="analytics-best-streak">0</p>
                       </div>
-                      <Zap className="h-10 w-10 opacity-80" />
+                      <Zap className="h-6 w-6 sm:h-10 sm:w-10 opacity-90" />
                     </div>
                   </CardContent>
                 </Card>
@@ -3510,8 +3510,8 @@ ${tradesList || 'Nenhuma operação realizada'}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div style={{ background: '#1e293b', borderRadius: '12px', padding: '16px', border: '1px solid #475569' }}>
-                    <canvas id="performanceChart" style={{ width: '100%', height: '300px' }}></canvas>
+                  <div style={{ background: '#1e293b', borderRadius: '12px', padding: '8px sm:16px', border: '1px solid #475569' }}>
+                    <canvas id="performanceChart" style={{ width: '100%', height: '200px sm:300px' }}></canvas>
                   </div>
                 </CardContent>
               </Card>
@@ -3554,13 +3554,13 @@ ${tradesList || 'Nenhuma operação realizada'}
                   <div className="overflow-x-auto">
                     <table className="w-full" style={{ minWidth: '500px' }}>
                       <thead>
-                        <tr style={{ background: '#0f172a', borderBottom: '2px solid #334155' }}>
-                          <th style={{ padding: '8px 6px', textAlign: 'left', color: '#cbd5e1', fontSize: '0.75rem' }}>Horário</th>
-                          <th style={{ padding: '8px 6px', textAlign: 'left', color: '#cbd5e1', fontSize: '0.75rem' }}>Ativo</th>
-                          <th style={{ padding: '8px 6px', textAlign: 'left', color: '#cbd5e1', fontSize: '0.75rem' }}>Sinal</th>
-                          <th style={{ padding: '8px 6px', textAlign: 'left', color: '#cbd5e1', fontSize: '0.75rem' }}>Entrada</th>
-                          <th style={{ padding: '8px 6px', textAlign: 'left', color: '#cbd5e1', fontSize: '0.75rem' }}>Resultado</th>
-                          <th style={{ padding: '8px 6px', textAlign: 'left', color: '#cbd5e1', fontSize: '0.75rem' }}>Lucro</th>
+                        <tr style={{ background: '#1e293b', borderBottom: '2px solid #475569' }}>
+                          <th className="hidden sm:table-cell" style={{ padding: '12px 8px', textAlign: 'left', color: '#f1f5f9', fontSize: '0.8rem', fontWeight: '600' }}>Horário</th>
+                          <th style={{ padding: '12px 8px', textAlign: 'left', color: '#f1f5f9', fontSize: '0.8rem', fontWeight: '600' }}>Ativo</th>
+                          <th style={{ padding: '12px 8px', textAlign: 'left', color: '#f1f5f9', fontSize: '0.8rem', fontWeight: '600' }}>Sinal</th>
+                          <th className="hidden md:table-cell" style={{ padding: '12px 8px', textAlign: 'left', color: '#f1f5f9', fontSize: '0.8rem', fontWeight: '600' }}>Entrada</th>
+                          <th style={{ padding: '12px 8px', textAlign: 'left', color: '#f1f5f9', fontSize: '0.8rem', fontWeight: '600' }}>Resultado</th>
+                          <th style={{ padding: '12px 8px', textAlign: 'left', color: '#f1f5f9', fontSize: '0.8rem', fontWeight: '600' }}>Lucro</th>
                         </tr>
                       </thead>
                       <tbody id="analytics-history" style={{ color: '#e2e8f0' }}>

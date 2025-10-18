@@ -18,6 +18,7 @@ import {
   Monitor,
   Shield,
   CheckCircle,
+  UserX,
   XCircle,
   LogOut
 } from 'lucide-react';
@@ -166,6 +167,41 @@ export default function Admin() {
       toast({
         title: "Erro",
         description: "Não foi possível atualizar o status",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleRemoveInactiveUsers = async () => {
+    try {
+      const inactiveUsers = users.filter(user => 
+        user.status === 'suspended' || user.status === 'expired'
+      );
+      
+      if (inactiveUsers.length === 0) {
+        toast({
+          title: "Nenhum usuário inativo",
+          description: "Não há usuários inativos para remover"
+        });
+        return;
+      }
+
+      const confirmed = window.confirm(
+        `Tem certeza que deseja remover ${inactiveUsers.length} usuário(s) inativo(s)? Esta ação não pode ser desfeita.`
+      );
+
+      if (confirmed) {
+        await apiClient.removeInactiveUsers();
+        toast({
+          title: "Usuários removidos",
+          description: `${inactiveUsers.length} usuário(s) inativo(s) removido(s) com sucesso`
+        });
+        loadDashboardData();
+      }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível remover usuários inativos",
         variant: "destructive"
       });
     }
@@ -602,6 +638,14 @@ export default function Admin() {
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
                     Limpar Expiradas
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={handleRemoveInactiveUsers}
+                    className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                  >
+                    <UserX className="h-4 w-4 mr-2" />
+                    Remover Inativos
                   </Button>
                   </div>
                 </div>

@@ -163,6 +163,12 @@ class ApiClient {
     });
   }
 
+  async removeInactiveUsers(): Promise<{ message: string; removedCount: number }> {
+    return this.request<{ message: string; removedCount: number }>('/admin/users/remove-inactive', {
+      method: 'DELETE',
+    });
+  }
+
   async getLicenses(): Promise<License[]> {
     return this.request<License[]>('/admin/licenses');
   }
