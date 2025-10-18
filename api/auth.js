@@ -13,9 +13,10 @@ const DB_CONFIG = {
   ssl: {
     rejectUnauthorized: false
   },
-  connectTimeout: 60000,
+  connectTimeout: 10000, // Reduzido para 10s
+  acquireTimeout: 10000, // Timeout para pegar conexão do pool
   // ✅ POOL CONFIG
-  connectionLimit: 10,
+  connectionLimit: 5, // Reduzido para evitar esgotar conexões do Hostinger
   waitForConnections: true,
   queueLimit: 0,
   enableKeepAlive: true,
