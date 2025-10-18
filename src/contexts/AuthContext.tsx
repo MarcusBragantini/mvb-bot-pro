@@ -97,12 +97,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             logout();
           }
         } else if (response.status === 401) {
-          // ✅ 401 = sessão não encontrada ou expirada, mas não desconectar automaticamente
-          // (pode ser problema temporário do servidor)
-          consecutiveErrors++;
-          if (consecutiveErrors === 1) {
-            console.log('⚠️ Sessão não validada pelo servidor - mantendo sessão local');
-          }
+          // ⚠️ 401 = Sessão invalidada por outro dispositivo/aba
+          // Desconectar imediatamente (não é erro temporário)
+          alert('⚠️ SESSÃO INVALIDADA\n\nSua licença está sendo usada em outro dispositivo ou aba.\n\nApenas 1 sessão ativa por vez é permitida.\n\nVocê será desconectado agora.');
+          logout();
         }
       } catch (error) {
         // Silenciar completamente erros de rede
@@ -112,8 +110,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     };
 
-    // ✅ Verificar a cada 30 segundos para detectar outras sessões rapidamente
-    const interval = setInterval(checkSession, 30000);
+    // ✅ Verificar a cada 10 segundos para detectar abas/dispositivos duplicados rapidamente
+    const interval = setInterval(checkSession, 10000);
     
     return () => clearInterval(interval);
   }, [user, sessionToken]);
