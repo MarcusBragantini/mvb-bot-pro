@@ -180,7 +180,6 @@ export default function Dashboard() {
         if (response.ok) {
           const data = await response.json();
           setLicenses(data.licenses || []);
-          console.log('✅ Licenças carregadas:', data.licenses);
         } else {
           throw new Error('Erro ao carregar licenças');
         }
@@ -245,14 +244,11 @@ export default function Dashboard() {
           currentBalance: currentBalance
         }));
         
-        console.log('✅ Saldo da Deriv carregado:', currentBalance);
         return currentBalance;
       } else {
-        console.log('⚠️ Erro ao buscar saldo da Deriv, usando valor salvo');
         return null;
       }
     } catch (error) {
-      console.log('❌ Erro ao buscar saldo da Deriv:', error);
       return null;
     }
   };
@@ -276,14 +272,11 @@ export default function Dashboard() {
           winRate: winRate
         }));
         
-        console.log('✅ Histórico de trading carregado:', { totalTrades, winRate });
         return { totalTrades, winRate };
       } else {
-        console.log('⚠️ Erro ao buscar histórico de trading');
         return { totalTrades: 0, winRate: 0 };
       }
     } catch (error) {
-      console.log('❌ Erro ao buscar histórico de trading:', error);
       return { totalTrades: 0, winRate: 0 };
     }
   };
@@ -315,7 +308,6 @@ export default function Dashboard() {
         setShowConfigForm(true);
       }
     } catch (error) {
-      console.log('❌ Erro ao carregar performance:', error);
       setShowConfigForm(true);
     }
   };

@@ -661,37 +661,98 @@ export default function BotInterface() {
   // ===== NOTIFICAÇÕES AUTOMÁTICAS DO BOT =====
   useEffect(() => {
     const handleBotStarted = () => {
-      if (telegramSettings.notificationsEnabled && telegramSettings.userTelegram) {
-        sendTelegramNotification(`
+      // Buscar configurações diretamente do localStorage (mais confiável que state)
+      const savedSettings = localStorage.getItem('telegram_settings');
+      if (!savedSettings) return;
+      
+      const telegramConfig = JSON.parse(savedSettings);
+      if (!telegramConfig.notificationsEnabled || !telegramConfig.userTelegram) return;
+      
+      const symbolElement = document.getElementById('symbol') as HTMLSelectElement;
+      const currentSymbol = symbolElement?.value || 'R_10';
+      const accountType = settings.selectedTokenType === 'demo' ? 'DEMO' : 'REAL';
+      
+      // Buscar botToken do state ou fazer fetch
+      const botToken = telegramSettings.botToken;
+      if (!botToken) {
+        console.log('⚠️ Bot token não carregado ainda');
+        return;
+      }
+      
+      // Enviar diretamente (sem depender do state do React)
+      fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: telegramConfig.userTelegram,
+          text: `
 🚀 <b>Zeus Iniciado</b>
 
 ✅ Bot conectado e analisando mercado
-📊 Par: ${(document.getElementById('symbol') as HTMLSelectElement)?.value || 'R_10'}
+📊 Par: ${currentSymbol}
+💼 Conta: ${accountType}
 💰 Entrada: $${settings.stake}
 ⚙️ Estratégia: Zeus
 
 ⏰ ${new Date().toLocaleString()}
-        `.trim());
-      }
+          `.trim(),
+          parse_mode: 'HTML'
+        })
+      }).catch(err => console.log('Erro ao enviar notificação:', err));
     };
 
-    const handleBotStopped = () => {
-      if (telegramSettings.notificationsEnabled && telegramSettings.userTelegram) {
-        const profitElement = document.getElementById('profit');
-        const accuracyElement = document.getElementById('accuracy');
-        const profit = profitElement?.textContent || '$0';
-        const accuracy = accuracyElement?.textContent || '0%';
+    const handleBotStopped = (event: any) => {
+      // Buscar configurações diretamente do localStorage (mais confiável que state)
+      const savedSettings = localStorage.getItem('telegram_settings');
+      if (!savedSettings) return;
+      
+      const telegramConfig = JSON.parse(savedSettings);
+      if (!telegramConfig.notificationsEnabled || !telegramConfig.userTelegram) return;
+      
+      const reportData = event.detail || {};
+      const currentSymbol = reportData.symbol || 'N/A';
+      const profit = reportData.profit || 0;
+      const accuracy = reportData.accuracy || '0';
+      const trades = reportData.tradeHistory || [];
 
-        sendTelegramNotification(`
+      // Determinar tipo de conta
+      const accountType = settings.selectedTokenType === 'demo' ? 'DEMO' : 'REAL';
+
+      // Buscar botToken do state
+      const botToken = telegramSettings.botToken;
+      if (!botToken) return;
+
+      // Criar lista de trades
+      let tradesList = '';
+      trades.forEach((trade: any) => {
+        const emoji = trade.result === 'WIN' ? '🎉' : '❌';
+        tradesList += `${emoji} ${trade.result} - Ativo: ${trade.symbol} - Lucro $${trade.profit.toFixed(2)}\n`;
+      });
+
+      // Enviar diretamente
+      fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: telegramConfig.userTelegram,
+          text: `
 ⏹️ <b>Zeus Parado</b>
 
 📊 Sessão finalizada
-💰 Lucro final: ${profit}
-📈 Precisão: ${accuracy}
-
+📊 Par: ${currentSymbol}
+💼 Conta: ${accountType}
+💰 Lucro final: $${profit.toFixed(2)}
+📈 Precisão: ${accuracy}%
+${tradesList || 'Nenhuma operação realizada'}
 ⏰ ${new Date().toLocaleString()}
-        `.trim());
-      }
+          `.trim(),
+          parse_mode: 'HTML'
+        })
+      }).catch(err => console.log('Erro ao enviar notificação:', err));
     };
 
     window.addEventListener('bot-started', handleBotStarted);
@@ -701,7 +762,7 @@ export default function BotInterface() {
       window.removeEventListener('bot-started', handleBotStarted);
       window.removeEventListener('bot-stopped', handleBotStopped);
     };
-  }, [telegramSettings.notificationsEnabled, telegramSettings.userTelegram, settings.stake]);
+  }, [telegramSettings.botToken, settings.selectedTokenType, settings.stake]);
 
   // ===== INICIALIZAR BOT UMA ÚNICA VEZ (NUNCA REINICIALIZAR) =====
   useEffect(() => {
@@ -1069,6 +1130,9 @@ export default function BotInterface() {
         consecutiveWins: 0,
         consecutiveLosses: 0
       };
+      
+      // Histórico de trades para relatório detalhado
+      let tradeHistory = [];
 
       // ===== FUNÇÕES DE PERSISTÊNCIA DO ESTADO =====
       function saveBotState() {
@@ -2745,6 +2809,18 @@ export default function BotInterface() {
           stats.consecutiveLosses++;
           stats.consecutiveWins = 0;
         }
+        
+        // Adicionar ao histórico para relatório
+        tradeHistory.push({
+          symbol: symbol,
+          signal: finalSignal,
+          stake: currentStake,
+          profit: tradeProfit,
+          result: tradeProfit >= 0 ? 'WIN' : 'LOSS',
+          confidence: confidence,
+          timestamp: new Date().toLocaleString()
+        });
+        
         updateAccuracy();
 
         // Salvar estado do bot após cada trade
@@ -2879,8 +2955,20 @@ export default function BotInterface() {
         // Salvar estado final do bot
         saveBotState();
         
-        // Disparar evento de bot parado
-        window.dispatchEvent(new Event('bot-stopped'));
+        // Preparar dados do relatório
+        const reportData = {
+          symbol: symbol, // Símbolo atual do bot
+          profit: profit,
+          accuracy: stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : '0',
+          totalTrades: stats.total,
+          wins: stats.wins,
+          losses: stats.losses,
+          tradeHistory: tradeHistory
+        };
+        
+        // Disparar evento de bot parado com dados do relatório
+        const event = new CustomEvent('bot-stopped', { detail: reportData });
+        window.dispatchEvent(event);
         
         if (ws && ws.readyState === WebSocket.OPEN) {
           try {

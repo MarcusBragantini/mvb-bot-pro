@@ -107,8 +107,6 @@ module.exports = async function handler(req, res) {
         [userId, licenseKey, expiresAt]
       );
 
-      console.log(`✅ Usuário ${userId} criado com licença de teste: ${licenseKey} (5 minutos)`);
-
       return res.status(201).json({ 
         message: 'Usuário criado com sucesso',
         license: {
@@ -248,37 +246,19 @@ module.exports = async function handler(req, res) {
           return res.status(400).json({ error: 'user_id e session_token são obrigatórios' });
         }
 
-        // ✅ CORREÇÃO: Verificar se já existe uma sessão ativa recente (menos de 5 minutos)
-        const [existingSessions] = await connection.execute(
-          `SELECT id, session_token, device_info, last_activity 
-           FROM user_sessions 
-           WHERE user_id = ? AND is_active = 1 AND last_activity > DATE_SUB(NOW(), INTERVAL 5 MINUTE)`,
+        // ⚠️ SESSÃO ÚNICA E RESTRITIVA
+        // Invalidar TODAS as sessões anteriores do usuário (força 1 dispositivo apenas)
+        await connection.execute(
+          'DELETE FROM user_sessions WHERE user_id = ?',
           [user_id]
         );
 
-        if (existingSessions.length > 0) {
-          // ✅ CORREÇÃO: Se há sessão recente, reutilizar em vez de invalidar
-          const existingSession = existingSessions[0];
-          await connection.execute(
-            'UPDATE user_sessions SET session_token = ?, device_info = ?, last_activity = NOW() WHERE id = ?',
-            [session_token, device_info || 'Unknown', existingSession.id]
-          );
-          console.log(`✅ Sessão existente atualizada para usuário ${user_id}`);
-        } else {
-          // ✅ CORREÇÃO: Só invalidar sessões antigas (mais de 24 horas sem atividade)
-          await connection.execute(
-            'DELETE FROM user_sessions WHERE user_id = ? AND last_activity < DATE_SUB(NOW(), INTERVAL 24 HOUR)',
-            [user_id]
-          );
-
-          // Criar nova sessão
-          await connection.execute(
-            `INSERT INTO user_sessions (user_id, session_token, device_info, is_active, created_at, last_activity)
-             VALUES (?, ?, ?, 1, NOW(), NOW())`,
-            [user_id, session_token, device_info || 'Unknown']
-          );
-          console.log(`✅ Nova sessão criada para usuário ${user_id}`);
-        }
+        // Criar nova sessão (única ativa)
+        await connection.execute(
+          `INSERT INTO user_sessions (user_id, session_token, device_info, is_active, created_at, last_activity)
+           VALUES (?, ?, ?, 1, NOW(), NOW())`,
+          [user_id, session_token, device_info || 'Unknown']
+        );
 
         return res.status(200).json({ 
           success: true,

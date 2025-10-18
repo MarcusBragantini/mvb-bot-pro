@@ -93,17 +93,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           consecutiveErrors = 0; // Resetar contador de erros
 
           if (!data.valid) {
-            console.log('⚠️ Sessão invalidada em outro dispositivo');
-            alert('Sua sessão foi encerrada porque você fez login em outro dispositivo.');
+            alert('⚠️ SESSÃO INVALIDADA\n\nSua licença está sendo usada em outro dispositivo.\n\nApenas 1 dispositivo/sessão por vez é permitido.\n\nVocê será desconectado agora.');
             logout();
           }
         } else if (response.status === 401) {
-          // ✅ 401 = sessão não encontrada ou expirada, mas não desconectar automaticamente
-          // (pode ser problema temporário do servidor)
-          consecutiveErrors++;
-          if (consecutiveErrors === 1) {
-            console.log('⚠️ Sessão não validada pelo servidor - mantendo sessão local');
-          }
+          // ⚠️ 401 = Sessão invalidada por outro dispositivo/aba
+          // Desconectar imediatamente (não é erro temporário)
+          alert('⚠️ SESSÃO INVALIDADA\n\nSua licença está sendo usada em outro dispositivo ou aba.\n\nApenas 1 sessão ativa por vez é permitida.\n\nVocê será desconectado agora.');
+          logout();
         }
       } catch (error) {
         // Silenciar completamente erros de rede
@@ -113,14 +110,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     };
 
-    // ✅ Verificar a cada 3 minutos (menos frequente para reduzir carga)
-    const interval = setInterval(checkSession, 180000);
+    // ✅ Verificar a cada 10 segundos para detectar abas/dispositivos duplicados rapidamente
+    const interval = setInterval(checkSession, 10000);
     
     return () => clearInterval(interval);
   }, [user, sessionToken]);
 
   useEffect(() => {
-    const initAuth = () => {
+    const initAuth = async () => {
       const storedToken = localStorage.getItem('auth_token');
       const storedUser = localStorage.getItem('auth_user');
       const storedSessionToken = localStorage.getItem('session_token');
@@ -128,9 +125,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (storedToken && storedUser && storedSessionToken) {
         try {
           const userData = JSON.parse(storedUser);
+          
+          // ⚠️ PROTEÇÃO: Gerar novo session_token único para esta aba/instância
+          // Isso invalida outras abas/dispositivos automaticamente
+          const newSessionToken = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}_${Math.random().toString(36).substring(2, 15)}`;
+          const deviceInfo = `${navigator.userAgent} | ${navigator.platform}`;
+          
+          // Registrar nova sessão (invalida as anteriores)
+          try {
+            await fetch('/api/auth?action=check-session', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                user_id: userData.id,
+                session_token: newSessionToken,
+                device_info: deviceInfo
+              }),
+            });
+            
+            // Atualizar token local
+            localStorage.setItem('session_token', newSessionToken);
+            setSessionToken(newSessionToken);
+          } catch (error) {
+            // Se falhar, usar o token antigo
+            setSessionToken(storedSessionToken);
+          }
+          
           setUser(userData);
           setToken(storedToken);
-          setSessionToken(storedSessionToken);
           apiClient.setToken(storedToken);
         } catch (error) {
           console.error('Error parsing stored user data:', error);
