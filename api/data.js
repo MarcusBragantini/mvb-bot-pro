@@ -470,6 +470,44 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    // ===== SALVAR TRADE =====
+    if (action === 'save_trade') {
+      if (req.method === 'POST') {
+        const { user_id, symbol, signal, stake, result, profit, confidence } = req.body;
+
+        if (!user_id || !symbol || !signal || !result) {
+          return res.status(400).json({ error: 'Campos obrigatórios ausentes' });
+        }
+
+        try {
+          await connection.execute(`
+            INSERT INTO user_trades (
+              user_id, 
+              symbol, 
+              trade_type, 
+              stake, 
+              result, 
+              profit, 
+              confidence,
+              status,
+              created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'completed', NOW())
+          `, [user_id, symbol, signal, stake, result, profit || 0, confidence || 0]);
+
+          return res.status(200).json({ 
+            success: true,
+            message: 'Trade salvo com sucesso'
+          });
+        } catch (error) {
+          console.error('❌ Erro ao salvar trade:', error);
+          return res.status(500).json({ 
+            error: 'Erro ao salvar trade',
+            details: error.message 
+          });
+        }
+      }
+    }
+
     // Se nenhuma ação foi processada, retornar erro
     return res.status(400).json({ error: 'Ação inválida' });
 
