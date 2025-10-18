@@ -3,35 +3,37 @@
 
 -- ===== OPÇÃO 1: ATUALIZAR TABELA EXISTENTE (Mantém dados existentes) =====
 
--- Adicionar campos faltantes
-ALTER TABLE user_trades 
-ADD COLUMN IF NOT EXISTS symbol VARCHAR(50) DEFAULT 'R_10' COMMENT 'Ativo operado' AFTER user_id;
+-- Verificar se colunas existem antes de adicionar
+-- Execute este bloco completo de uma vez
 
-ALTER TABLE user_trades 
-ADD COLUMN IF NOT EXISTS signal VARCHAR(10) DEFAULT 'CALL' COMMENT 'CALL ou PUT' AFTER symbol;
+-- Adicionar symbol
+ALTER TABLE user_trades ADD COLUMN symbol VARCHAR(50) DEFAULT 'R_10' COMMENT 'Ativo operado' AFTER user_id;
 
-ALTER TABLE user_trades 
-ADD COLUMN IF NOT EXISTS stake DECIMAL(10, 2) DEFAULT 1.00 COMMENT 'Valor de entrada' AFTER signal;
+-- Renomear trade_type para signal (se necessário) ou adicionar signal
+ALTER TABLE user_trades ADD COLUMN signal VARCHAR(10) DEFAULT 'CALL' COMMENT 'CALL ou PUT' AFTER symbol;
 
-ALTER TABLE user_trades 
-ADD COLUMN IF NOT EXISTS result VARCHAR(10) DEFAULT 'WIN' COMMENT 'WIN ou LOSS' AFTER stake;
+-- Copiar dados de trade_type para signal
+UPDATE user_trades SET signal = trade_type WHERE trade_type IS NOT NULL;
 
-ALTER TABLE user_trades 
-MODIFY COLUMN profit DECIMAL(10, 2) DEFAULT 0.00 COMMENT 'Lucro ou prejuízo';
+-- Adicionar stake
+ALTER TABLE user_trades ADD COLUMN stake DECIMAL(10, 2) DEFAULT 1.00 COMMENT 'Valor de entrada' AFTER signal;
 
-ALTER TABLE user_trades 
-ADD COLUMN IF NOT EXISTS confidence DECIMAL(5, 2) DEFAULT 0.00 COMMENT 'Confiança (%)' AFTER profit;
+-- Adicionar result
+ALTER TABLE user_trades ADD COLUMN result VARCHAR(10) DEFAULT 'WIN' COMMENT 'WIN ou LOSS' AFTER stake;
 
-ALTER TABLE user_trades 
-ADD COLUMN IF NOT EXISTS contract_id VARCHAR(100) COMMENT 'ID do contrato Deriv' AFTER confidence;
+-- Atualizar profit
+ALTER TABLE user_trades MODIFY COLUMN profit DECIMAL(10, 2) DEFAULT 0.00 COMMENT 'Lucro ou prejuízo';
 
--- Atualizar coluna trade_type (já existe mas pode estar vazia)
-UPDATE user_trades SET trade_type = 'CALL' WHERE trade_type IS NULL OR trade_type = '';
+-- Adicionar confidence
+ALTER TABLE user_trades ADD COLUMN confidence DECIMAL(5, 2) DEFAULT 0.00 COMMENT 'Confiança (%)' AFTER profit;
 
--- Adicionar índices para melhor performance
-CREATE INDEX IF NOT EXISTS idx_symbol ON user_trades(symbol);
-CREATE INDEX IF NOT EXISTS idx_result ON user_trades(result);
-CREATE INDEX IF NOT EXISTS idx_created_at ON user_trades(created_at);
+-- Adicionar contract_id
+ALTER TABLE user_trades ADD COLUMN contract_id VARCHAR(100) COMMENT 'ID do contrato Deriv' AFTER confidence;
+
+-- Adicionar índices (ignora se já existirem)
+ALTER TABLE user_trades ADD INDEX idx_symbol (symbol);
+ALTER TABLE user_trades ADD INDEX idx_result (result);
+ALTER TABLE user_trades ADD INDEX idx_created_at (created_at);
 
 -- Verificar estrutura atualizada
 DESCRIBE user_trades;

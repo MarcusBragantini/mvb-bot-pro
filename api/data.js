@@ -422,8 +422,13 @@ module.exports = async function handler(req, res) {
             const [rows] = await connection.execute(`
               SELECT 
                 id,
+                symbol,
+                trade_signal,
                 trade_type,
+                stake,
+                result,
                 profit,
+                confidence,
                 created_at,
                 status
               FROM user_trades 
@@ -484,7 +489,7 @@ module.exports = async function handler(req, res) {
             INSERT INTO user_trades (
               user_id, 
               symbol, 
-              trade_type, 
+              trade_signal,
               stake, 
               result, 
               profit, 
