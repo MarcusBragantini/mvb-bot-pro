@@ -661,12 +661,33 @@ export default function BotInterface() {
   // ===== NOTIFICAÇÕES AUTOMÁTICAS DO BOT =====
   useEffect(() => {
     const handleBotStarted = () => {
-      if (telegramSettings.notificationsEnabled && telegramSettings.userTelegram) {
-        const symbolElement = document.getElementById('symbol') as HTMLSelectElement;
-        const currentSymbol = symbolElement?.value || 'R_10';
-        const accountType = settings.selectedTokenType === 'demo' ? 'DEMO' : 'REAL';
-        
-        sendTelegramNotification(`
+      // Buscar configurações diretamente do localStorage (mais confiável que state)
+      const savedSettings = localStorage.getItem('telegram_settings');
+      if (!savedSettings) return;
+      
+      const telegramConfig = JSON.parse(savedSettings);
+      if (!telegramConfig.notificationsEnabled || !telegramConfig.userTelegram) return;
+      
+      const symbolElement = document.getElementById('symbol') as HTMLSelectElement;
+      const currentSymbol = symbolElement?.value || 'R_10';
+      const accountType = settings.selectedTokenType === 'demo' ? 'DEMO' : 'REAL';
+      
+      // Buscar botToken do state ou fazer fetch
+      const botToken = telegramSettings.botToken;
+      if (!botToken) {
+        console.log('⚠️ Bot token não carregado ainda');
+        return;
+      }
+      
+      // Enviar diretamente (sem depender do state do React)
+      fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: telegramConfig.userTelegram,
+          text: `
 🚀 <b>Zeus Iniciado</b>
 
 ✅ Bot conectado e analisando mercado
@@ -676,29 +697,49 @@ export default function BotInterface() {
 ⚙️ Estratégia: Zeus
 
 ⏰ ${new Date().toLocaleString()}
-        `.trim());
-      }
+          `.trim(),
+          parse_mode: 'HTML'
+        })
+      }).catch(err => console.log('Erro ao enviar notificação:', err));
     };
 
     const handleBotStopped = (event: any) => {
-      if (telegramSettings.notificationsEnabled && telegramSettings.userTelegram) {
-        const reportData = event.detail || {};
-        const currentSymbol = reportData.symbol || 'N/A';
-        const profit = reportData.profit || 0;
-        const accuracy = reportData.accuracy || '0';
-        const trades = reportData.tradeHistory || [];
+      // Buscar configurações diretamente do localStorage (mais confiável que state)
+      const savedSettings = localStorage.getItem('telegram_settings');
+      if (!savedSettings) return;
+      
+      const telegramConfig = JSON.parse(savedSettings);
+      if (!telegramConfig.notificationsEnabled || !telegramConfig.userTelegram) return;
+      
+      const reportData = event.detail || {};
+      const currentSymbol = reportData.symbol || 'N/A';
+      const profit = reportData.profit || 0;
+      const accuracy = reportData.accuracy || '0';
+      const trades = reportData.tradeHistory || [];
 
-        // Determinar tipo de conta
-        const accountType = settings.selectedTokenType === 'demo' ? 'DEMO' : 'REAL';
+      // Determinar tipo de conta
+      const accountType = settings.selectedTokenType === 'demo' ? 'DEMO' : 'REAL';
 
-        // Criar lista de trades
-        let tradesList = '';
-        trades.forEach((trade: any) => {
-          const emoji = trade.result === 'WIN' ? '🎉' : '❌';
-          tradesList += `${emoji} ${trade.result} - Ativo: ${trade.symbol} - Lucro $${trade.profit.toFixed(2)}\n`;
-        });
+      // Buscar botToken do state
+      const botToken = telegramSettings.botToken;
+      if (!botToken) return;
 
-        sendTelegramNotification(`
+      // Criar lista de trades
+      let tradesList = '';
+      trades.forEach((trade: any) => {
+        const emoji = trade.result === 'WIN' ? '🎉' : '❌';
+        tradesList += `${emoji} ${trade.result} - Ativo: ${trade.symbol} - Lucro $${trade.profit.toFixed(2)}\n`;
+      });
+
+      // Enviar diretamente
+      fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: telegramConfig.userTelegram,
+          text: `
 ⏹️ <b>Zeus Parado</b>
 
 📊 Sessão finalizada
@@ -708,8 +749,10 @@ export default function BotInterface() {
 📈 Precisão: ${accuracy}%
 ${tradesList || 'Nenhuma operação realizada'}
 ⏰ ${new Date().toLocaleString()}
-        `.trim());
-      }
+          `.trim(),
+          parse_mode: 'HTML'
+        })
+      }).catch(err => console.log('Erro ao enviar notificação:', err));
     };
 
     window.addEventListener('bot-started', handleBotStarted);
@@ -719,7 +762,7 @@ ${tradesList || 'Nenhuma operação realizada'}
       window.removeEventListener('bot-started', handleBotStarted);
       window.removeEventListener('bot-stopped', handleBotStopped);
     };
-  }, [telegramSettings.notificationsEnabled, telegramSettings.userTelegram, settings.stake]);
+  }, [telegramSettings.botToken, settings.selectedTokenType, settings.stake]);
 
   // ===== INICIALIZAR BOT UMA ÚNICA VEZ (NUNCA REINICIALIZAR) =====
   useEffect(() => {
