@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Fundo circular azul escuro -->
+  <circle cx="256" cy="256" r="240" fill="#1e40af"/>
+  <circle cx="256" cy="256" r="240" fill="url(#bgGradient)"/>
+  
+  <defs>
+    <!-- Gradiente de fundo -->
+    <radialGradient id="bgGradient">
+      <stop offset="0%" style="stop-color:#2563eb;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1e40af;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Efeito de brilho para o raio -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Gradiente do raio -->
+    <linearGradient id="lightningGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#fef08a;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#fbbf24;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Círculo de borda -->
+  <circle cx="256" cy="256" r="240" fill="none" stroke="#3b82f6" stroke-width="8"/>
+  
+  <!-- Cabeça do robô -->
+  <rect x="150" y="150" width="212" height="175" rx="25" fill="#60a5fa" stroke="#1e40af" stroke-width="6"/>
+  
+  <!-- Antena esquerda -->
+  <line x1="190" y1="150" x2="190" y2="100" stroke="#fbbf24" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="190" cy="85" r="15" fill="#fbbf24"/>
+  <circle cx="190" cy="85" r="10" fill="#fef08a"/>
+  
+  <!-- Antena direita -->
+  <line x1="322" y1="150" x2="322" y2="100" stroke="#fbbf24" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="322" cy="85" r="15" fill="#fbbf24"/>
+  <circle cx="322" cy="85" r="10" fill="#fef08a"/>
+  
+  <!-- Olhos -->
+  <circle cx="200" cy="205" r="20" fill="#1e40af"/>
+  <circle cx="205" cy="200" r="8" fill="#60a5fa"/>
+  
+  <circle cx="312" cy="205" r="20" fill="#1e40af"/>
+  <circle cx="317" cy="200" r="8" fill="#60a5fa"/>
+  
+  <!-- Boca/display -->
+  <rect x="190" y="260" width="132" height="40" rx="10" fill="#1e40af" opacity="0.6"/>
+  <line x1="200" y1="280" x2="220" y2="280" stroke="#3b82f6" stroke-width="4" stroke-linecap="round"/>
+  <line x1="230" y1="280" x2="250" y2="280" stroke="#3b82f6" stroke-width="4" stroke-linecap="round"/>
+  <line x1="262" y1="280" x2="282" y2="280" stroke="#3b82f6" stroke-width="4" stroke-linecap="round"/>
+  <line x1="292" y1="280" x2="312" y2="280" stroke="#3b82f6" stroke-width="4" stroke-linecap="round"/>
+  
+  <!-- Corpo do robô -->
+  <rect x="160" y="325" width="192" height="100" rx="15" fill="#60a5fa" stroke="#1e40af" stroke-width="6"/>
+  
+  <!-- Detalhes do corpo - botões -->
+  <circle cx="210" cy="375" r="12" fill="#1e40af"/>
+  <circle cx="210" cy="375" r="6" fill="#3b82f6"/>
+  
+  <circle cx="302" cy="375" r="12" fill="#1e40af"/>
+  <circle cx="302" cy="375" r="6" fill="#3b82f6"/>
+  
+  <!-- Painel central do corpo -->
+  <rect x="235" y="345" width="42" height="60" rx="5" fill="#1e40af" opacity="0.4"/>
+  
+  <!-- Braço esquerdo -->
+  <rect x="90" y="340" width="55" height="65" rx="10" fill="#60a5fa" stroke="#1e40af" stroke-width="6"/>
+  <circle cx="117" cy="372" r="8" fill="#1e40af"/>
+  
+  <!-- Braço direito -->
+  <rect x="367" y="340" width="55" height="65" rx="10" fill="#60a5fa" stroke="#1e40af" stroke-width="6"/>
+  <circle cx="395" cy="372" r="8" fill="#1e40af"/>
+  
+  <!-- RAIO DE ZEUS PRINCIPAL - Grande e Imponente -->
+  <g transform="translate(340, 180)">
+    <path d="M 0,-50 L 25,10 L -10,10 L 20,80 L -25,20 L 10,20 Z" 
+          fill="url(#lightningGrad)" 
+          stroke="#f59e0b" 
+          stroke-width="3"
+          filter="url(#glow)"/>
+  </g>
+  
+  <!-- Raio secundário (menor) -->
+  <g transform="translate(170, 230) scale(0.5)">
+    <path d="M 0,-40 L 20,5 L -8,5 L 15,65 L -20,15 L 8,15 Z" 
+          fill="url(#lightningGrad)" 
+          opacity="0.9"/>
+  </g>
+  
+  <!-- Raio terciário (ainda menor) -->
+  <g transform="translate(380, 280) scale(0.4)">
+    <path d="M 0,-35 L 18,5 L -7,5 L 12,55 L -18,12 L 7,12 Z" 
+          fill="#fbbf24" 
+          opacity="0.8"/>
+  </g>
+  
+  <!-- Partículas de energia ao redor dos raios -->
+  <circle cx="370" cy="200" r="6" fill="#fef08a" opacity="0.9">
+    <animate attributeName="opacity" values="0.9;0.4;0.9" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="390" cy="240" r="5" fill="#fbbf24" opacity="0.8">
+    <animate attributeName="opacity" values="0.8;0.3;0.8" dur="1.5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="355" cy="270" r="4" fill="#fef08a" opacity="0.7">
+    <animate attributeName="opacity" values="0.7;0.3;0.7" dur="1.8s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="405" cy="220" r="4" fill="#fbbf24" opacity="0.8">
+    <animate attributeName="opacity" values="0.8;0.4;0.8" dur="2.2s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Faíscas adicionais -->
+  <circle cx="160" cy="255" r="3" fill="#fbbf24" opacity="0.6">
+    <animate attributeName="opacity" values="0.6;0.2;0.6" dur="1.3s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="175" cy="245" r="2.5" fill="#fef08a" opacity="0.7">
+    <animate attributeName="opacity" values="0.7;0.3;0.7" dur="1.7s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Detalhes de brilho no corpo -->
+  <rect x="165" y="330" width="8" height="30" rx="4" fill="#3b82f6" opacity="0.5"/>
+  <rect x="339" y="330" width="8" height="30" rx="4" fill="#3b82f6" opacity="0.5"/>
+</svg>
+

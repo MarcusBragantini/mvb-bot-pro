@@ -312,7 +312,7 @@ export default function Admin() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-slate-100">Painel Administrativo</h1>
-                <p className="text-sm text-gray-400">Bot MVB Pro - Sistema SaaS</p>
+                <p className="text-sm text-gray-400">Zeus - Sistema de Trading Inteligente</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
