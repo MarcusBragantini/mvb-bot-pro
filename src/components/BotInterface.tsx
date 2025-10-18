@@ -680,56 +680,26 @@ export default function BotInterface() {
         const reportData = event.detail || {};
         const profit = reportData.profit || 0;
         const accuracy = reportData.accuracy || '0';
-        const totalTrades = reportData.totalTrades || 0;
-        const wins = reportData.wins || 0;
-        const losses = reportData.losses || 0;
         const trades = reportData.tradeHistory || [];
 
-        // Agrupar trades por ativo
-        const assetsSummary: any = {};
-        trades.forEach((trade: any) => {
-          if (!assetsSummary[trade.symbol]) {
-            assetsSummary[trade.symbol] = {
-              total: 0,
-              wins: 0,
-              losses: 0,
-              profit: 0
-            };
-          }
-          assetsSummary[trade.symbol].total++;
-          if (trade.result === 'WIN') {
-            assetsSummary[trade.symbol].wins++;
-          } else {
-            assetsSummary[trade.symbol].losses++;
-          }
-          assetsSummary[trade.symbol].profit += trade.profit;
-        });
+        // Pegar o último ativo usado (ou todos se houver múltiplos)
+        const lastSymbol = trades.length > 0 ? trades[trades.length - 1].symbol : 'N/A';
 
-        // Criar tabela de ativos
-        let assetsTable = '';
-        Object.keys(assetsSummary).forEach(symbol => {
-          const asset = assetsSummary[symbol];
-          const assetAccuracy = asset.total > 0 ? ((asset.wins / asset.total) * 100).toFixed(0) : '0';
-          assetsTable += `
-📊 <b>${symbol}</b>
-   Trades: ${asset.total} | Win: ${asset.wins} | Loss: ${asset.losses}
-   Precisão: ${assetAccuracy}% | Lucro: $${asset.profit.toFixed(2)}
-`;
+        // Criar lista de trades
+        let tradesList = '';
+        trades.forEach((trade: any) => {
+          const emoji = trade.result === 'WIN' ? '🎉' : '❌';
+          tradesList += `${emoji} ${trade.result} - Ativo: ${trade.symbol} - Lucro $${trade.profit.toFixed(2)}\n`;
         });
 
         sendTelegramNotification(`
-⏹️ <b>Zeus - Relatório Final</b>
+⏹️ <b>Zeus Parado</b>
 
-📊 <b>RESUMO DA SESSÃO</b>
-━━━━━━━━━━━━━━━━━━━
-💰 Lucro Total: $${profit.toFixed(2)}
-📈 Precisão Geral: ${accuracy}%
-🎯 Operações: ${totalTrades}
-✅ Vitórias: ${wins}
-❌ Derrotas: ${losses}
-
-${assetsTable || '📊 Nenhuma operação realizada'}
-━━━━━━━━━━━━━━━━━━━
+📊 Sessão finalizada
+📊 Par: ${lastSymbol}
+💰 Lucro final: $${profit.toFixed(2)}
+📈 Precisão: ${accuracy}%
+${tradesList || 'Nenhuma operação realizada'}
 ⏰ ${new Date().toLocaleString()}
         `.trim());
       }
@@ -2809,28 +2779,6 @@ ${assetsTable || '📊 Nenhuma operação realizada'}
         addTradeToHistory(contract.contract_id, finalSignal, confidence, currentStake, martingaleLevel_current, tradeProfit >= 0 ? "WIN" : "LOSS", tradeProfit);
 
         addLog(\`📊 Resultado: \${tradeProfit >= 0 ? 'WIN' : 'LOSS'} | Entrada: $\${currentStake} | Lucro: $\${tradeProfit.toFixed(2)}\`);
-        
-        // Enviar notificação individual do trade
-        if (window.sendTelegramNotification) {
-          const emoji = tradeProfit >= 0 ? '🎉' : '❌';
-          const resultado = tradeProfit >= 0 ? 'WIN' : 'LOSS';
-          const retorno = ((tradeProfit / currentStake) * 100).toFixed(1);
-          
-          window.sendTelegramNotification(\`
-\${emoji} <b>Zeus - Resultado</b>
-
-\${tradeProfit >= 0 ? '✅' : '⚠️'} <b>\${resultado}</b>
-📊 Ativo: <b>\${symbol}</b>
-🎯 Sinal: \${finalSignal}
-💰 Entrada: $\${currentStake.toFixed(2)}
-💵 \${tradeProfit >= 0 ? 'Lucro' : 'Perda'}: $\${Math.abs(tradeProfit).toFixed(2)}
-📈 Retorno: \${retorno}%
-🎲 Confiança: \${confidence}%
-
-📊 Saldo Total: $\${profit.toFixed(2)}
-⏰ \${new Date().toLocaleString()}
-          \`.trim());
-        }
 
         if (tradeProfit < 0) {
           martingaleLevel_current++;
