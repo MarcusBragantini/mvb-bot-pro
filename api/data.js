@@ -440,7 +440,15 @@ module.exports = async function handler(req, res) {
             // DEBUG: Log dos dados do banco
             console.log('🗄️ Dados do banco para user_id', user_id, ':', rows.length, 'trades');
             if (rows.length > 0) {
-              console.log('📋 Primeiro trade:', rows[0]);
+              console.log('📋 Primeiro trade COMPLETO:', rows[0]);
+              console.log('📋 Campos específicos do banco:', {
+                'symbol': rows[0].symbol,
+                'trade_signal': rows[0].trade_signal,
+                'trade_type': rows[0].trade_type,
+                'result': rows[0].result,
+                'profit': rows[0].profit,
+                'stake': rows[0].stake
+              });
             }
 
             // Se não há trades, retornar array vazio

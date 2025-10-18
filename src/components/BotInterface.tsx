@@ -168,14 +168,14 @@ export default function BotInterface() {
               row.style.borderBottom = '1px solid #334155';
               
               // DEBUG: Mostrar dados recebidos
-              console.log('📊 Trade recebido:', {
-                symbol: trade.symbol,
-                trade_signal: trade.trade_signal,
-                trade_type: trade.trade_type,
-                result: trade.result,
-                profit: trade.profit,
-                stake: trade.stake,
-                created_at: trade.created_at
+              console.log('📊 Trade recebido COMPLETO:', trade);
+              console.log('📊 Campos específicos:', {
+                'symbol': trade.symbol,
+                'trade_signal': trade.trade_signal,
+                'trade_type': trade.trade_type,
+                'result': trade.result,
+                'profit': trade.profit,
+                'stake': trade.stake
               });
               
               // DEBUG: Verificar se os campos estão vazios
