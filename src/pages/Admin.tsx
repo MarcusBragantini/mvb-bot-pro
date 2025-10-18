@@ -340,19 +340,25 @@ export default function Admin() {
   return (
     <div className="min-h-screen bg-slate-900">
       <header className="bg-slate-800 shadow-sm border-b border-slate-700">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-14 sm:h-16">
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              <div className="p-1.5 sm:p-2 bg-gradient-to-r from-red-600 to-pink-600 rounded-lg">
-                <Shield className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-12 sm:h-16">
+            {/* Logo e Título */}
+            <div className="flex items-center space-x-1 sm:space-x-3 min-w-0 flex-1">
+              <div className="p-1 sm:p-2 bg-gradient-to-r from-red-600 to-pink-600 rounded-lg flex-shrink-0">
+                <Shield className="h-3 w-3 sm:h-6 sm:w-6 text-white" />
               </div>
-              <div>
-                <h1 className="text-sm sm:text-xl font-bold text-slate-100">Admin</h1>
-                <p className="text-xs sm:text-sm text-gray-400 hidden sm:block">Zeus - Sistema de Trading</p>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-xs sm:text-xl font-bold text-slate-100 truncate">Admin</h1>
+                <p className="text-xs text-gray-400 hidden sm:block truncate">Zeus - Sistema de Trading</p>
               </div>
             </div>
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              <Badge variant="destructive" className="text-xs">ADMIN</Badge>
+            
+            {/* Ações */}
+            <div className="flex items-center space-x-1 sm:space-x-3 flex-shrink-0">
+              <Badge variant="destructive" className="text-xs px-1 sm:px-2 py-0.5 sm:py-1">
+                <span className="hidden sm:inline">ADMIN</span>
+                <span className="sm:hidden">A</span>
+              </Badge>
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -360,62 +366,62 @@ export default function Admin() {
                   logout();
                   navigate('/dashboard');
                 }}
-                className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm px-2 sm:px-3"
+                className="flex items-center justify-center p-1 sm:px-3 sm:py-2 h-7 sm:h-9 text-xs sm:text-sm"
               >
                 <LogOut className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">Sair</span>
+                <span className="hidden sm:inline ml-1 sm:ml-2">Sair</span>
               </Button>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto p-3 sm:p-6">
-        <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-4 sm:mb-6">
+      <main className="max-w-7xl mx-auto p-2 sm:p-6">
+        <div className="grid grid-cols-2 gap-1 sm:gap-4 mb-3 sm:mb-6">
           <Card className="bg-gradient-to-br from-blue-600 to-blue-700 border-0 text-white shadow-lg">
-            <CardContent className="p-3">
+            <CardContent className="p-2 sm:p-3">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-white/90">Usuários</p>
-                  <p className="text-lg font-bold text-white">{stats.totalUsers}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-white/90 truncate">Usuários</p>
+                  <p className="text-sm sm:text-lg font-bold text-white">{stats.totalUsers}</p>
                 </div>
-                <Users className="h-5 w-5 text-white/80" />
+                <Users className="h-4 w-4 sm:h-5 sm:w-5 text-white/80 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
           
           <Card className="bg-gradient-to-br from-purple-600 to-purple-700 border-0 text-white shadow-lg">
-            <CardContent className="p-3">
+            <CardContent className="p-2 sm:p-3">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-white/90">Licenças</p>
-                  <p className="text-lg font-bold text-white">{stats.totalLicenses}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-white/90 truncate">Licenças</p>
+                  <p className="text-sm sm:text-lg font-bold text-white">{stats.totalLicenses}</p>
                 </div>
-                <Key className="h-5 w-5 text-white/80" />
+                <Key className="h-4 w-4 sm:h-5 sm:w-5 text-white/80 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
           
           <Card className="bg-gradient-to-br from-green-600 to-green-700 border-0 text-white shadow-lg">
-            <CardContent className="p-3">
+            <CardContent className="p-2 sm:p-3">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-white/90">Ativas</p>
-                  <p className="text-lg font-bold text-white">{stats.activeLicenses}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-white/90 truncate">Ativas</p>
+                  <p className="text-sm sm:text-lg font-bold text-white">{stats.activeLicenses}</p>
                 </div>
-                <CheckCircle className="h-5 w-5 text-white/80" />
+                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-white/80 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
           
           <Card className="bg-gradient-to-br from-red-600 to-red-700 border-0 text-white shadow-lg">
-            <CardContent className="p-3">
+            <CardContent className="p-2 sm:p-3">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-white/90">Expiradas</p>
-                  <p className="text-lg font-bold text-white">{stats.expiredLicenses}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-white/90 truncate">Expiradas</p>
+                  <p className="text-sm sm:text-lg font-bold text-white">{stats.expiredLicenses}</p>
                 </div>
-                <XCircle className="h-5 w-5 text-white/80" />
+                <XCircle className="h-4 w-4 sm:h-5 sm:w-5 text-white/80 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
