@@ -152,8 +152,8 @@ export default function BotInterface() {
               
               // Fallbacks para campos que podem estar vazios
               const tradeResult = trade.result || (parseFloat(trade.profit) >= 0 ? 'WIN' : 'LOSS');
-              const tradeSignal = trade.trade_signal || trade.trade_type || 'CALL';
-              const tradeSymbol = trade.symbol || 'R_10';
+              const tradeSignal = trade.trade_signal || trade.trade_type || '-';
+              const tradeSymbol = trade.symbol || '-';
               const tradeStake = parseFloat(trade.stake) || 0;
               const tradeProfit = parseFloat(trade.profit) || 0;
               
