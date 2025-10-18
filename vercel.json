@@ -5,18 +5,24 @@
       "schedule": "0 10 * * *"
     }
   ],
-  "rewrites": [
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "routes": [
     {
-      "source": "/favicon.ico",
-      "destination": "/favicon.svg"
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
     },
     {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
     },
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/favicon\\.(ico|svg)",
+      "dest": "/favicon.svg"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ],
   "headers": [
