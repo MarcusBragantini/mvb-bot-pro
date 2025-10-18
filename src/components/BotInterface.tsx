@@ -251,25 +251,20 @@ export default function BotInterface() {
       }
 
       // Token do bot configurado
-      const botToken = telegramSettings.botToken || '8488356513:AAHQf7eRYsqxA02Azckcmqs10Bidik6887k';
+      const botToken = telegramSettings.botToken;
       
       if (!botToken) {
-        console.log('❌ Token do bot não configurado');
         return;
       }
 
       // ⚠️ IMPORTANTE: Telegram API não aceita @username diretamente
       // É necessário usar Chat ID numérico
-      // Por enquanto, desabilitar notificações se não for Chat ID
       const chatId = telegramSettings.userTelegram;
       
       // Verificar se é um número (Chat ID) ou username
       const isNumeric = /^\d+$/.test(chatId);
       
       if (!isNumeric) {
-        console.log('⚠️ Username detectado. Telegram API requer Chat ID numérico.');
-        console.log('ℹ️ Instruções: Envie /start para @Mvb_pro_bot e obtenha seu Chat ID em:');
-        console.log('ℹ️ https://api.telegram.org/bot' + botToken + '/getUpdates');
         return false;
       }
 
@@ -288,15 +283,11 @@ export default function BotInterface() {
       const data = await response.json();
       
       if (data.ok) {
-        console.log('✅ Notificação Telegram enviada');
         return true;
       } else {
-        console.error('❌ Erro ao enviar notificação:', data);
-        console.error('ℹ️ Verifique se você enviou /start para o bot @Mvb_pro_bot');
         return false;
       }
     } catch (error) {
-      console.error('❌ Erro Telegram:', error);
       return false;
     }
   };
@@ -3395,8 +3386,8 @@ export default function BotInterface() {
                                 <p><strong>Como obter seu Chat ID:</strong></p>
                                 <ol className="list-decimal list-inside ml-2 space-y-1">
                                   <li>Envie <code className="bg-slate-200 px-1 rounded">/start</code> para <a href="https://t.me/Mvb_pro_bot" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">@Mvb_pro_bot</a></li>
-                                  <li>Acesse <a href="https://api.telegram.org/bot8488356513:AAHQf7eRYsqxA02Azckcmqs10Bidik6887k/getUpdates" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">este link</a></li>
-                                  <li>Procure por <code className="bg-slate-200 px-1 rounded">"id":</code> e copie o número (ex: 5034947899)</li>
+                                  <li>Use o bot <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">@userinfobot</a> para obter seu Chat ID</li>
+                                  <li>Copie o número do ID e cole aqui (ex: 5034947899)</li>
                                 </ol>
                               </div>
                             </div>
