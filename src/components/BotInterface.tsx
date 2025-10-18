@@ -3312,6 +3312,118 @@ export default function BotInterface() {
                         </div>
                       </CardContent>
                     </Card>
+
+                    {/* NOTIFICAÇÕES TELEGRAM - NOVO CARD */}
+                    <Card className="border-cyan-200">
+                      <CardHeader className="pb-4">
+                        <CardTitle className="text-lg text-cyan-600 flex items-center gap-2">
+                          <Bell className="h-5 w-5" />
+                          Notificações Telegram
+                        </CardTitle>
+                        <CardDescription>
+                          Receba notificações automáticas no Telegram
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="telegram-notifications"
+                            checked={telegramSettings.notificationsEnabled}
+                            onChange={(e) => {
+                              const newSettings = {
+                                ...telegramSettings,
+                                notificationsEnabled: e.target.checked
+                              };
+                              setTelegramSettings(newSettings);
+                            }}
+                            className="rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
+                          />
+                          <Label htmlFor="telegram-notifications" className="text-sm font-medium">
+                            Ativar notificações via Telegram
+                          </Label>
+                        </div>
+
+                        {telegramSettings.notificationsEnabled && (
+                          <>
+                            <div>
+                              <Label htmlFor="user-telegram" className="text-sm font-medium">
+                                Seu @username do Telegram
+                              </Label>
+                              <Input
+                                id="user-telegram"
+                                type="text"
+                                placeholder="seuusuario"
+                                value={telegramSettings.userTelegram}
+                                className="mt-1"
+                                onChange={(e) => {
+                                  const newSettings = {
+                                    ...telegramSettings,
+                                    userTelegram: e.target.value.replace('@', '')
+                                  };
+                                  setTelegramSettings(newSettings);
+                                }}
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                Digite apenas o username, sem o @. Ex: joaosilva
+                              </p>
+                            </div>
+
+                            <div>
+                              <Label htmlFor="bot-token" className="text-sm font-medium">
+                                Token do Bot Telegram (ADMIN)
+                              </Label>
+                              <Input
+                                id="bot-token"
+                                type="password"
+                                placeholder="Token do seu bot Telegram"
+                                value={telegramSettings.botToken}
+                                className="mt-1"
+                                onChange={(e) => {
+                                  const newSettings = {
+                                    ...telegramSettings,
+                                    botToken: e.target.value
+                                  };
+                                  setTelegramSettings(newSettings);
+                                }}
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                Apenas para administradores. Usuários normais só precisam do username.
+                              </p>
+                            </div>
+
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={testTelegramNotification}
+                                variant="outline"
+                                className="flex-1 border-cyan-300 text-cyan-600 hover:bg-cyan-50"
+                              >
+                                <Bot className="h-4 w-4 mr-2" />
+                                Testar
+                              </Button>
+                              <Button
+                                onClick={saveTelegramSettings}
+                                className="flex-1 bg-cyan-600 hover:bg-cyan-700"
+                              >
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Salvar
+                              </Button>
+                            </div>
+
+                            {telegramSettings.userTelegram && (
+                              <div className="p-3 bg-cyan-50 rounded-lg">
+                                <p className="text-sm text-cyan-800">
+                                  <strong>Notificações ativas para:</strong> @{telegramSettings.userTelegram}
+                                </p>
+                                <p className="text-xs text-cyan-600 mt-1">
+                                  Você receberá alertas quando o bot iniciar, parar, detectar sinais e finalizar trades.
+                                </p>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </CardContent>
+                    </Card>
                   </div>
 
                   {/* Botão para Salvar Configurações */}
