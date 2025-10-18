@@ -315,7 +315,7 @@ export default function BotInterface() {
     }
 
     const success = await sendTelegramNotification(`
-🤖 <b>Teste de Notificação - Bot Trading</b>
+🤖 <b>Teste de Notificação - Zeus</b>
 
 ✅ Sistema de notificações funcionando perfeitamente!
 📊 Agora você receberá atualizações automáticas:
@@ -482,7 +482,7 @@ export default function BotInterface() {
           
           toast({
             title: "✅ Acesso liberado!",
-              description: `Bem-vindo ao Bot Trading, ${user.name}! Licença expira em ${timeDisplay}.`,
+              description: `Bem-vindo ao Zeus, ${user.name}! Licença expira em ${timeDisplay}.`,
             });
           } else {
             // Licença encontrada mas expirada
@@ -663,12 +663,12 @@ export default function BotInterface() {
     const handleBotStarted = () => {
       if (telegramSettings.notificationsEnabled && telegramSettings.userTelegram) {
         sendTelegramNotification(`
-🚀 <b>Bot Trading Iniciado</b>
+🚀 <b>Zeus Iniciado</b>
 
 ✅ Bot conectado e analisando mercado
 📊 Par: ${(document.getElementById('symbol') as HTMLSelectElement)?.value || 'R_10'}
 💰 Entrada: $${settings.stake}
-⚙️ Estratégia: MHI + EMA + RSI
+⚙️ Estratégia: Zeus
 
 ⏰ ${new Date().toLocaleString()}
         `.trim());
@@ -683,7 +683,7 @@ export default function BotInterface() {
         const accuracy = accuracyElement?.textContent || '0%';
 
         sendTelegramNotification(`
-⏹️ <b>Bot Trading Parado</b>
+⏹️ <b>Zeus Parado</b>
 
 📊 Sessão finalizada
 💰 Lucro final: ${profit}
@@ -1554,7 +1554,7 @@ export default function BotInterface() {
         
         websocket.send(JSON.stringify(historyRequest));
         addLog(\`⏳ Aguardando 288 candles de 5 minutos (24 horas)...\`);
-        addLog(\`📈 Análise robusta: MHI + EMA + RSI + Fibonacci + Tendência de 24h\`);
+        addLog(\`📈 Análise robusta: Estratégia Zeus\`);
       }
       
       function startBot() {
@@ -1651,7 +1651,7 @@ export default function BotInterface() {
         historicoCarregado = false;
         ultimoMinutoProcessado = 0;
 
-        addLog(\`🚀 Iniciando Bot MVB - Par: \${symbol}\`);
+        addLog(\`🚀 Iniciando Zeus - Par: \${symbol}\`);
         addLog(\`⚙️ Configurações: MHI(\${mhiPeriods}) | EMA(\${emaFast}/\${emaSlow}) | RSI(\${rsiPeriods})\`);
         document.getElementById("status").innerText = "🔄 Conectando...";
         updateMartingaleStatus();
@@ -2905,7 +2905,7 @@ export default function BotInterface() {
         restoreBotState(); // Restaurar estado do bot
         // ✅ CORREÇÃO: Limpar logs antigos do localStorage se existirem
         const logElement = document.getElementById("log");
-        if (logElement && logElement.innerHTML.includes("Bot MVB carregado com sucesso")) {
+        if (logElement && logElement.innerHTML.includes("Zeus carregado com sucesso")) {
           logElement.innerHTML = ""; // Limpar logs antigos
         }
       }, 1000);
@@ -2955,7 +2955,7 @@ export default function BotInterface() {
           <CardHeader className="text-center pb-8">
             <div className="text-6xl mb-4">🤖</div>
             <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Carregando Bot Trading
+              Carregando Zeus
             </CardTitle>
             <CardDescription className="text-gray-600 mt-2">
               Verificando suas licenças...
@@ -2981,7 +2981,7 @@ export default function BotInterface() {
             <TabsList className="grid w-full grid-cols-3 mb-4 sm:mb-6 h-10 sm:h-12">
               <TabsTrigger value="trading" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2">
                 <Play className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                <span className="hidden sm:inline">Bot Trading</span>
+                <span className="hidden sm:inline">Zeus</span>
                 <span className="sm:hidden">Trading</span>
               </TabsTrigger>
               <TabsTrigger value="analytics" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2">
