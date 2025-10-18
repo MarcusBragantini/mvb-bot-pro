@@ -145,6 +145,12 @@ module.exports = async function handler(req, res) {
         return res.status(401).json({ error: 'Credenciais inválidas' });
       }
 
+      // Atualizar last_login
+      await connection.execute(
+        'UPDATE users SET last_login = NOW() WHERE id = ?',
+        [user.id]
+      );
+
       // Gerar token JWT
       const token = jwt.sign(
         { id: user.id, email: user.email, role: user.role },
