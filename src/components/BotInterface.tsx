@@ -193,6 +193,15 @@ export default function BotInterface() {
               const tradeStake = parseFloat(trade.stake) || 0;
               const tradeProfit = parseFloat(trade.profit) || 0;
               
+              // DEBUG: Mostrar valores finais
+              console.log('🎯 Valores finais:', {
+                tradeSymbol,
+                tradeSignal,
+                tradeResult,
+                tradeStake,
+                tradeProfit
+              });
+              
               const resultColor = tradeResult === 'WIN' ? '#10b981' : '#ef4444';
               const profitColor = tradeProfit >= 0 ? '#10b981' : '#ef4444';
               const signalColor = tradeSignal === 'CALL' ? '#10b981' : '#ef4444';
@@ -3518,8 +3527,20 @@ ${tradesList || 'Nenhuma operação realizada'}
                 Todas as operações realizadas nesta sessão
               </CardDescription>
               <Button 
-                onClick={() => {
+                onClick={async () => {
                   console.log('🔄 Forçando recarregamento...');
+                  console.log('👤 User ID:', user?.id);
+                  
+                  // Teste direto da API
+                  try {
+                    const response = await fetch(`/api/data?action=trading_history&user_id=${user?.id}`);
+                    const data = await response.json();
+                    console.log('🔍 Resposta direta da API:', data);
+                    console.log('📊 Primeiro trade:', data.trades?.[0]);
+                  } catch (error) {
+                    console.error('❌ Erro no teste direto:', error);
+                  }
+                  
                   loadAnalyticsFromDatabase();
                 }}
                 variant="outline" 
