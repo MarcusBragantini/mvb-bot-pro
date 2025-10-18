@@ -107,8 +107,6 @@ module.exports = async function handler(req, res) {
         [userId, licenseKey, expiresAt]
       );
 
-      console.log(`✅ Usuário ${userId} criado com licença de teste: ${licenseKey} (5 minutos)`);
-
       return res.status(201).json({ 
         message: 'Usuário criado com sucesso',
         license: {
@@ -263,7 +261,6 @@ module.exports = async function handler(req, res) {
             'UPDATE user_sessions SET session_token = ?, device_info = ?, last_activity = NOW() WHERE id = ?',
             [session_token, device_info || 'Unknown', existingSession.id]
           );
-          console.log(`✅ Sessão existente atualizada para usuário ${user_id}`);
         } else {
           // ✅ CORREÇÃO: Só invalidar sessões antigas (mais de 24 horas sem atividade)
           await connection.execute(
@@ -277,7 +274,6 @@ module.exports = async function handler(req, res) {
              VALUES (?, ?, ?, 1, NOW(), NOW())`,
             [user_id, session_token, device_info || 'Unknown']
           );
-          console.log(`✅ Nova sessão criada para usuário ${user_id}`);
         }
 
         return res.status(200).json({ 
