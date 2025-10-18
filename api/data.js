@@ -462,8 +462,13 @@ module.exports = async function handler(req, res) {
             // Processar trades para calcular estatísticas
             const trades = rows.map(trade => ({
               id: trade.id,
-              type: trade.trade_type,
+              symbol: trade.symbol,
+              trade_signal: trade.trade_signal,
+              trade_type: trade.trade_type,
+              stake: trade.stake,
+              result: trade.result,
               profit: parseFloat(trade.profit) || 0,
+              confidence: trade.confidence,
               created_at: trade.created_at,
               status: trade.status
             }));
