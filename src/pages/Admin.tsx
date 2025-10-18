@@ -614,11 +614,11 @@ export default function Admin() {
 
           <TabsContent value="licenses">
             <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
+              <CardHeader className="p-3 sm:p-6">
+                <div className="space-y-3">
                   <div>
-                    <CardTitle>Gerenciar Licenças</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-sm sm:text-lg">Gerenciar Licenças</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">
                       Visualize, crie e gerencie todas as licenças do sistema
                     </CardDescription>
                   </div>
@@ -630,18 +630,18 @@ export default function Admin() {
                           Nova Licença
                         </Button>
                       </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="w-[95vw] sm:w-full max-w-md">
                       <DialogHeader>
-                        <DialogTitle>Criar Nova Licença</DialogTitle>
-                        <DialogDescription>
+                        <DialogTitle className="text-sm sm:text-base">Criar Nova Licença</DialogTitle>
+                        <DialogDescription className="text-xs sm:text-sm">
                           Gere uma nova licença para um usuário específico
                         </DialogDescription>
                       </DialogHeader>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label>Usuário</Label>
+                      <div className="space-y-3 sm:space-y-4">
+                        <div className="space-y-1 sm:space-y-2">
+                          <Label className="text-xs sm:text-sm">Usuário</Label>
                           <Select value={newLicense.user_id} onValueChange={(value) => setNewLicense({ ...newLicense, user_id: value })}>
-                            <SelectTrigger>
+                            <SelectTrigger className="text-xs sm:text-sm">
                               <SelectValue placeholder="Selecione um usuário" />
                             </SelectTrigger>
                             <SelectContent>
@@ -653,8 +653,8 @@ export default function Admin() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="space-y-2">
-                          <Label>Tipo de Licença</Label>
+                        <div className="space-y-1 sm:space-y-2">
+                          <Label className="text-xs sm:text-sm">Tipo de Licença</Label>
                           <Select 
                             value={Object.keys(LICENSE_TYPES).find(key => LICENSE_TYPES[key as keyof typeof LICENSE_TYPES].type === newLicense.license_type) || ''} 
                             onValueChange={(value) => {
@@ -667,7 +667,7 @@ export default function Admin() {
                               });
                             }}
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className="text-xs sm:text-sm">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -679,27 +679,27 @@ export default function Admin() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Duração</Label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                          <div className="space-y-1 sm:space-y-2">
+                            <Label className="text-xs sm:text-sm">Duração</Label>
                             <Input
                               type="text"
                               value={Object.values(LICENSE_TYPES).find(lt => lt.type === newLicense.license_type)?.name.match(/\((.*?)\)/)?.[1] || `${newLicense.duration_days} dias`}
                               disabled
-                              className="bg-gray-50"
+                              className="bg-gray-50 text-xs sm:text-sm"
                             />
                           </div>
-                          <div className="space-y-2">
-                            <Label>Max. Dispositivos</Label>
+                          <div className="space-y-1 sm:space-y-2">
+                            <Label className="text-xs sm:text-sm">Max. Dispositivos</Label>
                             <Input
                               type="number"
                               value={newLicense.max_devices}
                               disabled
-                              className="bg-gray-50"
+                              className="bg-gray-50 text-xs sm:text-sm"
                             />
                           </div>
                         </div>
-                        <Button onClick={handleCreateLicense} className="w-full">
+                        <Button onClick={handleCreateLicense} className="w-full text-xs sm:text-sm">
                           Criar Licença
                         </Button>
                       </div>
@@ -728,8 +728,65 @@ export default function Admin() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
+              <CardContent className="p-0">
+                {/* Mobile View */}
+                <div className="block sm:hidden">
+                  {licenses.map((license) => (
+                    <div key={license.id} className="p-3 border-b bg-white">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex-1">
+                          <h3 className="font-medium text-sm font-mono">{license.license_key}</h3>
+                          <p className="text-xs text-gray-500">{license.name}</p>
+                          <p className="text-xs text-gray-400">{license.email}</p>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Badge className={`text-xs ${Object.values(LICENSE_TYPES).find(lt => lt.type === license.license_type)?.color || 'bg-gray-100 text-gray-800'}`}>
+                            {Object.values(LICENSE_TYPES).find(lt => lt.type === license.license_type)?.name || license.license_type.toUpperCase()}
+                          </Badge>
+                          <Badge variant={getLicenseStatusColor(license)} className="text-xs">
+                            {license.days_remaining > 0 ? (
+                              license.license_type === 'free' ? 
+                                `${license.days_remaining} min` : 
+                                `${license.days_remaining} dias`
+                            ) : (
+                              'Expirada'
+                            )}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <Monitor className="h-3 w-3 text-gray-500" />
+                          <span className="text-xs text-gray-600">{license.active_devices}/{license.max_devices}</span>
+                          <span className="text-xs text-gray-500">
+                            {new Date(license.expires_at).toLocaleDateString('pt-BR')}
+                          </span>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeactivateLicense(license.id)}
+                            className="text-xs px-2 py-1 h-6"
+                          >
+                            Desativar
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleExtendLicense(license.id, 30)}
+                            className="text-xs px-2 py-1 h-6"
+                          >
+                            +30d
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop View */}
+                <div className="hidden sm:block overflow-x-auto">
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="border-b">
