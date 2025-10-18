@@ -138,6 +138,7 @@ export default function BotInterface() {
     userTelegram: '',
     notificationsEnabled: false
   });
+  const [botTokenLoaded, setBotTokenLoaded] = useState(false);
   
   // ===== REFS PARA INTEGRAÇÃO COM CÓDIGO ORIGINAL =====
   const botContainerRef = useRef<HTMLDivElement>(null);
@@ -341,7 +342,12 @@ export default function BotInterface() {
   };
 
   const saveTelegramSettings = () => {
-    localStorage.setItem('telegram_settings', JSON.stringify(telegramSettings));
+    // Salvar apenas as configurações do usuário (não o token do bot)
+    const settingsToSave = {
+      userTelegram: telegramSettings.userTelegram,
+      notificationsEnabled: telegramSettings.notificationsEnabled
+    };
+    localStorage.setItem('telegram_settings', JSON.stringify(settingsToSave));
     toast({
       title: "✅ Configurações do Telegram salvas!",
       description: "Notificações configuradas com sucesso.",
@@ -528,11 +534,40 @@ export default function BotInterface() {
     }
   }, [user?.id]);
 
+  // ===== CARREGAR TOKEN DO BOT DO SERVIDOR =====
+  useEffect(() => {
+    const loadBotToken = async () => {
+      try {
+        const response = await fetch('/api/telegram-config');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.botToken) {
+            setTelegramSettings(prev => ({
+              ...prev,
+              botToken: data.botToken
+            }));
+            setBotTokenLoaded(true);
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao carregar token do Telegram:', error);
+      }
+    };
+
+    loadBotToken();
+  }, []);
+
   // ===== CARREGAR CONFIGURAÇÕES DO TELEGRAM =====
   useEffect(() => {
     const savedTelegramSettings = localStorage.getItem('telegram_settings');
     if (savedTelegramSettings) {
-      setTelegramSettings(JSON.parse(savedTelegramSettings));
+      const parsed = JSON.parse(savedTelegramSettings);
+      // Não sobrescrever o botToken que veio do servidor
+      setTelegramSettings(prev => ({
+        ...prev,
+        userTelegram: parsed.userTelegram || '',
+        notificationsEnabled: parsed.notificationsEnabled || false
+      }));
     }
   }, []);
 
@@ -3364,17 +3399,60 @@ export default function BotInterface() {
 
                         {telegramSettings.notificationsEnabled && (
                           <>
-                        <div>
+                            {/* Instruções Detalhadas */}
+                            <Alert className="bg-blue-50 border-blue-200">
+                              <Bot className="h-4 w-4 text-blue-600" />
+                              <AlertDescription className="text-sm text-blue-800">
+                                <p className="font-semibold mb-2">📱 Como configurar em 3 passos:</p>
+                                <ol className="list-decimal list-inside space-y-2 ml-2">
+                                  <li>
+                                    <strong>Inicie conversa com o bot:</strong>
+                                    <br />
+                                    <a 
+                                      href="https://t.me/Mvb_pro_bot" 
+                                      target="_blank" 
+                                      rel="noopener noreferrer" 
+                                      className="text-blue-600 hover:underline font-medium inline-flex items-center gap-1 mt-1"
+                                    >
+                                      Abrir @Mvb_pro_bot →
+                                    </a>
+                                    <br />
+                                    <span className="text-xs text-blue-700">Clique em "Iniciar" e envie qualquer mensagem</span>
+                                  </li>
+                                  <li>
+                                    <strong>Obtenha seu Chat ID:</strong>
+                                    <br />
+                                    <a 
+                                      href="https://t.me/userinfobot" 
+                                      target="_blank" 
+                                      rel="noopener noreferrer" 
+                                      className="text-blue-600 hover:underline font-medium inline-flex items-center gap-1 mt-1"
+                                    >
+                                      Abrir @userinfobot →
+                                    </a>
+                                    <br />
+                                    <span className="text-xs text-blue-700">Envie qualquer mensagem e ele te responderá com seu ID</span>
+                                  </li>
+                                  <li>
+                                    <strong>Cole o número aqui embaixo</strong>
+                                    <br />
+                                    <span className="text-xs text-blue-700">Copie apenas os números (ex: 5034947899)</span>
+                                  </li>
+                                </ol>
+                              </AlertDescription>
+                            </Alert>
+
+                            <div>
                               <Label htmlFor="user-telegram" className="text-sm font-medium">
                                 Seu Chat ID do Telegram
                               </Label>
-                          <Input
+                              <Input
                                 id="user-telegram"
                                 type="text"
-                                placeholder="5034947899"
+                                placeholder="Digite seu Chat ID (ex: 5034947899)"
                                 value={telegramSettings.userTelegram}
-                            className="mt-1"
-                            onChange={(e) => {
+                                className="mt-1 text-lg font-mono"
+                                onChange={(e) => {
                                   const newSettings = {
                                     ...telegramSettings,
                                     userTelegram: e.target.value.trim()
@@ -3382,38 +3460,10 @@ export default function BotInterface() {
                                   setTelegramSettings(newSettings);
                                 }}
                               />
-                              <div className="text-xs text-gray-500 mt-1 space-y-1">
-                                <p><strong>Como obter seu Chat ID:</strong></p>
-                                <ol className="list-decimal list-inside ml-2 space-y-1">
-                                  <li>Envie <code className="bg-slate-200 px-1 rounded">/start</code> para <a href="https://t.me/Mvb_pro_bot" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">@Mvb_pro_bot</a></li>
-                                  <li>Use o bot <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">@userinfobot</a> para obter seu Chat ID</li>
-                                  <li>Copie o número do ID e cole aqui (ex: 5034947899)</li>
-                                </ol>
-                              </div>
-                            </div>
-
-                            <div>
-                              <Label htmlFor="bot-token" className="text-sm font-medium">
-                                Token do Bot Telegram (ADMIN)
-                              </Label>
-                              <Input
-                                id="bot-token"
-                                type="password"
-                                placeholder="Token do seu bot Telegram"
-                                value={telegramSettings.botToken}
-                                className="mt-1"
-                                onChange={(e) => {
-                                  const newSettings = {
-                                    ...telegramSettings,
-                                    botToken: e.target.value
-                                  };
-                                  setTelegramSettings(newSettings);
-                                }}
-                              />
                               <p className="text-xs text-gray-500 mt-1">
-                                Apenas para administradores. Usuários normais só precisam do username.
-                          </p>
-                        </div>
+                                💡 O Chat ID é um número único de 9-10 dígitos
+                              </p>
+                            </div>
 
                             <div className="flex gap-2">
                               <Button
