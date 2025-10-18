@@ -150,18 +150,24 @@ export default function BotInterface() {
               const row = document.createElement('tr');
               row.style.borderBottom = '1px solid #334155';
               
-              const resultColor = trade.result === 'WIN' ? '#10b981' : '#ef4444';
-              const profitColor = parseFloat(trade.profit) >= 0 ? '#10b981' : '#ef4444';
-              const tradeSignal = trade.trade_signal || trade.trade_type || 'N/A';
+              // Fallbacks para campos que podem estar vazios
+              const tradeResult = trade.result || (parseFloat(trade.profit) >= 0 ? 'WIN' : 'LOSS');
+              const tradeSignal = trade.trade_signal || trade.trade_type || 'CALL';
+              const tradeSymbol = trade.symbol || 'R_10';
+              const tradeStake = parseFloat(trade.stake) || 0;
+              const tradeProfit = parseFloat(trade.profit) || 0;
+              
+              const resultColor = tradeResult === 'WIN' ? '#10b981' : '#ef4444';
+              const profitColor = tradeProfit >= 0 ? '#10b981' : '#ef4444';
               const signalColor = tradeSignal === 'CALL' ? '#10b981' : '#ef4444';
               
               row.innerHTML = `
                 <td style="padding: 10px 8px; fontSize: 0.8rem;">${new Date(trade.created_at).toLocaleString()}</td>
-                <td style="padding: 10px 8px; fontSize: 0.8rem; fontWeight: 600;">${trade.symbol || 'N/A'}</td>
+                <td style="padding: 10px 8px; fontSize: 0.8rem; fontWeight: 600;">${tradeSymbol}</td>
                 <td style="padding: 10px 8px; fontSize: 0.8rem; color: ${signalColor};">${tradeSignal}</td>
-                <td style="padding: 10px 8px; fontSize: 0.8rem;">$${parseFloat(trade.stake || 0).toFixed(2)}</td>
-                <td style="padding: 10px 8px; fontSize: 0.8rem; color: ${resultColor}; fontWeight: 600;">${trade.result}</td>
-                <td style="padding: 10px 8px; fontSize: 0.8rem; color: ${profitColor}; fontWeight: 600;">$${parseFloat(trade.profit || 0).toFixed(2)}</td>
+                <td style="padding: 10px 8px; fontSize: 0.8rem;">$${tradeStake.toFixed(2)}</td>
+                <td style="padding: 10px 8px; fontSize: 0.8rem; color: ${resultColor}; fontWeight: 600;">${tradeResult}</td>
+                <td style="padding: 10px 8px; fontSize: 0.8rem; color: ${profitColor}; fontWeight: 600;">$${tradeProfit.toFixed(2)}</td>
               `;
               
               historyBody.appendChild(row);
