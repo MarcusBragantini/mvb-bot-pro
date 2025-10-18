@@ -119,7 +119,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [user, sessionToken]);
 
   useEffect(() => {
-    const initAuth = () => {
+    const initAuth = async () => {
       const storedToken = localStorage.getItem('auth_token');
       const storedUser = localStorage.getItem('auth_user');
       const storedSessionToken = localStorage.getItem('session_token');
@@ -127,9 +127,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (storedToken && storedUser && storedSessionToken) {
         try {
           const userData = JSON.parse(storedUser);
+          
+          // ⚠️ PROTEÇÃO: Gerar novo session_token único para esta aba/instância
+          // Isso invalida outras abas/dispositivos automaticamente
+          const newSessionToken = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}_${Math.random().toString(36).substring(2, 15)}`;
+          const deviceInfo = `${navigator.userAgent} | ${navigator.platform}`;
+          
+          // Registrar nova sessão (invalida as anteriores)
+          try {
+            await fetch('/api/auth?action=check-session', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                user_id: userData.id,
+                session_token: newSessionToken,
+                device_info: deviceInfo
+              }),
+            });
+            
+            // Atualizar token local
+            localStorage.setItem('session_token', newSessionToken);
+            setSessionToken(newSessionToken);
+          } catch (error) {
+            // Se falhar, usar o token antigo
+            setSessionToken(storedSessionToken);
+          }
+          
           setUser(userData);
           setToken(storedToken);
-          setSessionToken(storedSessionToken);
           apiClient.setToken(storedToken);
         } catch (error) {
           console.error('Error parsing stored user data:', error);
