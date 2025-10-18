@@ -114,15 +114,32 @@ export default function BotInterface() {
     }
   };
   
+  // ===== CARREGAR ANALYTICS AO MONTAR O COMPONENTE =====
+  useEffect(() => {
+    if (activeTab === 'analytics' && user?.id) {
+      console.log('🔄 Carregando analytics do banco...');
+      loadAnalyticsFromDatabase();
+    }
+  }, [activeTab, user?.id]);
+  
   // ===== CARREGAR ANALYTICS DO BANCO =====
   const loadAnalyticsFromDatabase = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.log('⚠️ User ID não encontrado');
+      return;
+    }
+    
+    console.log('🔍 Buscando trades para user_id:', user.id);
     
     try {
       const response = await fetch(`/api/data?action=trading_history&user_id=${user.id}`);
+      console.log('📡 Resposta da API:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('📦 Dados recebidos:', data);
         const trades = data.trades || [];
+        console.log('📊 Total de trades:', trades.length);
         
         if (trades.length > 0) {
           // Calcular estatísticas do banco
