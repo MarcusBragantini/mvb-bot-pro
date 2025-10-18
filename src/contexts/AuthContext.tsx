@@ -93,8 +93,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           consecutiveErrors = 0; // Resetar contador de erros
 
           if (!data.valid) {
-            console.log('⚠️ Sessão invalidada em outro dispositivo');
-            alert('Sua sessão foi encerrada porque você fez login em outro dispositivo.');
+            alert('⚠️ SESSÃO INVALIDADA\n\nSua licença está sendo usada em outro dispositivo.\n\nApenas 1 dispositivo/sessão por vez é permitido.\n\nVocê será desconectado agora.');
             logout();
           }
         } else if (response.status === 401) {
@@ -113,8 +112,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     };
 
-    // ✅ Verificar a cada 3 minutos (menos frequente para reduzir carga)
-    const interval = setInterval(checkSession, 180000);
+    // ✅ Verificar a cada 30 segundos para detectar outras sessões rapidamente
+    const interval = setInterval(checkSession, 30000);
     
     return () => clearInterval(interval);
   }, [user, sessionToken]);
