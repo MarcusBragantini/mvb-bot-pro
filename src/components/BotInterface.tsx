@@ -664,12 +664,14 @@ export default function BotInterface() {
       if (telegramSettings.notificationsEnabled && telegramSettings.userTelegram) {
         const symbolElement = document.getElementById('symbol') as HTMLSelectElement;
         const currentSymbol = symbolElement?.value || 'R_10';
+        const accountType = settings.selectedTokenType === 'demo' ? 'DEMO' : 'REAL';
         
         sendTelegramNotification(`
 🚀 <b>Zeus Iniciado</b>
 
 ✅ Bot conectado e analisando mercado
 📊 Par: ${currentSymbol}
+💼 Conta: ${accountType}
 💰 Entrada: $${settings.stake}
 ⚙️ Estratégia: Zeus
 
@@ -681,12 +683,13 @@ export default function BotInterface() {
     const handleBotStopped = (event: any) => {
       if (telegramSettings.notificationsEnabled && telegramSettings.userTelegram) {
         const reportData = event.detail || {};
+        const currentSymbol = reportData.symbol || 'N/A';
         const profit = reportData.profit || 0;
         const accuracy = reportData.accuracy || '0';
         const trades = reportData.tradeHistory || [];
 
-        // Pegar o último ativo usado (ou todos se houver múltiplos)
-        const lastSymbol = trades.length > 0 ? trades[trades.length - 1].symbol : 'N/A';
+        // Determinar tipo de conta
+        const accountType = settings.selectedTokenType === 'demo' ? 'DEMO' : 'REAL';
 
         // Criar lista de trades
         let tradesList = '';
@@ -699,7 +702,8 @@ export default function BotInterface() {
 ⏹️ <b>Zeus Parado</b>
 
 📊 Sessão finalizada
-📊 Par: ${lastSymbol}
+📊 Par: ${currentSymbol}
+💼 Conta: ${accountType}
 💰 Lucro final: $${profit.toFixed(2)}
 📈 Precisão: ${accuracy}%
 ${tradesList || 'Nenhuma operação realizada'}
@@ -2910,6 +2914,7 @@ ${tradesList || 'Nenhuma operação realizada'}
         
         // Preparar dados do relatório
         const reportData = {
+          symbol: symbol, // Símbolo atual do bot
           profit: profit,
           accuracy: stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : '0',
           totalTrades: stats.total,
