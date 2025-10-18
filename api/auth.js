@@ -265,9 +265,9 @@ module.exports = async function handler(req, res) {
           );
           console.log(`✅ Sessão existente atualizada para usuário ${user_id}`);
         } else {
-          // ✅ CORREÇÃO: Só invalidar sessões antigas (mais de 5 minutos)
+          // ✅ CORREÇÃO: Só invalidar sessões antigas (mais de 24 horas sem atividade)
           await connection.execute(
-            'DELETE FROM user_sessions WHERE user_id = ? AND last_activity < DATE_SUB(NOW(), INTERVAL 5 MINUTE)',
+            'DELETE FROM user_sessions WHERE user_id = ? AND last_activity < DATE_SUB(NOW(), INTERVAL 24 HOUR)',
             [user_id]
           );
 

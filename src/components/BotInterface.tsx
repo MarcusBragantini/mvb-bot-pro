@@ -24,7 +24,8 @@ import {
   TrendingUp,
   DollarSign,
   Target,
-  Zap
+  Zap,
+  Bell
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
@@ -36,6 +37,12 @@ interface LicenseInfo {
   days: number;
   features: string[];
   maxDevices: number;
+}
+
+interface TelegramSettings {
+  botToken: string;
+  userTelegram: string;
+  notificationsEnabled: boolean;
 }
 
 // ===== SISTEMA DE LICENÇAS =====
@@ -123,6 +130,13 @@ export default function BotInterface() {
     autoCloseTime: 30, // segundos
     // ✅ NOVO: Percentual de lucro para fechamento automático
     autoCloseProfit: 20 // percentual (scalp 20%)
+  });
+
+  // ===== ESTADOS DO TELEGRAM =====
+  const [telegramSettings, setTelegramSettings] = useState<TelegramSettings>({
+    botToken: '',
+    userTelegram: '',
+    notificationsEnabled: false
   });
   
   // ===== REFS PARA INTEGRAÇÃO COM CÓDIGO ORIGINAL =====
@@ -227,6 +241,111 @@ export default function BotInterface() {
     // Salvar imediatamente no localStorage com chave do usuário
     const settingsKey = user?.id ? `mvb_bot_settings_${user.id}` : 'mvb_bot_settings_temp';
     localStorage.setItem(settingsKey, JSON.stringify(newSettings));
+  };
+
+  // ===== FUNÇÕES DO TELEGRAM =====
+  const sendTelegramNotification = async (message: string) => {
+    try {
+      if (!telegramSettings.notificationsEnabled || !telegramSettings.userTelegram) {
+        return;
+      }
+
+      // Token do bot configurado
+      const botToken = telegramSettings.botToken;
+      
+      if (!botToken) {
+        return;
+      }
+
+      // ⚠️ IMPORTANTE: Telegram API não aceita @username diretamente
+      // É necessário usar Chat ID numérico
+      const chatId = telegramSettings.userTelegram;
+      
+      // Verificar se é um número (Chat ID) ou username
+      const isNumeric = /^\d+$/.test(chatId);
+      
+      if (!isNumeric) {
+        return false;
+      }
+
+      const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: message,
+          parse_mode: 'HTML'
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.ok) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch (error) {
+      return false;
+    }
+  };
+
+  const testTelegramNotification = async () => {
+    if (!telegramSettings.userTelegram) {
+      toast({
+        title: "❌ Chat ID não configurado",
+        description: "Por favor, insira seu Chat ID do Telegram",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Verificar se é numérico
+    const isNumeric = /^\d+$/.test(telegramSettings.userTelegram);
+    if (!isNumeric) {
+      toast({
+        title: "❌ Chat ID inválido",
+        description: "O Chat ID deve ser apenas números. Siga as instruções para obter o Chat ID correto.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const success = await sendTelegramNotification(`
+🤖 <b>Teste de Notificação - Bot Trading</b>
+
+✅ Sistema de notificações funcionando perfeitamente!
+📊 Agora você receberá atualizações automáticas:
+• Bot iniciado/parado
+• Sinais detectados
+• Resultados de trades
+• Alertas importantes
+
+⏰ ${new Date().toLocaleString()}
+    `.trim());
+
+    if (success) {
+      toast({
+        title: "✅ Teste enviado!",
+        description: "Verifique seu Telegram para confirmar o recebimento.",
+      });
+    } else {
+      toast({
+        title: "❌ Erro no envio",
+        description: "Verifique o token do bot e seu username.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const saveTelegramSettings = () => {
+    localStorage.setItem('telegram_settings', JSON.stringify(telegramSettings));
+    toast({
+      title: "✅ Configurações do Telegram salvas!",
+      description: "Notificações configuradas com sucesso.",
+    });
   };
 
   // ===== FUNÇÕES DE LICENÇA =====
@@ -409,6 +528,14 @@ export default function BotInterface() {
     }
   }, [user?.id]);
 
+  // ===== CARREGAR CONFIGURAÇÕES DO TELEGRAM =====
+  useEffect(() => {
+    const savedTelegramSettings = localStorage.getItem('telegram_settings');
+    if (savedTelegramSettings) {
+      setTelegramSettings(JSON.parse(savedTelegramSettings));
+    }
+  }, []);
+
   // ===== MONITORAR EXPIRAÇÃO DE LICENÇA E PARAR BOT =====
   useEffect(() => {
     if (!isLicenseValid) {
@@ -486,11 +613,60 @@ export default function BotInterface() {
       (window as any).showToast('Teste Toast', 'Se você está vendo isso, o sistema está funcionando!', 'default');
     };
 
+    // Exportar função do Telegram para o bot usar
+    (window as any).sendTelegramNotification = sendTelegramNotification;
+
     return () => {
       delete (window as any).showToast;
       delete (window as any).testToast;
+      delete (window as any).sendTelegramNotification;
     };
   }, [toast]);
+
+  // ===== NOTIFICAÇÕES AUTOMÁTICAS DO BOT =====
+  useEffect(() => {
+    const handleBotStarted = () => {
+      if (telegramSettings.notificationsEnabled && telegramSettings.userTelegram) {
+        sendTelegramNotification(`
+🚀 <b>Bot Trading Iniciado</b>
+
+✅ Bot conectado e analisando mercado
+📊 Par: ${(document.getElementById('symbol') as HTMLSelectElement)?.value || 'R_10'}
+💰 Entrada: $${settings.stake}
+⚙️ Estratégia: MHI + EMA + RSI
+
+⏰ ${new Date().toLocaleString()}
+        `.trim());
+      }
+    };
+
+    const handleBotStopped = () => {
+      if (telegramSettings.notificationsEnabled && telegramSettings.userTelegram) {
+        const profitElement = document.getElementById('profit');
+        const accuracyElement = document.getElementById('accuracy');
+        const profit = profitElement?.textContent || '$0';
+        const accuracy = accuracyElement?.textContent || '0%';
+
+        sendTelegramNotification(`
+⏹️ <b>Bot Trading Parado</b>
+
+📊 Sessão finalizada
+💰 Lucro final: ${profit}
+📈 Precisão: ${accuracy}
+
+⏰ ${new Date().toLocaleString()}
+        `.trim());
+      }
+    };
+
+    window.addEventListener('bot-started', handleBotStarted);
+    window.addEventListener('bot-stopped', handleBotStopped);
+
+    return () => {
+      window.removeEventListener('bot-started', handleBotStarted);
+      window.removeEventListener('bot-stopped', handleBotStopped);
+    };
+  }, [telegramSettings.notificationsEnabled, telegramSettings.userTelegram, settings.stake]);
 
   // ===== INICIALIZAR BOT UMA ÚNICA VEZ (NUNCA REINICIALIZAR) =====
   useEffect(() => {
@@ -738,7 +914,7 @@ export default function BotInterface() {
           <div id="confidenceValue"></div>
           <div id="finalSignal"></div>
         </div>
-        
+
         <!-- Campos ocultos para configurações -->
         <div style="display: none;">
           <input type="number" id="stake" value="${settings.stake || 1}" min="0.01" max="1000" step="0.01">
@@ -2350,7 +2526,7 @@ export default function BotInterface() {
             return "PUT";
           } else {
             addLog(\`⚠️ Mercado MUITO LATERAL detectado (\${trend24hStrength.toFixed(3)}%). Aguardando confirmação dupla MHI + RSI...\`);
-            return "NEUTRO";
+          return "NEUTRO";
           }
         }
         
@@ -3088,70 +3264,187 @@ export default function BotInterface() {
                       </CardHeader>
                       <CardContent>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                          <div>
-                            <Label htmlFor="mhi-setting" className="text-sm font-medium">Períodos MHI</Label>
-                            <Input
-                              id="mhi-setting"
-                              type="number"
-                              min="5"
-                              max="50"
-                              value={settings.mhiPeriods || 20}
-                              className="mt-1"
-                              onChange={(e) => {
-                                const value = parseInt(e.target.value) || 20;
-                                updateSetting('mhiPeriods', value);
-                              }}
-                            />
-                          </div>
-                          
-                          <div>
-                            <Label htmlFor="emafast-setting" className="text-sm font-medium">EMA Rápida</Label>
-                            <Input
-                              id="emafast-setting"
-                              type="number"
-                              min="5"
-                              max="20"
-                              value={settings.emaFast || 8}
-                              className="mt-1"
-                              onChange={(e) => {
-                                const value = parseInt(e.target.value) || 8;
-                                updateSetting('emaFast', value);
-                              }}
-                            />
-                          </div>
-                          
-                          <div>
-                            <Label htmlFor="emaslow-setting" className="text-sm font-medium">EMA Lenta</Label>
-                            <Input
-                              id="emaslow-setting"
-                              type="number"
-                              min="15"
-                              max="50"
-                              value={settings.emaSlow || 18}
-                              className="mt-1"
-                              onChange={(e) => {
-                                const value = parseInt(e.target.value) || 18;
-                                updateSetting('emaSlow', value);
-                              }}
-                            />
-                          </div>
-                          
-                          <div>
-                            <Label htmlFor="rsi-setting" className="text-sm font-medium">RSI Períodos</Label>
-                            <Input
-                              id="rsi-setting"
-                              type="number"
-                              min="7"
-                              max="21"
-                              value={settings.rsiPeriods || 10}
-                              className="mt-1"
-                              onChange={(e) => {
-                                const value = parseInt(e.target.value) || 10;
-                                updateSetting('rsiPeriods', value);
-                              }}
-                            />
-                          </div>
+                        <div>
+                          <Label htmlFor="mhi-setting" className="text-sm font-medium">Períodos MHI</Label>
+                          <Input
+                            id="mhi-setting"
+                            type="number"
+                            min="5"
+                            max="50"
+                            value={settings.mhiPeriods || 20}
+                            className="mt-1"
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 20;
+                              updateSetting('mhiPeriods', value);
+                            }}
+                          />
                         </div>
+                        
+                        <div>
+                          <Label htmlFor="emafast-setting" className="text-sm font-medium">EMA Rápida</Label>
+                          <Input
+                            id="emafast-setting"
+                            type="number"
+                            min="5"
+                            max="20"
+                            value={settings.emaFast || 8}
+                            className="mt-1"
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 8;
+                              updateSetting('emaFast', value);
+                            }}
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="emaslow-setting" className="text-sm font-medium">EMA Lenta</Label>
+                          <Input
+                            id="emaslow-setting"
+                            type="number"
+                            min="15"
+                            max="50"
+                            value={settings.emaSlow || 18}
+                            className="mt-1"
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 18;
+                              updateSetting('emaSlow', value);
+                            }}
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="rsi-setting" className="text-sm font-medium">RSI Períodos</Label>
+                          <Input
+                            id="rsi-setting"
+                            type="number"
+                            min="7"
+                            max="21"
+                            value={settings.rsiPeriods || 10}
+                            className="mt-1"
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 10;
+                              updateSetting('rsiPeriods', value);
+                            }}
+                          />
+                        </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* NOTIFICAÇÕES TELEGRAM - NOVO CARD */}
+                    <Card className="border-cyan-200">
+                      <CardHeader className="pb-4">
+                        <CardTitle className="text-lg text-cyan-600 flex items-center gap-2">
+                          <Bell className="h-5 w-5" />
+                          Notificações Telegram
+                        </CardTitle>
+                        <CardDescription>
+                          Receba notificações automáticas no Telegram
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="telegram-notifications"
+                            checked={telegramSettings.notificationsEnabled}
+                            onChange={(e) => {
+                              const newSettings = {
+                                ...telegramSettings,
+                                notificationsEnabled: e.target.checked
+                              };
+                              setTelegramSettings(newSettings);
+                            }}
+                            className="rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
+                          />
+                          <Label htmlFor="telegram-notifications" className="text-sm font-medium">
+                            Ativar notificações via Telegram
+                          </Label>
+                        </div>
+
+                        {telegramSettings.notificationsEnabled && (
+                          <>
+                        <div>
+                              <Label htmlFor="user-telegram" className="text-sm font-medium">
+                                Seu Chat ID do Telegram
+                              </Label>
+                          <Input
+                                id="user-telegram"
+                                type="text"
+                                placeholder="5034947899"
+                                value={telegramSettings.userTelegram}
+                            className="mt-1"
+                            onChange={(e) => {
+                                  const newSettings = {
+                                    ...telegramSettings,
+                                    userTelegram: e.target.value.trim()
+                                  };
+                                  setTelegramSettings(newSettings);
+                                }}
+                              />
+                              <div className="text-xs text-gray-500 mt-1 space-y-1">
+                                <p><strong>Como obter seu Chat ID:</strong></p>
+                                <ol className="list-decimal list-inside ml-2 space-y-1">
+                                  <li>Envie <code className="bg-slate-200 px-1 rounded">/start</code> para <a href="https://t.me/Mvb_pro_bot" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">@Mvb_pro_bot</a></li>
+                                  <li>Use o bot <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">@userinfobot</a> para obter seu Chat ID</li>
+                                  <li>Copie o número do ID e cole aqui (ex: 5034947899)</li>
+                                </ol>
+                              </div>
+                            </div>
+
+                            <div>
+                              <Label htmlFor="bot-token" className="text-sm font-medium">
+                                Token do Bot Telegram (ADMIN)
+                              </Label>
+                              <Input
+                                id="bot-token"
+                                type="password"
+                                placeholder="Token do seu bot Telegram"
+                                value={telegramSettings.botToken}
+                                className="mt-1"
+                                onChange={(e) => {
+                                  const newSettings = {
+                                    ...telegramSettings,
+                                    botToken: e.target.value
+                                  };
+                                  setTelegramSettings(newSettings);
+                                }}
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                Apenas para administradores. Usuários normais só precisam do username.
+                          </p>
+                        </div>
+
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={testTelegramNotification}
+                                variant="outline"
+                                className="flex-1 border-cyan-300 text-cyan-600 hover:bg-cyan-50"
+                              >
+                                <Bot className="h-4 w-4 mr-2" />
+                                Testar
+                              </Button>
+                              <Button
+                                onClick={saveTelegramSettings}
+                                className="flex-1 bg-cyan-600 hover:bg-cyan-700"
+                              >
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Salvar
+                              </Button>
+                            </div>
+
+                            {telegramSettings.userTelegram && (
+                              <div className="p-3 bg-cyan-50 rounded-lg">
+                                <p className="text-sm text-cyan-800">
+                                  <strong>Notificações ativas!</strong> Chat ID: {telegramSettings.userTelegram}
+                                </p>
+                                <p className="text-xs text-cyan-600 mt-1">
+                                  ✅ Você receberá alertas quando o bot iniciar, parar, detectar sinais e finalizar trades.
+                                </p>
+                              </div>
+                            )}
+                          </>
+                        )}
                       </CardContent>
                     </Card>
                   </div>
