@@ -1,6 +1,7 @@
 // Configuration file to ensure correct API URL
 export const API_CONFIG = {
-  BASE_URL: 'https://mvb-bot-pro.vercel.app/api',
+  // Use relative URL to avoid CORS issues
+  BASE_URL: '/api',
   TIMEOUT: 10000,
 };
 
