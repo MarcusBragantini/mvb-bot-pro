@@ -7,7 +7,7 @@ const path = require('path');
 const DB_CONFIG = {
   host: process.env.DB_HOST || 'srv806.hstgr.io',
   user: process.env.DB_USER || 'u950457610_bot_mvb_saas',
-  password: process.env.DB_PASSWORD || 'Mvb985674',
+  password: process.env.DB_PASSWORD || 'Mvb985674%081521',
   database: process.env.DB_NAME || 'u950457610_bot_mvb_saas',
   port: process.env.DB_PORT || 3306,
   ssl: {
