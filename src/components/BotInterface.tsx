@@ -2822,6 +2822,7 @@ ${tradesList || 'Nenhuma operação realizada'}
         });
         
         updateAccuracy();
+        updateAnalytics(); // Atualizar aba Analytics
 
         // Salvar estado do bot após cada trade
         saveBotState();
@@ -2945,6 +2946,53 @@ ${tradesList || 'Nenhuma operação realizada'}
           addLog(\`📋 Trade adicionado ao histórico: \${result} - $\${profit.toFixed(2)}\`);
         } catch (error) {
           addLog(\`❌ Erro ao adicionar trade ao histórico: \${error.message}\`);
+        }
+      }
+      
+      // ===== ATUALIZAR ABA ANALYTICS =====
+      function updateAnalytics() {
+        try {
+          // Atualizar cards de estatísticas
+          const totalTradesEl = document.getElementById("analytics-total-trades");
+          if (totalTradesEl) totalTradesEl.textContent = stats.total.toString();
+          
+          const winRateEl = document.getElementById("analytics-win-rate");
+          const winRate = stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : '0';
+          if (winRateEl) winRateEl.textContent = winRate + '%';
+          
+          const profitEl = document.getElementById("analytics-profit");
+          if (profitEl) profitEl.textContent = '$' + profit.toFixed(2);
+          
+          const bestStreakEl = document.getElementById("analytics-best-streak");
+          const bestStreak = Math.max(stats.consecutiveWins, stats.consecutiveLosses);
+          if (bestStreakEl) bestStreakEl.textContent = bestStreak.toString();
+          
+          // Atualizar tabela de histórico
+          const historyBody = document.getElementById("analytics-history");
+          if (historyBody && tradeHistory.length > 0) {
+            historyBody.innerHTML = '';
+            
+            tradeHistory.slice().reverse().forEach(trade => {
+              const row = document.createElement("tr");
+              row.style.borderBottom = "1px solid #334155";
+              
+              const resultColor = trade.result === 'WIN' ? '#10b981' : '#ef4444';
+              const profitColor = trade.profit >= 0 ? '#10b981' : '#ef4444';
+              
+              row.innerHTML = \`
+                <td style="padding: 10px 8px; fontSize: 0.8rem;">\${trade.timestamp}</td>
+                <td style="padding: 10px 8px; fontSize: 0.8rem; fontWeight: 600;">\${trade.symbol}</td>
+                <td style="padding: 10px 8px; fontSize: 0.8rem; color: \${trade.signal === 'CALL' ? '#10b981' : '#ef4444'};">\${trade.signal}</td>
+                <td style="padding: 10px 8px; fontSize: 0.8rem;">$\${trade.stake.toFixed(2)}</td>
+                <td style="padding: 10px 8px; fontSize: 0.8rem; color: \${resultColor}; fontWeight: 600;">\${trade.result}</td>
+                <td style="padding: 10px 8px; fontSize: 0.8rem; color: \${profitColor}; fontWeight: 600;">$\${trade.profit.toFixed(2)}</td>
+              \`;
+              
+              historyBody.appendChild(row);
+            });
+          }
+        } catch (error) {
+          // Silenciar erro se aba analytics não estiver aberta
         }
       }
 
@@ -3159,27 +3207,107 @@ ${tradesList || 'Nenhuma operação realizada'}
             </TabsContent>
             
             <TabsContent value="analytics" className="space-y-4">
+              {/* Estatísticas Gerais */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card className="bg-gradient-to-br from-blue-500 to-blue-600 border-0 text-white">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm opacity-90">Total de Trades</p>
+                        <p className="text-3xl font-bold" id="analytics-total-trades">0</p>
+                      </div>
+                      <Target className="h-10 w-10 opacity-80" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gradient-to-br from-green-500 to-green-600 border-0 text-white">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm opacity-90">Taxa de Acerto</p>
+                        <p className="text-3xl font-bold" id="analytics-win-rate">0%</p>
+                      </div>
+                      <TrendingUp className="h-10 w-10 opacity-80" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gradient-to-br from-purple-500 to-purple-600 border-0 text-white">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm opacity-90">Lucro Total</p>
+                        <p className="text-3xl font-bold" id="analytics-profit">$0.00</p>
+                      </div>
+                      <DollarSign className="h-10 w-10 opacity-80" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gradient-to-br from-orange-500 to-orange-600 border-0 text-white">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm opacity-90">Melhor Sequência</p>
+                        <p className="text-3xl font-bold" id="analytics-best-streak">0</p>
+                      </div>
+                      <Zap className="h-10 w-10 opacity-80" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Gráfico de Performance */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" />
-                    Analytics e Performance
+                    <BarChart3 className="h-5 w-5" />
+                    Gráfico de Performance
                   </CardTitle>
                   <CardDescription>
-                    Análise detalhada do desempenho do bot
+                    Evolução do lucro ao longo do tempo
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-12 text-gray-500">
-                    <BarChart3 className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                    <h3 className="text-lg font-semibold mb-2">Analytics em Desenvolvimento</h3>
-                    <p className="text-sm">Esta seção mostrará:</p>
-                    <ul className="text-sm mt-2 space-y-1">
-                      <li>• Gráficos de performance</li>
-                      <li>• Estatísticas detalhadas</li>
-                      <li>• Análise de risco</li>
-                      <li>• Histórico de lucros</li>
-                    </ul>
+                  <div style={{ background: '#1e293b', borderRadius: '12px', padding: '16px', border: '1px solid #475569' }}>
+                    <canvas id="performanceChart" style={{ width: '100%', height: '300px' }}></canvas>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Histórico Detalhado */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="h-5 w-5" />
+                    Histórico de Operações
+                  </CardTitle>
+                  <CardDescription>
+                    Todas as operações realizadas nesta sessão
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full" style={{ minWidth: '500px' }}>
+                      <thead>
+                        <tr style={{ background: '#0f172a', borderBottom: '2px solid #334155' }}>
+                          <th style={{ padding: '8px 6px', textAlign: 'left', color: '#cbd5e1', fontSize: '0.75rem' }}>Horário</th>
+                          <th style={{ padding: '8px 6px', textAlign: 'left', color: '#cbd5e1', fontSize: '0.75rem' }}>Ativo</th>
+                          <th style={{ padding: '8px 6px', textAlign: 'left', color: '#cbd5e1', fontSize: '0.75rem' }}>Sinal</th>
+                          <th style={{ padding: '8px 6px', textAlign: 'left', color: '#cbd5e1', fontSize: '0.75rem' }}>Entrada</th>
+                          <th style={{ padding: '8px 6px', textAlign: 'left', color: '#cbd5e1', fontSize: '0.75rem' }}>Resultado</th>
+                          <th style={{ padding: '8px 6px', textAlign: 'left', color: '#cbd5e1', fontSize: '0.75rem' }}>Lucro</th>
+                        </tr>
+                      </thead>
+                      <tbody id="analytics-history" style={{ color: '#e2e8f0' }}>
+                        <tr>
+                          <td colSpan={6} className="text-center py-8 text-gray-400">
+                            Nenhuma operação registrada ainda
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
                 </CardContent>
               </Card>
