@@ -86,6 +86,9 @@ export default function BotInterface() {
   const [userLicenses, setUserLicenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('trading');
+  
+  // ===== ESTADOS DE ANALYTICS =====
+  const [analyticsAccountFilter, setAnalyticsAccountFilter] = useState<'all' | 'real' | 'demo'>('all');
 
   // Função para verificar se bot está rodando
   const isBotRunning = () => {
@@ -120,7 +123,7 @@ export default function BotInterface() {
       console.log('🔄 Carregando analytics do banco...');
       loadAnalyticsFromDatabase();
     }
-  }, [activeTab, user?.id]);
+  }, [activeTab, user?.id, analyticsAccountFilter]);
   
   // ===== CARREGAR ANALYTICS DO BANCO =====
   const loadAnalyticsFromDatabase = async () => {
@@ -129,10 +132,11 @@ export default function BotInterface() {
       return;
     }
     
-    console.log('🔍 Buscando trades para user_id:', user.id);
+    console.log('🔍 Buscando trades para user_id:', user.id, 'Filtro:', analyticsAccountFilter);
     
     try {
-      const response = await fetch(`/api/data?action=trading_history&user_id=${user.id}`);
+      const filterParam = analyticsAccountFilter !== 'all' ? `&account_type=${analyticsAccountFilter}` : '';
+      const response = await fetch(`/api/data?action=trading_history&user_id=${user.id}${filterParam}`);
       console.log('📡 Resposta da API:', response.status);
       
       if (response.ok) {
@@ -3167,7 +3171,20 @@ ${tradesList || 'Nenhuma operação realizada'}
           
           // ✅ SALVAR NO BANCO DE DADOS
           if (window.user?.id) {
-            console.log('💾 Salvando trade:', { symbol, signal, stake, result, profit });
+            // Detectar tipo de conta do localStorage ou assumir demo
+            let accountType = 'demo';
+            try {
+              const authData = localStorage.getItem('deriv_auth_data');
+              if (authData) {
+                const parsed = JSON.parse(authData);
+                accountType = (parsed.account_type === 'REAL') ? 'real' : 'demo';
+              }
+            } catch (e) {
+              // Se não conseguir ler, usa demo como padrão
+              accountType = 'demo';
+            }
+            
+            console.log('💾 Salvando trade:', { symbol, signal, stake, result, profit, account_type: accountType });
             fetch('/api/data?action=save_trade', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -3178,7 +3195,8 @@ ${tradesList || 'Nenhuma operação realizada'}
                 stake: stake,
                 result: result,
                 profit: profit,
-                confidence: confidence
+                confidence: confidence,
+                account_type: accountType
               })
             }).catch(err => {
               console.error('❌ Erro ao salvar trade:', err);
@@ -3447,6 +3465,44 @@ ${tradesList || 'Nenhuma operação realizada'}
             </TabsContent>
             
             <TabsContent value="analytics" className="space-y-4">
+              {/* Filtro de Tipo de Conta */}
+              <Card className="bg-slate-800 border-slate-700">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-medium text-slate-100">Filtrar por Tipo de Conta</h3>
+                      <p className="text-xs text-gray-400 mt-1">Separe análises de contas Real e Demo</p>
+                    </div>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      <Button
+                        variant={analyticsAccountFilter === 'all' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setAnalyticsAccountFilter('all')}
+                        className="flex-1 sm:flex-none text-xs"
+                      >
+                        Todas
+                      </Button>
+                      <Button
+                        variant={analyticsAccountFilter === 'real' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setAnalyticsAccountFilter('real')}
+                        className="flex-1 sm:flex-none text-xs bg-green-600 hover:bg-green-700 border-green-600"
+                      >
+                        Real
+                      </Button>
+                      <Button
+                        variant={analyticsAccountFilter === 'demo' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setAnalyticsAccountFilter('demo')}
+                        className="flex-1 sm:flex-none text-xs bg-blue-600 hover:bg-blue-700 border-blue-600"
+                      >
+                        Demo
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Estatísticas Gerais */}
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
                 <Card className="bg-gradient-to-br from-blue-600 to-blue-700 border-0 text-white shadow-lg">

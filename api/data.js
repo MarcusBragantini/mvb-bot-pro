@@ -410,7 +410,7 @@ module.exports = async function handler(req, res) {
     // ===== TRADING HISTORY =====
     if (action === 'trading_history') {
       if (req.method === 'GET') {
-        const { user_id } = req.query;
+        const { user_id, account_type } = req.query;
 
         if (!user_id) {
           return res.status(400).json({ error: 'user_id é obrigatório' });
@@ -419,7 +419,8 @@ module.exports = async function handler(req, res) {
         try {
           // ✅ CORREÇÃO: Verificar se tabela existe antes de usar
           try {
-            const [rows] = await connection.execute(`
+            // Construir query com filtro opcional de account_type
+            let query = `
               SELECT 
                 id,
                 symbol,
@@ -430,12 +431,23 @@ module.exports = async function handler(req, res) {
                 profit,
                 confidence,
                 created_at,
-                status
+                status,
+                account_type
               FROM user_trades 
               WHERE user_id = ?
-              ORDER BY created_at DESC
-              LIMIT 1000
-            `, [user_id]);
+            `;
+            
+            const params = [user_id];
+            
+            // Adicionar filtro de account_type se fornecido
+            if (account_type && (account_type === 'real' || account_type === 'demo')) {
+              query += ` AND account_type = ?`;
+              params.push(account_type);
+            }
+            
+            query += ` ORDER BY created_at DESC LIMIT 1000`;
+            
+            const [rows] = await connection.execute(query, params);
             
             // DEBUG: Log dos dados do banco
             console.log('🗄️ Dados do banco para user_id', user_id, ':', rows.length, 'trades');
@@ -470,7 +482,8 @@ module.exports = async function handler(req, res) {
               profit: parseFloat(trade.profit) || 0,
               confidence: trade.confidence,
               created_at: trade.created_at,
-              status: trade.status
+              status: trade.status,
+              account_type: trade.account_type || 'demo'
             }));
 
             return res.status(200).json({ 
@@ -497,7 +510,7 @@ module.exports = async function handler(req, res) {
     // ===== SALVAR TRADE =====
     if (action === 'save_trade') {
       if (req.method === 'POST') {
-        const { user_id, symbol, trade_signal, stake, result, profit, confidence } = req.body;
+        const { user_id, symbol, trade_signal, stake, result, profit, confidence, account_type } = req.body;
 
         if (!user_id || !symbol || !trade_signal || !result) {
           return res.status(400).json({ error: 'Campos obrigatórios ausentes' });
@@ -514,9 +527,10 @@ module.exports = async function handler(req, res) {
               profit, 
               confidence,
               status,
+              account_type,
               created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'completed', NOW())
-          `, [user_id, symbol, trade_signal, stake, result, profit || 0, confidence || 0]);
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'completed', ?, NOW())
+          `, [user_id, symbol, trade_signal, stake, result, profit || 0, confidence || 0, account_type || 'demo']);
 
           return res.status(200).json({ 
             success: true,
