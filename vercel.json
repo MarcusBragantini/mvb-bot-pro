@@ -1,29 +1,8 @@
 {
-  "version": 2,
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "functions": {
-    "api/**/*.js": {
-      "memory": 1024,
-      "maxDuration": 10
-    }
-  },
-  "rewrites": [
+  "crons": [
     {
-      "source": "/api/admin/:path*",
-      "destination": "/api/admin"
-    },
-    {
-      "source": "/api/auth",
-      "destination": "/api/auth"
-    },
-    {
-      "source": "/api/data",
-      "destination": "/api/data"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "path": "/api/engagement-notifications",
+      "schedule": "0 10 * * *"
     }
   ]
 }
