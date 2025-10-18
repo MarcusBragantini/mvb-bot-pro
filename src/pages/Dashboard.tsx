@@ -402,7 +402,7 @@ export default function Dashboard() {
                 <Bot className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-slate-100">MVB Pro</h1>
+                <h1 className="text-xl font-bold text-slate-100">Zeus</h1>
                 <p className="text-sm text-gray-400 hidden sm:block">Dashboard</p>
               </div>
             </div>
