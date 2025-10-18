@@ -107,6 +107,174 @@ export default function BotInterface() {
       });
     }
     setActiveTab(newTab);
+    
+    // Carregar dados do banco ao abrir aba Analytics
+    if (newTab === 'analytics' && user?.id) {
+      loadAnalyticsFromDatabase();
+    }
+  };
+  
+  // ===== CARREGAR ANALYTICS DO BANCO =====
+  const loadAnalyticsFromDatabase = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const response = await fetch(`/api/data?action=trading_history&user_id=${user.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        const trades = data.trades || [];
+        
+        if (trades.length > 0) {
+          // Calcular estatísticas do banco
+          const totalTrades = trades.length;
+          const wins = trades.filter((t: any) => t.result === 'WIN').length;
+          const losses = totalTrades - wins;
+          const winRate = ((wins / totalTrades) * 100).toFixed(1);
+          const totalProfit = trades.reduce((sum: number, t: any) => sum + (parseFloat(t.profit) || 0), 0);
+          
+          // Atualizar cards
+          const totalEl = document.getElementById('analytics-total-trades');
+          const winRateEl = document.getElementById('analytics-win-rate');
+          const profitEl = document.getElementById('analytics-profit');
+          
+          if (totalEl) totalEl.textContent = totalTrades.toString();
+          if (winRateEl) winRateEl.textContent = winRate + '%';
+          if (profitEl) profitEl.textContent = '$' + totalProfit.toFixed(2);
+          
+          // Atualizar tabela
+          const historyBody = document.getElementById('analytics-history');
+          if (historyBody) {
+            historyBody.innerHTML = '';
+            
+            trades.forEach((trade: any) => {
+              const row = document.createElement('tr');
+              row.style.borderBottom = '1px solid #334155';
+              
+              const resultColor = trade.result === 'WIN' ? '#10b981' : '#ef4444';
+              const profitColor = parseFloat(trade.profit) >= 0 ? '#10b981' : '#ef4444';
+              const signalColor = trade.trade_type === 'CALL' ? '#10b981' : '#ef4444';
+              
+              row.innerHTML = `
+                <td style="padding: 10px 8px; fontSize: 0.8rem;">${new Date(trade.created_at).toLocaleString()}</td>
+                <td style="padding: 10px 8px; fontSize: 0.8rem; fontWeight: 600;">${trade.symbol || 'N/A'}</td>
+                <td style="padding: 10px 8px; fontSize: 0.8rem; color: ${signalColor};">${trade.trade_type}</td>
+                <td style="padding: 10px 8px; fontSize: 0.8rem;">$${parseFloat(trade.stake || 0).toFixed(2)}</td>
+                <td style="padding: 10px 8px; fontSize: 0.8rem; color: ${resultColor}; fontWeight: 600;">${trade.result}</td>
+                <td style="padding: 10px 8px; fontSize: 0.8rem; color: ${profitColor}; fontWeight: 600;">$${parseFloat(trade.profit || 0).toFixed(2)}</td>
+              `;
+              
+              historyBody.appendChild(row);
+            });
+          }
+          
+          // Criar gráfico de performance
+          createPerformanceChart(trades, wins, losses);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar analytics:', error);
+    }
+  };
+  
+  // ===== CRIAR GRÁFICO DE PERFORMANCE =====
+  const createPerformanceChart = (trades: any[], wins: number, losses: number) => {
+    const canvas = document.getElementById('performanceChart') as HTMLCanvasElement;
+    if (!canvas || typeof (window as any).Chart === 'undefined') return;
+    
+    // Destruir gráfico existente
+    const existingChart = (window as any).performanceChartInstance;
+    if (existingChart) {
+      existingChart.destroy();
+    }
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    // Preparar dados de evolução do lucro
+    let cumulativeProfit = 0;
+    const profitData = trades.reverse().map((trade: any) => {
+      cumulativeProfit += parseFloat(trade.profit) || 0;
+      return {
+        x: new Date(trade.created_at),
+        y: cumulativeProfit
+      };
+    });
+    
+    // Criar gráfico
+    const chart = new (window as any).Chart(ctx, {
+      type: 'line',
+      data: {
+        datasets: [
+          {
+            label: 'Evolução do Lucro',
+            data: profitData,
+            borderColor: '#60a5fa',
+            backgroundColor: 'rgba(96, 165, 250, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 4,
+            pointBackgroundColor: '#60a5fa',
+            pointBorderColor: '#1e40af',
+            pointBorderWidth: 2
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            labels: {
+              color: '#cbd5e1',
+              font: { size: 12, weight: 'bold' }
+            }
+          },
+          tooltip: {
+            backgroundColor: '#0f172a',
+            titleColor: '#f1f5f9',
+            bodyColor: '#cbd5e1',
+            borderColor: '#334155',
+            borderWidth: 1
+          }
+        },
+        scales: {
+          x: {
+            type: 'time',
+            time: {
+              unit: 'minute',
+              displayFormats: {
+                minute: 'HH:mm',
+                hour: 'HH:mm'
+              }
+            },
+            ticks: {
+              color: '#94a3b8',
+              font: { size: 11 }
+            },
+            grid: {
+              color: '#334155',
+              drawBorder: false
+            }
+          },
+          y: {
+            ticks: {
+              color: '#cbd5e1',
+              font: { size: 11, weight: 'bold' },
+              callback: (value: any) => '$' + value.toFixed(2)
+            },
+            grid: {
+              color: '#334155',
+              drawBorder: false
+            }
+          }
+        }
+      }
+    });
+    
+    // Salvar referência para destruir depois
+    (window as any).performanceChartInstance = chart;
   };
   
   // ===== ESTADOS DAS CONFIGURAÇÕES =====
@@ -2944,6 +3112,25 @@ ${tradesList || 'Nenhuma operação realizada'}
           historyBody.prepend(row);
           
           addLog(\`📋 Trade adicionado ao histórico: \${result} - $\${profit.toFixed(2)}\`);
+          
+          // ✅ SALVAR NO BANCO DE DADOS
+          if (window.user?.id) {
+            fetch('/api/data?action=save_trade', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                user_id: window.user.id,
+                symbol: symbol,
+                signal: signal,
+                stake: stake,
+                result: result,
+                profit: profit,
+                confidence: confidence
+              })
+            }).catch(err => {
+              // Silenciar erro - não crítico
+            });
+          }
         } catch (error) {
           addLog(\`❌ Erro ao adicionar trade ao histórico: \${error.message}\`);
         }
