@@ -173,7 +173,17 @@ export default function BotInterface() {
                 trade_signal: trade.trade_signal,
                 trade_type: trade.trade_type,
                 result: trade.result,
-                profit: trade.profit
+                profit: trade.profit,
+                stake: trade.stake,
+                created_at: trade.created_at
+              });
+              
+              // DEBUG: Verificar se os campos estão vazios
+              console.log('🔍 Verificação de campos:', {
+                'symbol vazio?': !trade.symbol,
+                'trade_signal vazio?': !trade.trade_signal,
+                'trade_type vazio?': !trade.trade_type,
+                'result vazio?': !trade.result
               });
               
               // Fallbacks para campos que podem estar vazios
@@ -3497,17 +3507,28 @@ ${tradesList || 'Nenhuma operação realizada'}
                 </CardContent>
               </Card>
 
-              {/* Histórico Detalhado */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Activity className="h-5 w-5" />
-                    Histórico de Operações
-                  </CardTitle>
-                  <CardDescription>
-                    Todas as operações realizadas nesta sessão
-                  </CardDescription>
-                </CardHeader>
+          {/* Histórico Detalhado */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5" />
+                Histórico de Operações
+              </CardTitle>
+              <CardDescription>
+                Todas as operações realizadas nesta sessão
+              </CardDescription>
+              <Button 
+                onClick={() => {
+                  console.log('🔄 Forçando recarregamento...');
+                  loadAnalyticsFromDatabase();
+                }}
+                variant="outline" 
+                size="sm"
+                className="mt-2"
+              >
+                🔄 Recarregar Dados
+              </Button>
+            </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
                     <table className="w-full" style={{ minWidth: '500px' }}>

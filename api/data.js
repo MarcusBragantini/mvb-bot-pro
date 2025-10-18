@@ -436,6 +436,12 @@ module.exports = async function handler(req, res) {
               ORDER BY created_at DESC
               LIMIT 1000
             `, [user_id]);
+            
+            // DEBUG: Log dos dados do banco
+            console.log('🗄️ Dados do banco para user_id', user_id, ':', rows.length, 'trades');
+            if (rows.length > 0) {
+              console.log('📋 Primeiro trade:', rows[0]);
+            }
 
             // Se não há trades, retornar array vazio
             if (rows.length === 0) {
