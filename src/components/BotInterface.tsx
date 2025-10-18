@@ -150,6 +150,15 @@ export default function BotInterface() {
               const row = document.createElement('tr');
               row.style.borderBottom = '1px solid #334155';
               
+              // DEBUG: Mostrar dados recebidos
+              console.log('📊 Trade recebido:', {
+                symbol: trade.symbol,
+                trade_signal: trade.trade_signal,
+                trade_type: trade.trade_type,
+                result: trade.result,
+                profit: trade.profit
+              });
+              
               // Fallbacks para campos que podem estar vazios
               const tradeResult = trade.result || (parseFloat(trade.profit) >= 0 ? 'WIN' : 'LOSS');
               const tradeSignal = trade.trade_signal || trade.trade_type || '-';
@@ -3122,20 +3131,21 @@ ${tradesList || 'Nenhuma operação realizada'}
           
           // ✅ SALVAR NO BANCO DE DADOS
           if (window.user?.id) {
+            console.log('💾 Salvando trade:', { symbol, signal, stake, result, profit });
             fetch('/api/data?action=save_trade', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 user_id: window.user.id,
                 symbol: symbol,
-                signal: signal,
+                trade_signal: signal,
                 stake: stake,
                 result: result,
                 profit: profit,
                 confidence: confidence
               })
             }).catch(err => {
-              // Silenciar erro - não crítico
+              console.error('❌ Erro ao salvar trade:', err);
             });
           }
         } catch (error) {

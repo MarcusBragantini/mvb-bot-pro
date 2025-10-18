@@ -478,9 +478,9 @@ module.exports = async function handler(req, res) {
     // ===== SALVAR TRADE =====
     if (action === 'save_trade') {
       if (req.method === 'POST') {
-        const { user_id, symbol, signal, stake, result, profit, confidence } = req.body;
+        const { user_id, symbol, trade_signal, stake, result, profit, confidence } = req.body;
 
-        if (!user_id || !symbol || !signal || !result) {
+        if (!user_id || !symbol || !trade_signal || !result) {
           return res.status(400).json({ error: 'Campos obrigatórios ausentes' });
         }
 
@@ -497,7 +497,7 @@ module.exports = async function handler(req, res) {
               status,
               created_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, 'completed', NOW())
-          `, [user_id, symbol, signal, stake, result, profit || 0, confidence || 0]);
+          `, [user_id, symbol, trade_signal, stake, result, profit || 0, confidence || 0]);
 
           return res.status(200).json({ 
             success: true,
