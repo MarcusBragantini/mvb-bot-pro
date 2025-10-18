@@ -387,19 +387,21 @@ export default function Dashboard() {
     <div className="min-h-screen bg-slate-900">
       {/* Header */}
       <header className="bg-slate-800 shadow-sm border-b border-slate-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg">
-                <Bot className="h-6 w-6 text-white" />
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-12 sm:h-16 gap-2">
+            {/* Logo e Título */}
+            <div className="flex items-center space-x-1 sm:space-x-3 min-w-0 flex-shrink-0">
+              <div className="p-1 sm:p-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg">
+                <Bot className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
               </div>
-              <div>
+              <div className="hidden sm:block">
                 <h1 className="text-xl font-bold text-slate-100">Zeus</h1>
-                <p className="text-sm text-gray-400 hidden sm:block">Dashboard</p>
+                <p className="text-sm text-gray-400">Dashboard</p>
               </div>
             </div>
             
-            <div className="flex items-center space-x-4">
+            {/* Informações do Usuário - Oculto em mobile */}
+            <div className="hidden md:flex items-center space-x-4 flex-1 justify-end">
               <div className="text-right">
                 <p className="text-sm font-medium text-slate-100">{user?.name}</p>
                 <p className="text-xs text-gray-400">{user?.email}</p>
@@ -427,11 +429,33 @@ export default function Dashboard() {
                 </Button>
               </div>
             </div>
+            
+            {/* Botões Mobile */}
+            <div className="flex md:hidden items-center gap-1 flex-shrink-0">
+              {isAdmin && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => navigate('/admin')}
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 p-1 h-8"
+                >
+                  <ShieldCheck className="h-3 w-3" />
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={logout}
+                className="p-1 h-8"
+              >
+                <LogOut className="h-3 w-3" />
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-slate-900">
+      <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-3 sm:py-8 bg-slate-900">
         {error && (
           <Alert variant="destructive" className="mb-6">
             <AlertCircle className="h-4 w-4" />
@@ -439,76 +463,76 @@ export default function Dashboard() {
           </Alert>
         )}
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-3 sm:space-y-6">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-            <TabsTrigger value="bot">Bot Trading</TabsTrigger>
+            <TabsTrigger value="overview" className="text-xs sm:text-sm">Visão Geral</TabsTrigger>
+            <TabsTrigger value="bot" className="text-xs sm:text-sm">Bot Trading</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-6" forceMount style={{ display: activeTab === 'overview' ? 'block' : 'none' }}>
+          <TabsContent value="overview" className="space-y-3 sm:space-y-6" forceMount style={{ display: activeTab === 'overview' ? 'block' : 'none' }}>
             {/* Informações da Conta */}
             <Card className="bg-slate-800 border-slate-700">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-slate-100">
-                  <Shield className="h-5 w-5 text-blue-400" />
+              <CardHeader className="p-3 sm:p-6">
+                <CardTitle className="flex items-center gap-2 text-slate-100 text-sm sm:text-base">
+                  <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400" />
                   Minha Conta
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-6">
+                <div className="grid grid-cols-1 gap-3 sm:gap-4">
                   <div>
-                    <p className="text-sm text-gray-400">Nome</p>
-                    <p className="font-semibold text-slate-100">{user?.name}</p>
+                    <p className="text-xs sm:text-sm text-gray-400">Nome</p>
+                    <p className="font-semibold text-slate-100 text-sm sm:text-base break-words">{user?.name}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-400">Email</p>
-                    <p className="font-semibold text-slate-100">{user?.email}</p>
+                    <p className="text-xs sm:text-sm text-gray-400">Email</p>
+                    <p className="font-semibold text-slate-100 text-sm sm:text-base break-all">{user?.email}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-400">Cliente desde</p>
-                    <p className="font-semibold text-slate-100">
+                    <p className="text-xs sm:text-sm text-gray-400">Cliente desde</p>
+                    <p className="font-semibold text-slate-100 text-sm sm:text-base">
                       {user?.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : '-'}
                     </p>
                   </div>
                 </div>
                 {activeLicense && (
-                  <div className="pt-4 border-t border-slate-600">
-                    <div className="space-y-4">
+                  <div className="pt-3 sm:pt-4 border-t border-slate-600">
+                    <div className="space-y-3 sm:space-y-4">
                       {/* Informações básicas da licença */}
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                         <div>
-                          <p className="text-sm text-gray-400">Tipo de Licença</p>
-                          <Badge className="mt-1 bg-blue-600 text-white">
+                          <p className="text-xs sm:text-sm text-gray-400">Tipo de Licença</p>
+                          <Badge className="mt-1 bg-blue-600 text-white text-xs">
                             {activeLicense.license_type === 'free' ? 'TESTE' : activeLicense.license_type.toUpperCase()}
                           </Badge>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-400">Status</p>
-                          <Badge className={`mt-1 ${getStatusBadge(activeLicense.status)}`}>
+                          <p className="text-xs sm:text-sm text-gray-400">Status</p>
+                          <Badge className={`mt-1 text-xs ${getStatusBadge(activeLicense.status)}`}>
                             {activeLicense.status.toUpperCase()}
                           </Badge>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-400">Chave</p>
-                          <p className="font-mono text-xs font-semibold text-slate-100">{activeLicense.license_key}</p>
+                          <p className="text-xs sm:text-sm text-gray-400">Chave</p>
+                          <p className="font-mono text-xs font-semibold text-slate-100 break-all">{activeLicense.license_key}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-400">Dispositivos</p>
-                          <p className="font-semibold text-slate-100">{activeLicense.max_devices} permitido(s)</p>
+                          <p className="text-xs sm:text-sm text-gray-400">Dispositivos</p>
+                          <p className="font-semibold text-slate-100 text-sm">{activeLicense.max_devices} permitido(s)</p>
                         </div>
                       </div>
 
                       {/* Detalhes da licença */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                         <div>
-                          <p className="text-sm text-gray-400">Criada em</p>
-                          <p className="font-semibold text-slate-100">
+                          <p className="text-xs sm:text-sm text-gray-400">Criada em</p>
+                          <p className="font-semibold text-slate-100 text-sm">
                             {new Date(activeLicense.created_at).toLocaleDateString('pt-BR')}
                           </p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-400">Expira em</p>
-                          <p className="font-semibold text-slate-100">
+                          <p className="text-xs sm:text-sm text-gray-400">Expira em</p>
+                          <p className="font-semibold text-slate-100 text-sm">
                             {new Date(activeLicense.expires_at).toLocaleDateString('pt-BR')}
                           </p>
                         </div>
@@ -516,9 +540,9 @@ export default function Dashboard() {
 
                       {/* Tempo restante com progress bar */}
                       <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-400">Tempo restante:</span>
-                          <span className={`text-sm font-bold ${
+                        <div className="flex flex-wrap justify-between items-center gap-2">
+                          <span className="text-xs sm:text-sm text-gray-400">Tempo restante:</span>
+                          <span className={`text-xs sm:text-sm font-bold ${
                             activeLicense.license_type === 'free' 
                               ? (Math.max(0, Math.ceil((new Date(activeLicense.expires_at).getTime() - Date.now()) / (1000 * 60))) > 2 ? 'text-green-600' : 'text-red-600')
                               : (activeLicense.days_remaining > 7 ? 'text-green-600' : 
