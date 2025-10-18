@@ -370,45 +370,45 @@ export default function Admin() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
+      <main className="max-w-7xl mx-auto p-3 sm:p-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
+          <Card className="bg-gradient-to-br from-blue-600 to-blue-700 border-0 text-white shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total de Usuários</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-xs sm:text-sm font-medium text-white">Total de Usuários</CardTitle>
+              <Users className="h-4 w-4 text-white opacity-80" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalUsers}</div>
+              <div className="text-xl sm:text-2xl font-bold text-white">{stats.totalUsers}</div>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="bg-gradient-to-br from-purple-600 to-purple-700 border-0 text-white shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total de Licenças</CardTitle>
-              <Key className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-xs sm:text-sm font-medium text-white">Total de Licenças</CardTitle>
+              <Key className="h-4 w-4 text-white opacity-80" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalLicenses}</div>
+              <div className="text-xl sm:text-2xl font-bold text-white">{stats.totalLicenses}</div>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="bg-gradient-to-br from-green-600 to-green-700 border-0 text-white shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Licenças Ativas</CardTitle>
-              <CheckCircle className="h-4 w-4 text-green-600" />
+              <CardTitle className="text-xs sm:text-sm font-medium text-white">Licenças Ativas</CardTitle>
+              <CheckCircle className="h-4 w-4 text-white opacity-80" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.activeLicenses}</div>
+              <div className="text-xl sm:text-2xl font-bold text-white">{stats.activeLicenses}</div>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="bg-gradient-to-br from-red-600 to-red-700 border-0 text-white shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Licenças Expiradas</CardTitle>
-              <XCircle className="h-4 w-4 text-red-600" />
+              <CardTitle className="text-xs sm:text-sm font-medium text-white">Licenças Expiradas</CardTitle>
+              <XCircle className="h-4 w-4 text-white opacity-80" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">{stats.expiredLicenses}</div>
+              <div className="text-xl sm:text-2xl font-bold text-white">{stats.expiredLicenses}</div>
             </CardContent>
           </Card>
         </div>
@@ -429,16 +429,16 @@ export default function Admin() {
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
+                  <table className="w-full border-collapse" style={{ minWidth: '800px' }}>
                     <thead>
-                      <tr className="border-b">
-                        <th className="text-left p-3">Usuário</th>
-                        <th className="text-left p-3">Email</th>
-                        <th className="text-left p-3">Data Cadastro</th>
-                        <th className="text-left p-3">Tipo Licença</th>
-                        <th className="text-left p-3">Status Licença</th>
-                        <th className="text-left p-3">Expira em</th>
-                        <th className="text-left p-3">Ações</th>
+                      <tr className="border-b bg-slate-50">
+                        <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-semibold">Usuário</th>
+                        <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-semibold hidden sm:table-cell">Email</th>
+                        <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-semibold hidden md:table-cell">Data Cadastro</th>
+                        <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-semibold">Tipo Licença</th>
+                        <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-semibold">Status Licença</th>
+                        <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-semibold hidden lg:table-cell">Expira em</th>
+                        <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-semibold">Ações</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -448,52 +448,53 @@ export default function Admin() {
                         
                         return (
                           <tr key={user.id} className={rowClass}>
-                            <td className="p-3">
+                            <td className="p-2 sm:p-3">
                               <div>
-                                <div className="font-medium">{user.name}</div>
-                                <div className="text-sm text-gray-500">ID: {user.id}</div>
+                                <div className="font-medium text-sm sm:text-base">{user.name}</div>
+                                <div className="text-xs text-gray-500">ID: {user.id}</div>
+                                <div className="text-xs text-gray-500 sm:hidden">{user.email}</div>
                               </div>
                             </td>
-                            <td className="p-3">{user.email}</td>
-                            <td className="p-3">
-                              <div className="text-sm">
+                            <td className="p-2 sm:p-3 hidden sm:table-cell">{user.email}</td>
+                            <td className="p-2 sm:p-3 hidden md:table-cell">
+                              <div className="text-xs sm:text-sm">
                                 {new Date(user.created_at).toLocaleDateString('pt-BR')}
                               </div>
                             </td>
-                            <td className="p-3">
+                            <td className="p-2 sm:p-3">
                               {user.license_type ? (
-                                <Badge className={Object.values(LICENSE_TYPES).find(lt => lt.type === user.license_type)?.color || 'bg-gray-100 text-gray-800'}>
+                                <Badge className={`text-xs ${Object.values(LICENSE_TYPES).find(lt => lt.type === user.license_type)?.color || 'bg-gray-100 text-gray-800'}`}>
                                   {Object.values(LICENSE_TYPES).find(lt => lt.type === user.license_type)?.name || user.license_type.toUpperCase()}
                                 </Badge>
                               ) : (
-                                <Badge variant="outline" className="text-gray-400">Sem Licença</Badge>
+                                <Badge variant="outline" className="text-xs text-gray-400">Sem Licença</Badge>
                               )}
                             </td>
-                            <td className="p-3">
+                            <td className="p-2 sm:p-3">
                               {user.license_status === 'sem_licenca' && (
-                                <Badge variant="outline" className="text-gray-500">
+                                <Badge variant="outline" className="text-xs text-gray-500">
                                   Sem Licença
                                 </Badge>
                               )}
                               {user.license_status === 'ativa' && (
-                                <Badge className="bg-green-100 text-green-800">
+                                <Badge className="text-xs bg-green-100 text-green-800">
                                   ✓ Ativa
                                 </Badge>
                               )}
                               {user.license_status === 'expirando' && (
-                                <Badge className="bg-orange-100 text-orange-800">
+                                <Badge className="text-xs bg-orange-100 text-orange-800">
                                   ⚠ Expirando
                                 </Badge>
                               )}
                               {user.license_status === 'expirada' && (
-                                <Badge className="bg-red-100 text-red-800">
+                                <Badge className="text-xs bg-red-100 text-red-800">
                                   ✗ Expirada
                                 </Badge>
                               )}
                             </td>
-                            <td className="p-3">
+                            <td className="p-2 sm:p-3 hidden lg:table-cell">
                               {user.expires_at ? (
-                                <div className="text-sm">
+                                <div className="text-xs sm:text-sm">
                                   {user.license_type === 'lifetime' ? (
                                     <span className="font-semibold text-yellow-600">∞ Vitalícia</span>
                                   ) : user.days_remaining > 0 ? (
@@ -508,16 +509,16 @@ export default function Admin() {
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-gray-400 text-sm">-</span>
+                                <span className="text-gray-400 text-xs sm:text-sm">-</span>
                               )}
                             </td>
-                            <td className="p-3">
-                              <div className="flex gap-2">
+                            <td className="p-2 sm:p-3">
+                              <div className="flex gap-1 sm:gap-2">
                                 <Select
                                   value={user.status}
                                   onValueChange={(value) => handleUpdateUserStatus(user.id, value)}
                                 >
-                                  <SelectTrigger className="w-32">
+                                  <SelectTrigger className="w-24 sm:w-32 text-xs">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -631,22 +632,26 @@ export default function Admin() {
                       </div>
                     </DialogContent>
                   </Dialog>
-                  <Button 
-                    variant="outline"
-                    onClick={handleCleanupExpiredLicenses}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Limpar Expiradas
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    onClick={handleRemoveInactiveUsers}
-                    className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                  >
-                    <UserX className="h-4 w-4 mr-2" />
-                    Remover Inativos
-                  </Button>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button 
+                      variant="outline"
+                      onClick={handleCleanupExpiredLicenses}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 text-xs sm:text-sm"
+                    >
+                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">Limpar Expiradas</span>
+                      <span className="sm:hidden">Limpar</span>
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={handleRemoveInactiveUsers}
+                      className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 text-xs sm:text-sm"
+                    >
+                      <UserX className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">Remover Inativos</span>
+                      <span className="sm:hidden">Remover</span>
+                    </Button>
+                  </div>
                   </div>
                 </div>
               </CardHeader>
