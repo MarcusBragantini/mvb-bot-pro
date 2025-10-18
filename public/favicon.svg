@@ -1,42 +1,66 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <defs>
-    <linearGradient id="robotGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
-    </linearGradient>
-  </defs>
-  
-  <!-- Corpo do robô -->
-  <rect x="25" y="35" width="50" height="45" rx="8" fill="url(#robotGradient)"/>
+  <!-- Fundo circular azul escuro -->
+  <circle cx="50" cy="50" r="48" fill="#1e40af" stroke="#3b82f6" stroke-width="2"/>
   
   <!-- Cabeça do robô -->
-  <rect x="30" y="15" width="40" height="25" rx="6" fill="url(#robotGradient)"/>
+  <rect x="30" y="30" width="40" height="35" rx="5" fill="#60a5fa" stroke="#1e40af" stroke-width="1.5"/>
   
-  <!-- Antena -->
-  <line x1="50" y1="15" x2="50" y2="8" stroke="#667eea" stroke-width="3" stroke-linecap="round"/>
-  <circle cx="50" cy="6" r="4" fill="#ffd700"/>
+  <!-- Antena esquerda -->
+  <line x1="37" y1="30" x2="37" y2="22" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="37" cy="20" r="3" fill="#fbbf24"/>
+  
+  <!-- Antena direita -->
+  <line x1="63" y1="30" x2="63" y2="22" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="63" cy="20" r="3" fill="#fbbf24"/>
   
   <!-- Olhos -->
-  <circle cx="40" cy="25" r="4" fill="#ffffff"/>
-  <circle cx="60" cy="25" r="4" fill="#ffffff"/>
-  <circle cx="41" cy="25" r="2" fill="#667eea"/>
-  <circle cx="61" cy="25" r="2" fill="#667eea"/>
+  <circle cx="40" cy="42" r="4" fill="#1e40af"/>
+  <circle cx="60" cy="42" r="4" fill="#1e40af"/>
   
-  <!-- Boca/Display -->
-  <rect x="38" y="32" width="24" height="4" rx="2" fill="#ffffff" opacity="0.8"/>
+  <!-- Boca/display -->
+  <rect x="38" y="52" width="24" height="8" rx="2" fill="#1e40af" opacity="0.6"/>
+  
+  <!-- Corpo do robô -->
+  <rect x="32" y="65" width="36" height="20" rx="3" fill="#60a5fa" stroke="#1e40af" stroke-width="1.5"/>
+  
+  <!-- Detalhes do corpo -->
+  <circle cx="43" cy="75" r="2.5" fill="#1e40af"/>
+  <circle cx="57" cy="75" r="2.5" fill="#1e40af"/>
   
   <!-- Braços -->
-  <rect x="15" y="45" width="8" height="25" rx="4" fill="url(#robotGradient)"/>
-  <rect x="77" y="45" width="8" height="25" rx="4" fill="url(#robotGradient)"/>
+  <rect x="20" y="68" width="10" height="12" rx="2" fill="#60a5fa" stroke="#1e40af" stroke-width="1.5"/>
+  <rect x="70" y="68" width="10" height="12" rx="2" fill="#60a5fa" stroke="#1e40af" stroke-width="1.5"/>
   
-  <!-- Detalhes do peito -->
-  <circle cx="50" cy="52" r="6" fill="#ffffff" opacity="0.3"/>
-  <circle cx="38" cy="62" r="3" fill="#ffffff" opacity="0.3"/>
-  <circle cx="62" cy="62" r="3" fill="#ffffff" opacity="0.3"/>
+  <!-- RAIO DE ZEUS - símbolo principal -->
+  <g transform="translate(65, 35)">
+    <!-- Raio amarelo brilhante -->
+    <path d="M 0,-8 L 3,0 L -2,0 L 2,10 L -3,2 L 2,2 Z" 
+          fill="#fbbf24" 
+          stroke="#f59e0b" 
+          stroke-width="0.5"
+          filter="url(#glow)"/>
+  </g>
   
-  <!-- Base -->
-  <rect x="35" y="80" width="30" height="8" rx="4" fill="url(#robotGradient)"/>
+  <!-- Segundo raio menor -->
+  <g transform="translate(35, 45) scale(0.6)">
+    <path d="M 0,-6 L 2,0 L -1,0 L 1,8 L -2,2 L 1,2 Z" 
+          fill="#fbbf24" 
+          opacity="0.8"/>
+  </g>
   
-  <!-- Efeito de brilho -->
-  <path d="M 32 20 Q 35 18 38 20" stroke="#ffffff" stroke-width="2" fill="none" opacity="0.5"/>
+  <!-- Efeito de brilho para o raio -->
+  <defs>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="0.5" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Pequenos detalhes de energia ao redor -->
+  <circle cx="75" cy="40" r="1.5" fill="#fbbf24" opacity="0.7"/>
+  <circle cx="78" cy="48" r="1" fill="#fbbf24" opacity="0.6"/>
+  <circle cx="72" cy="52" r="1.2" fill="#fbbf24" opacity="0.7"/>
 </svg>
