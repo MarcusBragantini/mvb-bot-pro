@@ -661,12 +661,21 @@ export default function BotInterface() {
   // ===== NOTIFICAÇÕES AUTOMÁTICAS DO BOT =====
   useEffect(() => {
     const handleBotStarted = () => {
+      console.log('🎯 Evento bot-started recebido!');
+      console.log('📱 Telegram ativo?', telegramSettings.notificationsEnabled);
+      console.log('📱 User Telegram:', telegramSettings.userTelegram);
+      
       if (telegramSettings.notificationsEnabled && telegramSettings.userTelegram) {
+        const symbolElement = document.getElementById('symbol') as HTMLSelectElement;
+        const currentSymbol = symbolElement?.value || 'R_10';
+        
+        console.log('📊 Enviando notificação para ativo:', currentSymbol);
+        
         sendTelegramNotification(`
 🚀 <b>Zeus Iniciado</b>
 
 ✅ Bot conectado e analisando mercado
-📊 Par: ${(document.getElementById('symbol') as HTMLSelectElement)?.value || 'R_10'}
+📊 Par: ${currentSymbol}
 💰 Entrada: $${settings.stake}
 ⚙️ Estratégia: Zeus
 
