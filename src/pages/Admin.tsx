@@ -448,50 +448,58 @@ export default function Admin() {
                     const isExpiring = user.license_status === 'expirando' || user.license_status === 'expirada';
                     return (
                       <div key={user.id} className={`p-3 border-b ${isExpiring ? 'bg-orange-50' : 'bg-white'}`}>
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex-1">
-                            <h3 className="font-medium text-sm">{user.name}</h3>
-                            <p className="text-xs text-gray-500">{user.email}</p>
-                            <p className="text-xs text-gray-400">ID: {user.id}</p>
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            {user.license_type ? (
-                              <Badge className={`text-xs ${Object.values(LICENSE_TYPES).find(lt => lt.type === user.license_type)?.color || 'bg-gray-100 text-gray-800'}`}>
-                                {Object.values(LICENSE_TYPES).find(lt => lt.type === user.license_type)?.name || user.license_type.toUpperCase()}
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-xs text-gray-400">Sem Licença</Badge>
-                            )}
-                            {user.license_status === 'ativa' && (
-                              <Badge className="text-xs bg-green-100 text-green-800">✓ Ativa</Badge>
-                            )}
-                            {user.license_status === 'expirando' && (
-                              <Badge className="text-xs bg-orange-100 text-orange-800">⚠ Expirando</Badge>
-                            )}
-                            {user.license_status === 'expirada' && (
-                              <Badge className="text-xs bg-red-100 text-red-800">✗ Expirada</Badge>
-                            )}
-                          </div>
+                        {/* Nome e Email */}
+                        <div className="mb-2">
+                          <h3 className="font-medium text-sm break-words">{user.name}</h3>
+                          <p className="text-xs text-gray-500 break-all">{user.email}</p>
+                          <p className="text-xs text-gray-400">ID: {user.id}</p>
                         </div>
-                        <div className="flex justify-between items-center">
-                          <div className="text-xs text-gray-500">
-                            {user.expires_at && user.license_type !== 'lifetime' && user.days_remaining > 0 && (
+                        
+                        {/* Badges - Quebra linha se necessário */}
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {user.license_type ? (
+                            <Badge className={`text-xs ${Object.values(LICENSE_TYPES).find(lt => lt.type === user.license_type)?.color || 'bg-gray-100 text-gray-800'}`}>
+                              {Object.values(LICENSE_TYPES).find(lt => lt.type === user.license_type)?.name || user.license_type.toUpperCase()}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs text-gray-400">Sem Licença</Badge>
+                          )}
+                          {user.license_status === 'ativa' && (
+                            <Badge className="text-xs bg-green-100 text-green-800">✓ Ativa</Badge>
+                          )}
+                          {user.license_status === 'expirando' && (
+                            <Badge className="text-xs bg-orange-100 text-orange-800">⚠ Expirando</Badge>
+                          )}
+                          {user.license_status === 'expirada' && (
+                            <Badge className="text-xs bg-red-100 text-red-800">✗ Expirada</Badge>
+                          )}
+                        </div>
+                        
+                        {/* Informações de expiração */}
+                        {user.expires_at && (
+                          <div className="text-xs text-gray-500 mb-2">
+                            {user.license_type === 'lifetime' ? (
+                              <span className="font-semibold text-yellow-600">∞ Vitalícia</span>
+                            ) : user.days_remaining > 0 ? (
                               <span>
-                                {user.license_type === 'free' ? 
+                                Expira em: {user.license_type === 'free' ? 
                                   `${user.days_remaining} min` : 
                                   `${user.days_remaining} dias`
                                 }
                               </span>
-                            )}
-                            {user.license_type === 'lifetime' && (
-                              <span className="font-semibold text-yellow-600">∞ Vitalícia</span>
+                            ) : (
+                              <span className="text-red-600">Expirada</span>
                             )}
                           </div>
+                        )}
+                        
+                        {/* Select de status - Largura total */}
+                        <div className="mt-2">
                           <Select
                             value={user.status}
                             onValueChange={(value) => handleUpdateUserStatus(user.id, value)}
                           >
-                            <SelectTrigger className="w-20 h-7 text-xs">
+                            <SelectTrigger className="w-full h-8 text-xs">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -739,53 +747,62 @@ export default function Admin() {
                 <div className="block sm:hidden">
                   {licenses.map((license) => (
                     <div key={license.id} className="p-3 border-b bg-white">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex-1">
-                          <h3 className="font-medium text-sm font-mono">{license.license_key}</h3>
-                          <p className="text-xs text-gray-500">{license.name}</p>
-                          <p className="text-xs text-gray-400">{license.email}</p>
+                      {/* Chave da Licença */}
+                      <div className="mb-2">
+                        <h3 className="font-medium text-xs font-mono break-all">{license.license_key}</h3>
+                      </div>
+                      
+                      {/* Nome e Email */}
+                      <div className="mb-2">
+                        <p className="text-xs text-gray-700 font-medium break-words">{license.name}</p>
+                        <p className="text-xs text-gray-500 break-all">{license.email}</p>
+                      </div>
+                      
+                      {/* Badges - Quebra linha se necessário */}
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        <Badge className={`text-xs ${Object.values(LICENSE_TYPES).find(lt => lt.type === license.license_type)?.color || 'bg-gray-100 text-gray-800'}`}>
+                          {Object.values(LICENSE_TYPES).find(lt => lt.type === license.license_type)?.name || license.license_type.toUpperCase()}
+                        </Badge>
+                        <Badge variant={getLicenseStatusColor(license)} className="text-xs">
+                          {license.days_remaining > 0 ? (
+                            license.license_type === 'free' ? 
+                              `${license.days_remaining} min` : 
+                              `${license.days_remaining} dias`
+                          ) : (
+                            'Expirada'
+                          )}
+                        </Badge>
+                      </div>
+                      
+                      {/* Informações de Dispositivos e Data */}
+                      <div className="flex flex-wrap gap-2 mb-2 text-xs text-gray-600">
+                        <div className="flex items-center gap-1">
+                          <Monitor className="h-3 w-3 text-gray-500" />
+                          <span>{license.active_devices}/{license.max_devices} dispositivos</span>
                         </div>
-                        <div className="flex flex-col gap-1">
-                          <Badge className={`text-xs ${Object.values(LICENSE_TYPES).find(lt => lt.type === license.license_type)?.color || 'bg-gray-100 text-gray-800'}`}>
-                            {Object.values(LICENSE_TYPES).find(lt => lt.type === license.license_type)?.name || license.license_type.toUpperCase()}
-                          </Badge>
-                          <Badge variant={getLicenseStatusColor(license)} className="text-xs">
-                            {license.days_remaining > 0 ? (
-                              license.license_type === 'free' ? 
-                                `${license.days_remaining} min` : 
-                                `${license.days_remaining} dias`
-                            ) : (
-                              'Expirada'
-                            )}
-                          </Badge>
+                        <div>
+                          Expira: {new Date(license.expires_at).toLocaleDateString('pt-BR')}
                         </div>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <Monitor className="h-3 w-3 text-gray-500" />
-                          <span className="text-xs text-gray-600">{license.active_devices}/{license.max_devices}</span>
-                          <span className="text-xs text-gray-500">
-                            {new Date(license.expires_at).toLocaleDateString('pt-BR')}
-                          </span>
-                        </div>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeactivateLicense(license.id)}
-                            className="text-xs px-2 py-1 h-6"
-                          >
-                            Desativar
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleExtendLicense(license.id, 30)}
-                            className="text-xs px-2 py-1 h-6"
-                          >
-                            +30d
-                          </Button>
-                        </div>
+                      
+                      {/* Botões de Ação - Largura total */}
+                      <div className="flex gap-2 mt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeactivateLicense(license.id)}
+                          className="flex-1 text-xs h-8"
+                        >
+                          Desativar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleExtendLicense(license.id, 30)}
+                          className="flex-1 text-xs h-8"
+                        >
+                          Estender +30d
+                        </Button>
                       </div>
                     </div>
                   ))}
