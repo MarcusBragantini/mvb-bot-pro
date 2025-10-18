@@ -250,12 +250,27 @@ export default function BotInterface() {
         return;
       }
 
-      // Token padrão - SUBSTITUA pelo token do seu bot
-      const botToken = telegramSettings.botToken || '7546983142:AAH0_2e6abcdEFG567hijklMNOPQRSTUVWXYZ';
+      // Token do bot configurado
+      const botToken = telegramSettings.botToken || '8488356513:AAHQf7eRYsqxA02Azckcmqs10Bidik6887k';
       
       if (!botToken) {
         console.log('❌ Token do bot não configurado');
         return;
+      }
+
+      // ⚠️ IMPORTANTE: Telegram API não aceita @username diretamente
+      // É necessário usar Chat ID numérico
+      // Por enquanto, desabilitar notificações se não for Chat ID
+      const chatId = telegramSettings.userTelegram;
+      
+      // Verificar se é um número (Chat ID) ou username
+      const isNumeric = /^\d+$/.test(chatId);
+      
+      if (!isNumeric) {
+        console.log('⚠️ Username detectado. Telegram API requer Chat ID numérico.');
+        console.log('ℹ️ Instruções: Envie /start para @Mvb_pro_bot e obtenha seu Chat ID em:');
+        console.log('ℹ️ https://api.telegram.org/bot' + botToken + '/getUpdates');
+        return false;
       }
 
       const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
@@ -264,7 +279,7 @@ export default function BotInterface() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          chat_id: `@${telegramSettings.userTelegram}`,
+          chat_id: chatId,
           text: message,
           parse_mode: 'HTML'
         })
@@ -277,6 +292,7 @@ export default function BotInterface() {
         return true;
       } else {
         console.error('❌ Erro ao enviar notificação:', data);
+        console.error('ℹ️ Verifique se você enviou /start para o bot @Mvb_pro_bot');
         return false;
       }
     } catch (error) {
@@ -288,8 +304,19 @@ export default function BotInterface() {
   const testTelegramNotification = async () => {
     if (!telegramSettings.userTelegram) {
       toast({
-        title: "❌ Username não configurado",
-        description: "Por favor, insira seu @username do Telegram",
+        title: "❌ Chat ID não configurado",
+        description: "Por favor, insira seu Chat ID do Telegram",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Verificar se é numérico
+    const isNumeric = /^\d+$/.test(telegramSettings.userTelegram);
+    if (!isNumeric) {
+      toast({
+        title: "❌ Chat ID inválido",
+        description: "O Chat ID deve ser apenas números. Siga as instruções para obter o Chat ID correto.",
         variant: "destructive"
       });
       return;
@@ -896,7 +923,7 @@ export default function BotInterface() {
           <div id="confidenceValue"></div>
           <div id="finalSignal"></div>
         </div>
-        
+
         <!-- Campos ocultos para configurações -->
         <div style="display: none;">
           <input type="number" id="stake" value="${settings.stake || 1}" min="0.01" max="1000" step="0.01">
@@ -2508,7 +2535,7 @@ export default function BotInterface() {
             return "PUT";
           } else {
             addLog(\`⚠️ Mercado MUITO LATERAL detectado (\${trend24hStrength.toFixed(3)}%). Aguardando confirmação dupla MHI + RSI...\`);
-            return "NEUTRO";
+          return "NEUTRO";
           }
         }
         
@@ -3246,69 +3273,69 @@ export default function BotInterface() {
                       </CardHeader>
                       <CardContent>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                          <div>
-                            <Label htmlFor="mhi-setting" className="text-sm font-medium">Períodos MHI</Label>
-                            <Input
-                              id="mhi-setting"
-                              type="number"
-                              min="5"
-                              max="50"
-                              value={settings.mhiPeriods || 20}
-                              className="mt-1"
-                              onChange={(e) => {
-                                const value = parseInt(e.target.value) || 20;
-                                updateSetting('mhiPeriods', value);
-                              }}
-                            />
-                          </div>
-                          
-                          <div>
-                            <Label htmlFor="emafast-setting" className="text-sm font-medium">EMA Rápida</Label>
-                            <Input
-                              id="emafast-setting"
-                              type="number"
-                              min="5"
-                              max="20"
-                              value={settings.emaFast || 8}
-                              className="mt-1"
-                              onChange={(e) => {
-                                const value = parseInt(e.target.value) || 8;
-                                updateSetting('emaFast', value);
-                              }}
-                            />
-                          </div>
-                          
-                          <div>
-                            <Label htmlFor="emaslow-setting" className="text-sm font-medium">EMA Lenta</Label>
-                            <Input
-                              id="emaslow-setting"
-                              type="number"
-                              min="15"
-                              max="50"
-                              value={settings.emaSlow || 18}
-                              className="mt-1"
-                              onChange={(e) => {
-                                const value = parseInt(e.target.value) || 18;
-                                updateSetting('emaSlow', value);
-                              }}
-                            />
-                          </div>
-                          
-                          <div>
-                            <Label htmlFor="rsi-setting" className="text-sm font-medium">RSI Períodos</Label>
-                            <Input
-                              id="rsi-setting"
-                              type="number"
-                              min="7"
-                              max="21"
-                              value={settings.rsiPeriods || 10}
-                              className="mt-1"
-                              onChange={(e) => {
-                                const value = parseInt(e.target.value) || 10;
-                                updateSetting('rsiPeriods', value);
-                              }}
-                            />
-                          </div>
+                        <div>
+                          <Label htmlFor="mhi-setting" className="text-sm font-medium">Períodos MHI</Label>
+                          <Input
+                            id="mhi-setting"
+                            type="number"
+                            min="5"
+                            max="50"
+                            value={settings.mhiPeriods || 20}
+                            className="mt-1"
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 20;
+                              updateSetting('mhiPeriods', value);
+                            }}
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="emafast-setting" className="text-sm font-medium">EMA Rápida</Label>
+                          <Input
+                            id="emafast-setting"
+                            type="number"
+                            min="5"
+                            max="20"
+                            value={settings.emaFast || 8}
+                            className="mt-1"
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 8;
+                              updateSetting('emaFast', value);
+                            }}
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="emaslow-setting" className="text-sm font-medium">EMA Lenta</Label>
+                          <Input
+                            id="emaslow-setting"
+                            type="number"
+                            min="15"
+                            max="50"
+                            value={settings.emaSlow || 18}
+                            className="mt-1"
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 18;
+                              updateSetting('emaSlow', value);
+                            }}
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="rsi-setting" className="text-sm font-medium">RSI Períodos</Label>
+                          <Input
+                            id="rsi-setting"
+                            type="number"
+                            min="7"
+                            max="21"
+                            value={settings.rsiPeriods || 10}
+                            className="mt-1"
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 10;
+                              updateSetting('rsiPeriods', value);
+                            }}
+                          />
+                        </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -3346,27 +3373,32 @@ export default function BotInterface() {
 
                         {telegramSettings.notificationsEnabled && (
                           <>
-                            <div>
+                        <div>
                               <Label htmlFor="user-telegram" className="text-sm font-medium">
-                                Seu @username do Telegram
+                                Seu Chat ID do Telegram
                               </Label>
-                              <Input
+                          <Input
                                 id="user-telegram"
                                 type="text"
-                                placeholder="seuusuario"
+                                placeholder="5034947899"
                                 value={telegramSettings.userTelegram}
-                                className="mt-1"
-                                onChange={(e) => {
+                            className="mt-1"
+                            onChange={(e) => {
                                   const newSettings = {
                                     ...telegramSettings,
-                                    userTelegram: e.target.value.replace('@', '')
+                                    userTelegram: e.target.value.trim()
                                   };
                                   setTelegramSettings(newSettings);
                                 }}
                               />
-                              <p className="text-xs text-gray-500 mt-1">
-                                Digite apenas o username, sem o @. Ex: joaosilva
-                              </p>
+                              <div className="text-xs text-gray-500 mt-1 space-y-1">
+                                <p><strong>Como obter seu Chat ID:</strong></p>
+                                <ol className="list-decimal list-inside ml-2 space-y-1">
+                                  <li>Envie <code className="bg-slate-200 px-1 rounded">/start</code> para <a href="https://t.me/Mvb_pro_bot" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">@Mvb_pro_bot</a></li>
+                                  <li>Acesse <a href="https://api.telegram.org/bot8488356513:AAHQf7eRYsqxA02Azckcmqs10Bidik6887k/getUpdates" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">este link</a></li>
+                                  <li>Procure por <code className="bg-slate-200 px-1 rounded">"id":</code> e copie o número (ex: 5034947899)</li>
+                                </ol>
+                              </div>
                             </div>
 
                             <div>
@@ -3389,8 +3421,8 @@ export default function BotInterface() {
                               />
                               <p className="text-xs text-gray-500 mt-1">
                                 Apenas para administradores. Usuários normais só precisam do username.
-                              </p>
-                            </div>
+                          </p>
+                        </div>
 
                             <div className="flex gap-2">
                               <Button
@@ -3413,10 +3445,10 @@ export default function BotInterface() {
                             {telegramSettings.userTelegram && (
                               <div className="p-3 bg-cyan-50 rounded-lg">
                                 <p className="text-sm text-cyan-800">
-                                  <strong>Notificações ativas para:</strong> @{telegramSettings.userTelegram}
+                                  <strong>Notificações ativas!</strong> Chat ID: {telegramSettings.userTelegram}
                                 </p>
                                 <p className="text-xs text-cyan-600 mt-1">
-                                  Você receberá alertas quando o bot iniciar, parar, detectar sinais e finalizar trades.
+                                  ✅ Você receberá alertas quando o bot iniciar, parar, detectar sinais e finalizar trades.
                                 </p>
                               </div>
                             )}
