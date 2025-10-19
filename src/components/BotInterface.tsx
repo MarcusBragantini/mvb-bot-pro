@@ -466,6 +466,12 @@ export default function BotInterface() {
     // Salvar imediatamente no localStorage com chave do usuário
     const settingsKey = user?.id ? `mvb_bot_settings_${user.id}` : 'mvb_bot_settings_temp';
     localStorage.setItem(settingsKey, JSON.stringify(newSettings));
+    
+    // Debug para selectedTokenType
+    if (key === 'selectedTokenType') {
+      console.log('🔄 Tipo de conta alterado:', value);
+      console.log('📊 Settings atualizados:', newSettings);
+    }
   };
 
   // ===== FUNÇÕES DO TELEGRAM =====
@@ -3415,32 +3421,32 @@ ${tradesList || 'Nenhuma operação realizada'}
                 <CardContent>
                   <div className="grid grid-cols-2 gap-2 sm:gap-4">
                     <Button
-                      variant={settings.selectedTokenType === 'demo' ? 'default' : 'outline'}
+                      type="button"
                       onClick={() => updateSetting('selectedTokenType', 'demo')}
                       className={`h-auto py-3 px-2 sm:px-4 transition-all duration-200 ${
                         settings.selectedTokenType === 'demo' 
-                          ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg' 
-                          : 'border-blue-300 text-blue-600 hover:bg-blue-600 hover:text-white hover:border-blue-600 hover:shadow-md'
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg border-blue-600' 
+                          : 'bg-slate-700 border-blue-300 text-blue-400 hover:bg-blue-600 hover:text-white hover:border-blue-600 hover:shadow-md'
                       }`}
                     >
                       <div className="text-center w-full">
-                        <div className="font-semibold text-sm sm:text-base">Demo</div>
+                        <div className="font-semibold text-sm sm:text-base">💎 Demo</div>
                         <div className="text-xs opacity-75 mt-1">
                           {settings.derivTokenDemo ? '✅ Configurado' : '❌ Não configurado'}
                         </div>
                       </div>
                     </Button>
                     <Button
-                      variant={settings.selectedTokenType === 'real' ? 'default' : 'outline'}
+                      type="button"
                       onClick={() => updateSetting('selectedTokenType', 'real')}
                       className={`h-auto py-3 px-2 sm:px-4 transition-all duration-200 ${
                         settings.selectedTokenType === 'real' 
-                          ? 'bg-red-600 hover:bg-red-700 text-white shadow-lg' 
-                          : 'border-red-300 text-red-600 hover:bg-red-600 hover:text-white hover:border-red-600 hover:shadow-md'
+                          ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg border-green-600' 
+                          : 'bg-slate-700 border-green-300 text-green-400 hover:bg-green-600 hover:text-white hover:border-green-600 hover:shadow-md'
                       }`}
                     >
                       <div className="text-center w-full">
-                        <div className="font-semibold text-sm sm:text-base">Real</div>
+                        <div className="font-semibold text-sm sm:text-base">💰 Real</div>
                         <div className="text-xs opacity-75 mt-1">
                           {settings.derivTokenReal ? '✅ Configurado' : '❌ Não configurado'}
                         </div>
