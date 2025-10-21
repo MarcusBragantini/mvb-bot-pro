@@ -117,9 +117,9 @@ export default function BotInterface() {
     }
   };
   
-  // ===== DETECTAR SESSÃO ATIVA DO TELEGRAM AO CARREGAR =====
+  // ===== DETECTAR SESSÃO ATIVA DO TELEGRAM E AUTO-INICIAR =====
   useEffect(() => {
-    const checkActiveSession = async () => {
+    const checkAndStartSession = async () => {
       if (!user?.id || !isLicenseValid) return;
       
       try {
@@ -128,17 +128,41 @@ export default function BotInterface() {
         
         if (data.has_active_session && data.session.source === 'telegram') {
           console.log('🤖 Sessão ativa do Telegram detectada:', data.session);
+          
+          // Aplicar configurações da sessão do Telegram
+          const session = data.session;
+          updateSetting('stake', parseFloat(session.stake));
+          updateSetting('martingale', parseFloat(session.martingale));
+          updateSetting('duration', parseInt(session.duration));
+          updateSetting('stopWin', parseFloat(session.stop_win));
+          updateSetting('stopLoss', parseFloat(session.stop_loss));
+          updateSetting('confidence', parseInt(session.confidence));
+          updateSetting('selectedTokenType', session.account_type);
+          
           toast({
-            title: "🤖 Bot em Background Detectado",
-            description: `Bot iniciado via Telegram está ativo! Símbolo: ${data.session.symbol}`,
+            title: "🤖 Sessão do Telegram Detectada!",
+            description: `Auto-iniciando bot com suas configurações: ${session.symbol}, $${session.stake}`,
           });
+          
+          // Auto-iniciar bot após 3 segundos (dar tempo para aplicar configs)
+          setTimeout(() => {
+            // Simular clique no botão de iniciar
+            const botElement = document.getElementById('bot-container');
+            if (botElement) {
+              const startButton = document.getElementById('startBtn');
+              if (startButton && !startButton.disabled) {
+                console.log('🚀 Auto-iniciando bot com configurações do Telegram...');
+                startButton.click();
+              }
+            }
+          }, 3000);
         }
       } catch (error) {
         console.error('❌ Erro ao verificar sessão ativa:', error);
       }
     };
     
-    checkActiveSession();
+    checkAndStartSession();
   }, [user?.id, isLicenseValid]);
   
   // ===== CARREGAR ANALYTICS AO MONTAR O COMPONENTE =====
