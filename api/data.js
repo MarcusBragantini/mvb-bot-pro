@@ -592,6 +592,48 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    // ===== SINCRONIZAR ESTATÍSTICAS DA SESSÃO (EM TEMPO REAL) =====
+    if (action === 'sync_session_stats') {
+      if (req.method === 'POST') {
+        const { session_id, profit_delta, result } = req.body;
+
+        if (!session_id) {
+          return res.status(400).json({ error: 'session_id é obrigatório' });
+        }
+
+        try {
+          // Incrementar contadores
+          const profitIncrement = parseFloat(profit_delta) || 0;
+          const isWin = result === 'WIN' ? 1 : 0;
+          const isLoss = result === 'LOSS' ? 1 : 0;
+
+          await connection.execute(
+            `UPDATE bot_sessions 
+             SET current_profit = current_profit + ?,
+                 trades_count = trades_count + 1,
+                 wins_count = wins_count + ?,
+                 losses_count = losses_count + ?,
+                 last_trade_at = NOW(),
+                 updated_at = NOW()
+             WHERE id = ?`,
+            [profitIncrement, isWin, isLoss, session_id]
+          );
+
+          console.log(`✅ Sessão sincronizada: session_id=${session_id}, profit_delta=$${profitIncrement}, ${result}`);
+          return res.status(200).json({ 
+            success: true,
+            message: 'Sessão sincronizada' 
+          });
+        } catch (error) {
+          console.error('❌ Erro ao sincronizar sessão:', error);
+          return res.status(500).json({ 
+            error: 'Erro ao sincronizar sessão',
+            details: error.message 
+          });
+        }
+      }
+    }
+
     // ===== ATUALIZAR SESSÃO DO BOT =====
     if (action === 'update_bot_session') {
       if (req.method === 'POST') {

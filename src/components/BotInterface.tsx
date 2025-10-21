@@ -3265,6 +3265,21 @@ ${tradesList || 'Nenhuma operação realizada'}
             }).catch(err => {
               console.error('❌ Erro ao salvar trade:', err);
             });
+            
+            // ✅ ATUALIZAR SESSÃO NO BANCO (para sincronizar com Telegram /status)
+            if (window.botSessionId) {
+              fetch('/api/data?action=sync_session_stats', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  session_id: window.botSessionId,
+                  profit_delta: profit,
+                  result: result
+                })
+              }).catch(err => {
+                console.error('❌ Erro ao atualizar sessão:', err);
+              });
+            }
           }
         } catch (error) {
           addLog(\`❌ Erro ao adicionar trade ao histórico: \${error.message}\`);
