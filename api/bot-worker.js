@@ -42,21 +42,42 @@ async function sendTelegramNotification(chatId, message) {
 }
 
 // ===== FUNÇÃO: OBTER DADOS DO MERCADO VIA API DERIV =====
-async function getMarketData(symbol, token) {
+async function getMarketData(symbol) {
   try {
-    // Usar API HTTP da Deriv para obter dados
-    const response = await fetch(`https://api.deriv.com/ticks/${symbol}?count=100`, {
+    // Usar API pública da Deriv (não requer autenticação)
+    const response = await fetch(`https://api.deriv.com/ticks_history?ticks_history=${symbol}&count=50&end=latest&style=ticks`, {
+      method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Content-Type': 'application/json'
       }
     });
     
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      console.error(`❌ API Deriv retornou ${response.status}`);
+      return null;
     }
     
     const data = await response.json();
-    return data.ticks || [];
+    
+    if (data.error) {
+      console.error(`❌ Erro da API Deriv: ${data.error.message}`);
+      return null;
+    }
+    
+    if (!data.history || !data.history.prices) {
+      console.error('❌ Dados de mercado inválidos');
+      return null;
+    }
+    
+    // Converter para formato de ticks
+    const ticks = data.history.prices.map((price, index) => ({
+      quote: price,
+      epoch: data.history.times[index]
+    }));
+    
+    console.log(`✅ Obtidos ${ticks.length} ticks de ${symbol}`);
+    return ticks;
+    
   } catch (error) {
     console.error(`❌ Erro ao obter dados de ${symbol}:`, error.message);
     return null;
@@ -89,72 +110,74 @@ function analyzeMarket(ticks) {
   return { signal: null, confidence: 0 };
 }
 
-// ===== FUNÇÃO: EXECUTAR TRADE =====
+// ===== FUNÇÃO: EXECUTAR TRADE REAL VIA API DERIV =====
 async function executeTrade(session, token, signal) {
   try {
-    // Preparar proposta de trade
-    const proposal = {
+    console.log(`🔄 Executando trade ${signal} em ${session.symbol}...`);
+    
+    // 1. OBTER PROPOSTA
+    const proposalParams = {
       proposal: 1,
-      amount: session.stake,
+      amount: parseFloat(session.stake),
       basis: 'stake',
-      contract_type: signal === 'CALL' ? 'CALL' : 'PUT',
+      contract_type: signal,
       currency: 'USD',
-      duration: session.duration || 1,
+      duration: parseInt(session.duration) || 1,
       duration_unit: 'm',
       symbol: session.symbol
     };
-
-    // Enviar proposta via API Deriv
-    const proposalResponse = await fetch('https://api.deriv.com/proposal', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(proposal)
-    });
-
-    if (!proposalResponse.ok) {
-      throw new Error(`Proposta falhou: ${proposalResponse.status}`);
-    }
-
+    
+    const proposalUrl = `https://api.deriv.com/api/v3/proposal?${new URLSearchParams({
+      ...proposalParams,
+      authorize: token
+    })}`;
+    
+    const proposalResponse = await fetch(proposalUrl);
     const proposalData = await proposalResponse.json();
     
     if (proposalData.error) {
-      throw new Error(proposalData.error.message);
+      console.error(`❌ Erro na proposta: ${proposalData.error.message}`);
+      return { success: false, error: proposalData.error.message };
     }
-
-    // Comprar o contrato
-    const buyResponse = await fetch('https://api.deriv.com/buy', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        buy: proposalData.proposal.id,
-        price: proposalData.proposal.ask_price
-      })
-    });
-
-    if (!buyResponse.ok) {
-      throw new Error(`Compra falhou: ${buyResponse.status}`);
+    
+    if (!proposalData.proposal || !proposalData.proposal.id) {
+      console.error('❌ Proposta inválida');
+      return { success: false, error: 'Proposta inválida' };
     }
-
+    
+    console.log(`✅ Proposta aceita: ID ${proposalData.proposal.id}, Preço: $${proposalData.proposal.ask_price}`);
+    
+    // 2. COMPRAR CONTRATO
+    const buyUrl = `https://api.deriv.com/api/v3/buy?${new URLSearchParams({
+      buy: proposalData.proposal.id,
+      price: proposalData.proposal.ask_price,
+      authorize: token
+    })}`;
+    
+    const buyResponse = await fetch(buyUrl);
     const buyData = await buyResponse.json();
     
     if (buyData.error) {
-      throw new Error(buyData.error.message);
+      console.error(`❌ Erro na compra: ${buyData.error.message}`);
+      return { success: false, error: buyData.error.message };
     }
-
+    
+    if (!buyData.buy || !buyData.buy.contract_id) {
+      console.error('❌ Compra falhou');
+      return { success: false, error: 'Compra falhou' };
+    }
+    
+    console.log(`✅ Trade executado! Contrato: ${buyData.buy.contract_id}`);
+    
     return {
       success: true,
       contract_id: buyData.buy.contract_id,
-      buy_price: buyData.buy.buy_price
+      buy_price: buyData.buy.buy_price,
+      payout: buyData.buy.payout
     };
 
   } catch (error) {
-    console.error('❌ Erro ao executar trade:', error);
+    console.error('❌ Erro ao executar trade:', error.message);
     return { success: false, error: error.message };
   }
 }
@@ -258,52 +281,40 @@ async function executeBotSession(connection, session) {
 
     console.log(`✅ Sinal detectado: ${analysis.signal} (${analysis.confidence}% confiança)`);
 
-    // ✅ EXECUTAR TRADE
+    // ✅ EXECUTAR TRADE REAL
     const tradeResult = await executeTrade(session, token, analysis.signal);
     
     if (!tradeResult.success) {
       console.error(`❌ Trade falhou: ${tradeResult.error}`);
+      
+      // Notificar erro no Telegram
+      if (session.telegram_chat_id) {
+        await sendTelegramNotification(
+          session.telegram_chat_id,
+          `❌ <b>Erro ao Executar Trade</b>\n\n${tradeResult.error}\n\nVerifique suas configurações e token Deriv.`
+        );
+      }
       return;
     }
 
-    // ✅ SIMULAR RESULTADO (em produção, você pegaria o resultado real)
-    // Por enquanto, vou simular 60% win rate
-    const isWin = Math.random() < 0.6;
-    const profit = isWin ? parseFloat(session.stake) * 0.85 : -parseFloat(session.stake);
-    const result = isWin ? 'WIN' : 'LOSS';
+    console.log(`✅ Trade executado com sucesso! Contrato: ${tradeResult.contract_id}`);
 
-    // ✅ ATUALIZAR SESSÃO
-    const newProfit = currentProfit + profit;
-    const newTrades = session.trades_count + 1;
-    const newWins = session.wins_count + (isWin ? 1 : 0);
-    const newLosses = session.losses_count + (isWin ? 0 : 1);
-
-    await connection.execute(
-      `UPDATE bot_sessions 
-       SET current_profit = ?, trades_count = ?, wins_count = ?, losses_count = ?, 
-           last_trade_at = NOW(), updated_at = NOW()
-       WHERE id = ?`,
-      [newProfit, newTrades, newWins, newLosses, session.id]
-    );
-
-    // ✅ SALVAR TRADE NO HISTÓRICO
-    await connection.execute(
-      `INSERT INTO user_trades 
-       (user_id, symbol, trade_signal, stake, result, profit, confidence, account_type)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [session.user_id, session.symbol, analysis.signal, session.stake, result, profit, analysis.confidence, session.account_type]
-    );
-
-    console.log(`✅ Trade executado: ${result} - Lucro: $${profit.toFixed(2)}`);
-
-    // ✅ NOTIFICAR NO TELEGRAM
+    // ✅ NOTIFICAR TRADE ABERTO NO TELEGRAM
     if (session.telegram_chat_id) {
-      const emoji = isWin ? '✅' : '❌';
       await sendTelegramNotification(
         session.telegram_chat_id,
-        `${emoji} <b>Trade Finalizado</b>\n\n📊 ${session.symbol} | ${analysis.signal}\n💰 ${result}: $${profit.toFixed(2)}\n📈 Total: $${newProfit.toFixed(2)} (${newWins}W/${newLosses}L)`
+        `🔵 <b>Trade Aberto</b>\n\n📊 ${session.symbol} | ${analysis.signal}\n💰 Stake: $${session.stake}\n🎯 Confiança: ${analysis.confidence}%\n📝 Contrato: ${tradeResult.contract_id}\n\n⏳ Aguardando resultado...`
       );
     }
+
+    // ⚠️ IMPORTANTE: Resultado será verificado na próxima execução
+    // Por enquanto, apenas atualizar updated_at para manter sessão ativa
+    await connection.execute(
+      'UPDATE bot_sessions SET updated_at = NOW(), last_trade_at = NOW() WHERE id = ?',
+      [session.id]
+    );
+    
+    console.log(`ℹ️ Trade em andamento. Resultado será verificado na próxima execução.`)
 
   } catch (error) {
     console.error(`❌ Erro ao processar sessão ${session.id}:`, error);
