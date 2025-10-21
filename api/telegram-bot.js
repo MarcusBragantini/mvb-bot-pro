@@ -53,6 +53,28 @@ async function sendTelegramMessage(chatId, text, parseMode = 'HTML', keyboard = 
   }
 }
 
+// ===== FUNÇÃO: RESPONDER CALLBACK QUERY =====
+async function answerCallback(callbackId, text = null) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  if (!botToken) return false;
+
+  try {
+    const payload = { callback_query_id: callbackId };
+    if (text) payload.text = text;
+
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    return response.ok;
+  } catch (error) {
+    console.error('❌ Erro ao responder callback:', error);
+    return false;
+  }
+}
+
 // ===== FUNÇÃO: LOG DE COMANDO =====
 async function logCommand(connection, chatId, username, command, params, response, success, error = null) {
   try {
@@ -473,6 +495,27 @@ module.exports = async (req, res) => {
   try {
     const update = req.body;
     
+    // Conectar ao banco
+    connection = await mysql.createConnection(DB_CONFIG);
+
+    // ===== PROCESSAR CALLBACK QUERY (CLIQUES NOS BOTÕES) =====
+    if (update.callback_query) {
+      const callback = update.callback_query;
+      const chatId = callback.message.chat.id.toString();
+      const messageId = callback.message.message_id;
+      const data = callback.data;
+
+      console.log(`🔘 Callback: ${data} de ${chatId}`);
+
+      // Responder callback imediatamente
+      await answerCallback(callback.id);
+
+      // Processar ação (implementar aqui as opções do wizard)
+      // Por enquanto, apenas confirmar
+      return res.status(200).json({ ok: true });
+    }
+
+    // ===== PROCESSAR MENSAGENS DE TEXTO =====
     if (!update.message || !update.message.text) {
       return res.status(200).json({ ok: true });
     }
@@ -483,9 +526,6 @@ module.exports = async (req, res) => {
 
     console.log(`📱 Telegram: ${username} (${chatId}): ${text}`);
 
-    // Conectar ao banco
-    connection = await mysql.createConnection(DB_CONFIG);
-
     // Parsear comando
     const parts = text.split(' ');
     const command = parts[0].toLowerCase();
@@ -495,9 +535,93 @@ module.exports = async (req, res) => {
 
     // Executar comando
     switch (command) {
-      case '/start':
+      case '/start': {
+        // Se não tiver parâmetros, abrir wizard de configuração
+        if (params.length === 0) {
+          // Buscar configurações da última sessão
+          const [users] = await connection.execute(
+            'SELECT id FROM users WHERE telegram_chat_id = ?',
+            [chatId]
+          );
+
+          if (users.length === 0) {
+            response = `❌ Configure seu Chat ID na Web primeiro!\n\nhttps://mvb-pro.bragantini.com.br`;
+            break;
+          }
+
+          const userId = users[0].id;
+
+          const [lastSession] = await connection.execute(
+            `SELECT symbol, account_type, stake, martingale, duration, stop_win, stop_loss
+             FROM bot_sessions 
+             WHERE user_id = ?
+             ORDER BY started_at DESC
+             LIMIT 1`,
+            [userId]
+          );
+
+          const config = lastSession.length > 0 ? lastSession[0] : {
+            symbol: 'R_10',
+            account_type: 'demo',
+            stake: 1.00,
+            duration: 15,
+            stop_win: 3.00,
+            stop_loss: -5.00
+          };
+
+          // Mostrar wizard de configuração
+          const wizardText = `⚙️ <b>Configuração do Bot Zeus</b>
+
+Configure o bot antes de iniciar ou use configurações padrão:
+
+<b>Configurações Atuais:</b>
+📊 Símbolo: <b>${config.symbol}</b>
+💼 Conta: <b>${config.account_type.toUpperCase()}</b>
+💰 Stake: <b>$${parseFloat(config.stake).toFixed(2)}</b>
+⏱️ Duration: <b>${config.duration} min</b>
+🟢 Stop Win: <b>$${parseFloat(config.stop_win).toFixed(2)}</b>
+🔴 Stop Loss: <b>$${parseFloat(config.stop_loss).toFixed(2)}</b>
+
+<b>Escolha uma opção:</b>`;
+
+          const keyboard = [
+            [
+              { text: '🚀 Iniciar com Essas Configurações', callback_data: `start_${userId}` }
+            ],
+            [
+              { text: '📊 Mudar Símbolo', callback_data: `cfg_symbol_${userId}` },
+              { text: '💼 Mudar Conta', callback_data: `cfg_account_${userId}` }
+            ],
+            [
+              { text: '💰 Mudar Stake', callback_data: `cfg_stake_${userId}` },
+              { text: '⏱️ Mudar Duration', callback_data: `cfg_duration_${userId}` }
+            ],
+            [
+              { text: '🎯 Stops (Win/Loss)', callback_data: `cfg_stops_${userId}` }
+            ],
+            [
+              { text: '❌ Cancelar', callback_data: 'cancel' }
+            ]
+          ];
+
+          await sendTelegramMessage(chatId, wizardText, 'HTML', keyboard);
+
+          // Salvar configuração temporária
+          await connection.execute(
+            `INSERT INTO telegram_wizard_state (user_id, config) 
+             VALUES (?, ?)
+             ON DUPLICATE KEY UPDATE config = ?, updated_at = NOW()`,
+            [userId, JSON.stringify(config), JSON.stringify(config)]
+          );
+
+          await logCommand(connection, chatId, username, command, params, 'Wizard aberto', true);
+          return res.status(200).json({ ok: true });
+        }
+
+        // Se tiver parâmetros, usar fluxo antigo
         response = await handleStart(connection, chatId, username, params);
         break;
+      }
       
       case '/stop':
         response = await handleStop(connection, chatId, username);
