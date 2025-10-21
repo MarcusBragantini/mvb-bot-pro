@@ -446,11 +446,15 @@ async function executeBotSession(connection, session) {
       [tradeResult.contract_id, analysis.signal, session.id]
     );
 
-    // ✅ NOTIFICAR TRADE ABERTO NO TELEGRAM
-    if (session.telegram_chat_id) {
+    // ✅ NOTIFICAR APENAS SE FOR PRIMEIRO TRADE OU A CADA 5 TRADES (evitar spam)
+    const tradesCount = session.trades_count || 0;
+    const shouldNotify = tradesCount === 0 || tradesCount % 5 === 0;
+    
+    if (session.telegram_chat_id && shouldNotify) {
+      const currentProfit = parseFloat(session.current_profit) || 0;
       await sendTelegramNotification(
         session.telegram_chat_id,
-        `🔵 <b>Trade Aberto</b>\n\n📊 ${session.symbol} | ${analysis.signal}\n💰 Stake: $${session.stake}\n🎯 Confiança: ${analysis.confidence}%\n📝 Contrato: ${tradeResult.contract_id}\n\n⏳ Aguardando 15 minutos para resultado...`
+        `🔵 <b>Trade #${tradesCount + 1} Aberto</b>\n\n📊 ${session.symbol} | ${analysis.signal}\n💰 Stake: $${session.stake}\n🎯 Confiança: ${analysis.confidence}%\n💵 Lucro acumulado: $${currentProfit.toFixed(2)}\n\n⏳ Aguardando resultado...\n\n💡 Use /status para ver detalhes`
       );
     }
     

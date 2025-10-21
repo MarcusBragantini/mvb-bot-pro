@@ -20,7 +20,7 @@ const DB_CONFIG = {
 };
 
 // ===== FUNÇÃO: ENVIAR MENSAGEM TELEGRAM =====
-async function sendTelegramMessage(chatId, text, parseMode = 'HTML') {
+async function sendTelegramMessage(chatId, text, parseMode = 'HTML', keyboard = null) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   if (!botToken) {
     console.error('❌ TELEGRAM_BOT_TOKEN não configurado');
@@ -28,14 +28,21 @@ async function sendTelegramMessage(chatId, text, parseMode = 'HTML') {
   }
 
   try {
+    const payload = {
+      chat_id: chatId,
+      text: text,
+      parse_mode: parseMode
+    };
+
+    // Adicionar teclado inline se fornecido
+    if (keyboard) {
+      payload.reply_markup = { inline_keyboard: keyboard };
+    }
+
     const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: text,
-        parse_mode: parseMode
-      })
+      body: JSON.stringify(payload)
     });
 
     const data = await response.json();
@@ -96,10 +103,34 @@ Use /status para ver estatísticas
 Use /stop para parar o bot`;
     }
 
-    // Parâmetros do comando: /start R_10 demo 1
-    const symbol = params[0] || 'R_10';
-    const accountType = params[1] || 'demo';
-    const stake = parseFloat(params[2]) || 1.00;
+    // ✅ BUSCAR CONFIGURAÇÕES DA ÚLTIMA SESSÃO (sincronizar com Web)
+    const [lastSession] = await connection.execute(
+      `SELECT symbol, account_type, stake, martingale, duration, stop_win, stop_loss, confidence, strategy
+       FROM bot_sessions 
+       WHERE user_id = ?
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [user.id]
+    );
+
+    // Usar configurações da última sessão (Web) ou permitir override via parâmetros
+    const defaultConfig = lastSession.length > 0 ? lastSession[0] : {
+      symbol: 'R_10',
+      account_type: 'demo',
+      stake: 1.00,
+      martingale: 2.00,
+      duration: 15,
+      stop_win: 3.00,
+      stop_loss: -5.00,
+      confidence: 70,
+      strategy: 'zeus'
+    };
+
+    // Parâmetros do comando: /start [symbol] [account] [stake]
+    // Se não passar parâmetros, usa configurações da Web
+    const symbol = params[0] || defaultConfig.symbol;
+    const accountType = params[1] || defaultConfig.account_type;
+    const stake = params[2] ? parseFloat(params[2]) : parseFloat(defaultConfig.stake);
 
     // Validações
     if (!['demo', 'real'].includes(accountType.toLowerCase())) {
@@ -129,13 +160,22 @@ Configure seu token da conta <b>${accountType.toUpperCase()}</b>:
 Depois envie /start novamente.`;
     }
 
-    // Criar sessão
+    // Criar sessão com TODAS as configurações (sincronizadas com Web)
     await connection.execute(
       `INSERT INTO bot_sessions 
-       (user_id, telegram_chat_id, is_active, source, symbol, account_type, stake)
-       VALUES (?, ?, TRUE, 'telegram', ?, ?, ?)`,
-      [user.id, chatId, symbol, accountType.toLowerCase(), stake]
+       (user_id, telegram_chat_id, is_active, source, symbol, account_type, stake, 
+        martingale, duration, stop_win, stop_loss, confidence, strategy)
+       VALUES (?, ?, TRUE, 'telegram', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [user.id, chatId, symbol, accountType.toLowerCase(), stake,
+       parseFloat(defaultConfig.martingale), parseInt(defaultConfig.duration),
+       parseFloat(defaultConfig.stop_win), parseFloat(defaultConfig.stop_loss),
+       parseInt(defaultConfig.confidence), defaultConfig.strategy]
     );
+
+    // Mensagem detalhada com todas as configurações
+    const configMessage = lastSession.length > 0 
+      ? '\n\n✅ <b>Usando configurações da Web</b>'
+      : '\n\n⚙️ <b>Usando configurações padrão</b>';
 
     return `✅ <b>Bot Zeus Iniciado!</b>
 
@@ -143,12 +183,15 @@ Depois envie /start novamente.`;
 📊 Símbolo: ${symbol}
 💼 Conta: ${accountType.toUpperCase()}
 💰 Stake: $${stake.toFixed(2)}
-⚙️ Estratégia: Zeus
+⏱️ Duration: ${defaultConfig.duration} min
+🔴 Stop Loss: $${parseFloat(defaultConfig.stop_loss).toFixed(2)}
+🟢 Stop Win: $${parseFloat(defaultConfig.stop_win).toFixed(2)}
+⚙️ Estratégia: Zeus${configMessage}
 
 🤖 O bot está rodando em <b>background</b>
 📱 Você pode fechar o Telegram
 
-<b>Comandos disponíveis:</b>
+<b>Comandos:</b>
 /status - Ver estatísticas
 /stop - Parar bot
 /config - Alterar configurações`;
@@ -374,34 +417,40 @@ async function handleConfig(connection, chatId, username, params) {
 }
 
 // ===== COMANDO: /help =====
-function handleHelp() {
-  return `🤖 <b>Zeus Bot - Comandos Disponíveis</b>
+function handleHelp(chatId) {
+  const message = `🤖 <b>Zeus Bot - Menu Principal</b>
 
-<b>Controles Básicos:</b>
-/start [symbol] [account] [stake] - Iniciar bot
-  Exemplo: <code>/start R_10 demo 1</code>
+Escolha uma opção abaixo ou use comandos:
 
-/stop - Parar bot
+<b>📱 Controle Rápido:</b>
+• /start - Iniciar bot (usa configurações da Web)
+• /stop - Parar bot
+• /status - Ver estatísticas
 
-/status - Ver estatísticas em tempo real
+<b>⚙️ Configuração:</b>
+• Todas as configurações da Web são sincronizadas!
+• Use /config para alterar manualmente
 
-<b>Configurações:</b>
-/config stake [valor] - Alterar stake
-  Exemplo: <code>/config stake 2</code>
+<b>💡 Dica:</b>
+Configure tudo na Web e use apenas /start aqui!
 
-/config symbol [símbolo] - Alterar ativo
-  Exemplo: <code>/config symbol R_25</code>
+https://mvb-pro.bragantini.com.br`;
 
-/config account [tipo] - Alterar conta
-  Exemplo: <code>/config account real</code>
+  const keyboard = [
+    [
+      { text: '▶️ Iniciar Bot', callback_data: 'cmd_start' },
+      { text: '⏹️ Parar Bot', callback_data: 'cmd_stop' }
+    ],
+    [
+      { text: '📊 Ver Status', callback_data: 'cmd_status' },
+      { text: '⚙️ Configurações', callback_data: 'cmd_config' }
+    ],
+    [
+      { text: '🌐 Abrir Web', url: 'https://mvb-pro.bragantini.com.br' }
+    ]
+  ];
 
-<b>Informações:</b>
-/balance - Ver saldo da conta Deriv
-
-/help - Mostrar esta mensagem
-
-<b>Suporte:</b>
-Em caso de dúvidas: https://mvb-pro.bragantini.com.br`;
+  return { message, keyboard };
 }
 
 // ===== HANDLER PRINCIPAL =====
@@ -463,8 +512,14 @@ module.exports = async (req, res) => {
         break;
       
       case '/help':
-        response = handleHelp();
-        break;
+      case '/start@zeus_bot_pro_bot': // Suportar menção ao bot
+      case '/menu': {
+        const helpData = handleHelp(chatId);
+        await sendTelegramMessage(chatId, helpData.message, 'HTML', helpData.keyboard);
+        // Log sem incluir response (muito longo)
+        await logCommand(connection, chatId, username, command, params, 'Menu enviado', true);
+        return res.status(200).json({ ok: true });
+      }
       
       default:
         response = `❓ Comando não reconhecido: ${command}

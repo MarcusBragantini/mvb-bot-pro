@@ -592,6 +592,51 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    // ===== BUSCAR CONFIGURAÇÕES DO USUÁRIO (PARA TELEGRAM) =====
+    if (action === 'get_user_config') {
+      const { user_id } = req.query;
+      
+      if (!user_id) {
+        return res.status(400).json({ error: 'user_id é obrigatório' });
+      }
+      
+      try {
+        // Buscar última sessão ou configurações salvas
+        const [sessions] = await connection.execute(
+          `SELECT symbol, account_type, stake, martingale, duration, stop_win, stop_loss, confidence, strategy
+           FROM bot_sessions 
+           WHERE user_id = ?
+           ORDER BY created_at DESC
+           LIMIT 1`,
+          [user_id]
+        );
+        
+        // Se não houver sessão, usar valores padrão
+        const config = sessions.length > 0 ? sessions[0] : {
+          symbol: 'R_10',
+          account_type: 'demo',
+          stake: 1.00,
+          martingale: 2.00,
+          duration: 15,
+          stop_win: 3.00,
+          stop_loss: -5.00,
+          confidence: 70,
+          strategy: 'zeus'
+        };
+        
+        return res.status(200).json({
+          success: true,
+          config: config
+        });
+      } catch (error) {
+        console.error('❌ Erro ao buscar configurações:', error);
+        return res.status(500).json({ 
+          error: 'Erro ao buscar configurações',
+          details: error.message 
+        });
+      }
+    }
+
     // ===== SINCRONIZAR ESTATÍSTICAS DA SESSÃO (EM TEMPO REAL) =====
     if (action === 'sync_session_stats') {
       if (req.method === 'POST') {
