@@ -194,6 +194,7 @@ async function handleStop(connection, chatId, username) {
       : '0.00';
 
     const duration = Math.floor((Date.now() - new Date(session.started_at).getTime()) / 1000 / 60);
+    const currentProfit = parseFloat(session.current_profit) || 0;
 
     // Parar sessão
     await connection.execute(
@@ -204,7 +205,7 @@ async function handleStop(connection, chatId, username) {
     return `⏹️ <b>Bot Zeus Parado</b>
 
 📊 <b>Resumo da Sessão:</b>
-💰 Lucro: $${session.current_profit.toFixed(2)}
+💰 Lucro: $${currentProfit.toFixed(2)}
 📈 Trades: ${session.trades_count} (${session.wins_count}W / ${session.losses_count}L)
 🎯 Precisão: ${accuracy}%
 ⏱️ Duração: ${duration} minutos
@@ -252,23 +253,29 @@ Use /start para iniciar.`;
       ? new Date(session.last_trade_at).toLocaleString('pt-BR')
       : 'Nenhum trade ainda';
 
+    // Converter para números (podem vir como string do banco)
+    const stake = parseFloat(session.stake) || 0;
+    const currentProfit = parseFloat(session.current_profit) || 0;
+    const stopLoss = parseFloat(session.stop_loss) || 0;
+    const stopWin = parseFloat(session.stop_win) || 0;
+
     return `📊 <b>Status do Bot Zeus</b>
 
 🤖 Status: <b>ATIVO</b> ✅
 📊 Símbolo: ${session.symbol}
 💼 Conta: ${session.account_type.toUpperCase()}
-💰 Stake: $${session.stake.toFixed(2)}
+💰 Stake: $${stake.toFixed(2)}
 
 <b>Estatísticas:</b>
-💵 Lucro: $${session.current_profit.toFixed(2)}
+💵 Lucro: $${currentProfit.toFixed(2)}
 📈 Trades: ${session.trades_count} (${session.wins_count}W / ${session.losses_count}L)
 🎯 Precisão: ${accuracy}%
 ⏱️ Tempo ativo: ${duration} min
 🕐 Último trade: ${lastTrade}
 
 <b>Stop Loss/Win:</b>
-🔴 Stop Loss: $${session.stop_loss.toFixed(2)}
-🟢 Stop Win: $${session.stop_win.toFixed(2)}`;
+🔴 Stop Loss: $${stopLoss.toFixed(2)}
+🟢 Stop Win: $${stopWin.toFixed(2)}`;
   } catch (error) {
     console.error('❌ Erro no /status:', error);
     return `❌ Erro ao buscar status: ${error.message}`;
