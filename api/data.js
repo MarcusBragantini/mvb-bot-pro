@@ -547,6 +547,36 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    // ===== SALVAR TELEGRAM CHAT ID =====
+    if (action === 'save_telegram_chat_id') {
+      if (req.method === 'POST') {
+        const { user_id, telegram_chat_id } = req.body;
+
+        if (!user_id || !telegram_chat_id) {
+          return res.status(400).json({ error: 'user_id e telegram_chat_id são obrigatórios' });
+        }
+
+        try {
+          await connection.execute(
+            'UPDATE users SET telegram_chat_id = ? WHERE id = ?',
+            [telegram_chat_id, user_id]
+          );
+
+          console.log(`✅ Telegram Chat ID salvo: user_id=${user_id}, chat_id=${telegram_chat_id}`);
+          return res.status(200).json({ 
+            success: true,
+            message: 'Chat ID salvo com sucesso' 
+          });
+        } catch (error) {
+          console.error('❌ Erro ao salvar Chat ID:', error);
+          return res.status(500).json({ 
+            error: 'Erro ao salvar Chat ID',
+            details: error.message 
+          });
+        }
+      }
+    }
+
     // Se nenhuma ação foi processada, retornar erro
     return res.status(400).json({ error: 'Ação inválida' });
 

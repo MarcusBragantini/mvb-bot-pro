@@ -571,13 +571,38 @@ export default function BotInterface() {
     }
   };
 
-  const saveTelegramSettings = () => {
+  const saveTelegramSettings = async () => {
     // Salvar apenas as configurações do usuário (não o token do bot)
     const settingsToSave = {
       userTelegram: telegramSettings.userTelegram,
       notificationsEnabled: telegramSettings.notificationsEnabled
     };
     localStorage.setItem('telegram_settings', JSON.stringify(settingsToSave));
+    
+    // ✅ NOVO: Salvar Chat ID no banco de dados
+    if (user?.id && telegramSettings.userTelegram) {
+      try {
+        const response = await fetch('/api/data?action=save_telegram_chat_id', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: user.id,
+            telegram_chat_id: telegramSettings.userTelegram
+          })
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+          console.log('✅ Chat ID salvo no banco de dados');
+        } else {
+          console.error('❌ Erro ao salvar no banco:', data.error);
+        }
+      } catch (error) {
+        console.error('❌ Erro ao salvar Chat ID no banco:', error);
+      }
+    }
+    
     toast({
       title: "✅ Configurações do Telegram salvas!",
       description: "Notificações configuradas com sucesso.",
