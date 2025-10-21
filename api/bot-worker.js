@@ -5,7 +5,7 @@
 // =====================================================
 
 const mysql = require('mysql2/promise');
-const WebSocket = require('ws');
+// const WebSocket = require('ws'); // TODO: Adicionar quando implementar lógica de trading real
 
 // ===== CONFIGURAÇÃO DO BANCO DE DADOS =====
 const DB_CONFIG = {
