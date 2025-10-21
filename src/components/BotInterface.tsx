@@ -1857,7 +1857,7 @@ ${tradesList || 'Nenhuma operação realizada'}
       
       // ✅ FUNÇÃO: Buscar dados históricos de 24 HORAS da Deriv
       function loadHistoricalData(websocket, symbol) {
-        addLog(\`📊 Buscando histórico de 24 HORAS de \${symbol}...\`);
+        addLog(\`📊 Solicitando dados históricos de \${symbol}...\`);
         
         // Solicitar candles de 5 minutos das últimas 288 velas (24 horas)
         // 288 velas de 5 minutos = 24 horas (288 * 5 = 1440 minutos = 24h)
@@ -2167,7 +2167,7 @@ ${tradesList || 'Nenhuma operação realizada'}
               addLog(\`✅ \${priceData.length} velas históricas carregadas (24 HORAS)!\`);
               addLog(\`📊 Analisando tendência de 24h do mercado antes de operar...\`);
               addLog(\`📈 Indicadores robustos: MHI(\${mhiPeriods}) EMA(\${emaFast}/\${emaSlow}) RSI(\${rsiPeriods}) Fibonacci\`);
-              addLog(\`⏳ Aguardando 10 velas de 1min antes de operar (10min prático)...\`);
+              addLog(\`⏳ Aguardando 5 velas de 1min antes de operar (5min para estabilizar)...\`);
               historicoCarregado = true; // ✅ Marcar que histórico foi carregado
               velasSemOperarAposHistorico = 0; // ✅ Resetar contador
               ultimoMinutoProcessado = Math.floor(Date.now() / 1000 / 60); // ✅ Inicializar contador de minutos
@@ -2404,17 +2404,17 @@ ${tradesList || 'Nenhuma operação realizada'}
           }
           
           // ✅ PRÁTICO: Contar apenas velas de 1 minuto (não ticks)
-          if (historicoCarregado && velasSemOperarAposHistorico < 10) {
+          if (historicoCarregado && velasSemOperarAposHistorico < 5) {
             const currentMinute = Math.floor(timestamp / 60); // Minuto atual (timestamp em segundos)
             
             // Só incrementar se mudou o minuto (nova vela de 1 minuto)
             if (currentMinute > ultimoMinutoProcessado) {
               ultimoMinutoProcessado = currentMinute;
               velasSemOperarAposHistorico++;
-              addLog(\`⏳ Vela \${velasSemOperarAposHistorico}/10 após histórico (1min cada = \${velasSemOperarAposHistorico}min)...\`);
+              addLog(\`⏳ Vela \${velasSemOperarAposHistorico}/5 após histórico (1min cada = \${velasSemOperarAposHistorico}min)...\`);
               
-              if (velasSemOperarAposHistorico >= 10) {
-                addLog(\`✅ Análise de 24h + 10min completas! Bot pronto para operar.\`);
+              if (velasSemOperarAposHistorico >= 5) {
+                addLog(\`✅ Análise de 24h + 5min completas! Bot pronto para operar.\`);
               document.getElementById("status").innerText = "✅ Pronto para operar";
               }
             }
@@ -2422,10 +2422,10 @@ ${tradesList || 'Nenhuma operação realizada'}
           
           updateDataCount();
           
-          // ✅ PRÁTICO: Só operar após aguardar 10 velas de 1min do histórico (10min)
+          // ✅ PRÁTICO: Só operar após aguardar 5 velas de 1min do histórico (5min)
           if (priceData.length >= Math.max(mhiPeriods, emaSlow, rsiPeriods) && isRunning && !isTrading) {
-            // ✅ Verificar se já aguardou 10 velas após histórico
-            if (historicoCarregado && velasSemOperarAposHistorico < 10) {
+            // ✅ Verificar se já aguardou 5 velas após histórico
+            if (historicoCarregado && velasSemOperarAposHistorico < 5) {
               return; // ⏳ Ainda aguardando velas...
             }
             
