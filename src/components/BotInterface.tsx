@@ -117,6 +117,30 @@ export default function BotInterface() {
     }
   };
   
+  // ===== DETECTAR SESSÃO ATIVA DO TELEGRAM AO CARREGAR =====
+  useEffect(() => {
+    const checkActiveSession = async () => {
+      if (!user?.id || !isLicenseValid) return;
+      
+      try {
+        const response = await fetch(`/api/data?action=check_active_session&user_id=${user.id}`);
+        const data = await response.json();
+        
+        if (data.has_active_session && data.session.source === 'telegram') {
+          console.log('🤖 Sessão ativa do Telegram detectada:', data.session);
+          toast({
+            title: "🤖 Bot em Background Detectado",
+            description: `Bot iniciado via Telegram está ativo! Símbolo: ${data.session.symbol}`,
+          });
+        }
+      } catch (error) {
+        console.error('❌ Erro ao verificar sessão ativa:', error);
+      }
+    };
+    
+    checkActiveSession();
+  }, [user?.id, isLicenseValid]);
+  
   // ===== CARREGAR ANALYTICS AO MONTAR O COMPONENTE =====
   useEffect(() => {
     if (activeTab === 'analytics' && user?.id) {

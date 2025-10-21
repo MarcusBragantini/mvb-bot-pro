@@ -592,6 +592,37 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    // ===== VERIFICAR SESSÃO ATIVA =====
+    if (action === 'check_active_session') {
+      const { user_id } = req.query;
+      
+      if (!user_id) {
+        return res.status(400).json({ error: 'user_id é obrigatório' });
+      }
+      
+      try {
+        const [sessions] = await connection.execute(
+          `SELECT id, source, symbol, account_type, stake, duration, stop_win, stop_loss, 
+                  current_profit, trades_count, wins_count, losses_count, started_at
+           FROM bot_sessions 
+           WHERE user_id = ? AND is_active = TRUE
+           LIMIT 1`,
+          [user_id]
+        );
+        
+        return res.status(200).json({
+          has_active_session: sessions.length > 0,
+          session: sessions.length > 0 ? sessions[0] : null
+        });
+      } catch (error) {
+        console.error('❌ Erro ao verificar sessão:', error);
+        return res.status(500).json({ 
+          error: 'Erro ao verificar sessão',
+          details: error.message 
+        });
+      }
+    }
+
     // ===== BUSCAR CONFIGURAÇÕES DO USUÁRIO (PARA TELEGRAM) =====
     if (action === 'get_user_config') {
       const { user_id } = req.query;
