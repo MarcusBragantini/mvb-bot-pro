@@ -446,7 +446,7 @@ module.exports = async function handler(req, res) {
               params.push(account_type);
             }
             
-            query += ` ORDER BY created_at DESC LIMIT 1000`;
+            query += ` ORDER BY id DESC LIMIT 1000`;
             
             const [rows] = await connection.execute(query, params);
             
@@ -606,7 +606,7 @@ module.exports = async function handler(req, res) {
           `SELECT symbol, account_type, stake, martingale, duration, stop_win, stop_loss, confidence, strategy
            FROM bot_sessions 
            WHERE user_id = ?
-           ORDER BY created_at DESC
+           ORDER BY started_at DESC
            LIMIT 1`,
           [user_id]
         );

@@ -108,7 +108,7 @@ Use /stop para parar o bot`;
       `SELECT symbol, account_type, stake, martingale, duration, stop_win, stop_loss, confidence, strategy
        FROM bot_sessions 
        WHERE user_id = ?
-       ORDER BY created_at DESC
+       ORDER BY started_at DESC
        LIMIT 1`,
       [user.id]
     );
