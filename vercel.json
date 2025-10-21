@@ -3,10 +3,6 @@
     {
       "path": "/api/engagement-notifications",
       "schedule": "0 10 * * *"
-    },
-    {
-      "path": "/api/bot-worker",
-      "schedule": "* * * * *"
     }
   ],
   "buildCommand": "npm run build",
