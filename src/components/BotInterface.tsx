@@ -2098,6 +2098,39 @@ ${tradesList || 'Nenhuma operação realizada'}
               } else if (accountType === 'REAL') {
                 addLog("⚠️ CONTA REAL detectada - ATENÇÃO!");
               }
+              
+              // ✅ NOVO: Criar sessão no banco de dados para sincronização com Telegram
+              if (window.user?.id) {
+                const stopWin = parseFloat(document.getElementById("stopWin").value) || 3;
+                const stopLoss = parseFloat(document.getElementById("stopLoss").value) || -5;
+                const chatId = localStorage.getItem('telegram_settings') ? JSON.parse(localStorage.getItem('telegram_settings')).userTelegram : null;
+                
+                fetch('/api/data?action=create_bot_session', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    user_id: window.user.id,
+                    telegram_chat_id: chatId,
+                    source: 'web',
+                    symbol: symbol,
+                    account_type: accountType.toLowerCase(),
+                    stake: initialStake,
+                    martingale: martingaleMultiplier,
+                    duration: duration,
+                    stop_win: stopWin,
+                    stop_loss: stopLoss,
+                    confidence: minConfidence,
+                    strategy: 'zeus'
+                  })
+                }).then(res => res.json()).then(data => {
+                  if (data.success) {
+                    window.botSessionId = data.session_id;
+                    addLog(\`✅ Sessão criada no banco (ID: \${data.session_id})\`);
+                  }
+                }).catch(err => {
+                  console.error('❌ Erro ao criar sessão:', err);
+                });
+              }
             }
             
             // ✅ NOVO: Buscar dados históricos ANTES de subscrever ticks
@@ -3302,6 +3335,27 @@ ${tradesList || 'Nenhuma operação realizada'}
           losses: stats.losses,
           tradeHistory: tradeHistory
         };
+        
+        // ✅ NOVO: Atualizar sessão no banco de dados
+        if (window.user?.id && window.botSessionId) {
+          fetch('/api/data?action=update_bot_session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              session_id: window.botSessionId,
+              current_profit: profit,
+              trades_count: stats.total,
+              wins_count: stats.wins,
+              losses_count: stats.losses
+            })
+          }).then(res => res.json()).then(data => {
+            if (data.success) {
+              addLog(\`✅ Sessão atualizada no banco\`);
+            }
+          }).catch(err => {
+            console.error('❌ Erro ao atualizar sessão:', err);
+          });
+        }
         
         // Disparar evento de bot parado com dados do relatório
         const event = new CustomEvent('bot-stopped', { detail: reportData });

@@ -547,6 +547,84 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    // ===== CRIAR SESSÃO DO BOT (WEB) =====
+    if (action === 'create_bot_session') {
+      if (req.method === 'POST') {
+        const { 
+          user_id, telegram_chat_id, source, symbol, account_type, 
+          stake, martingale, duration, stop_win, stop_loss, confidence, strategy 
+        } = req.body;
+
+        if (!user_id) {
+          return res.status(400).json({ error: 'user_id é obrigatório' });
+        }
+
+        try {
+          // Desativar sessões anteriores do mesmo usuário
+          await connection.execute(
+            'UPDATE bot_sessions SET is_active = FALSE, stopped_at = NOW() WHERE user_id = ? AND is_active = TRUE',
+            [user_id]
+          );
+
+          // Criar nova sessão
+          const [result] = await connection.execute(
+            `INSERT INTO bot_sessions 
+             (user_id, telegram_chat_id, is_active, source, symbol, account_type, stake, 
+              martingale, duration, stop_win, stop_loss, confidence, strategy)
+             VALUES (?, ?, TRUE, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [user_id, telegram_chat_id, source, symbol, account_type, stake, 
+             martingale, duration, stop_win, stop_loss, confidence, strategy]
+          );
+
+          console.log(`✅ Sessão criada: session_id=${result.insertId}, user_id=${user_id}, source=${source}`);
+          return res.status(200).json({ 
+            success: true,
+            session_id: result.insertId,
+            message: 'Sessão criada com sucesso' 
+          });
+        } catch (error) {
+          console.error('❌ Erro ao criar sessão:', error);
+          return res.status(500).json({ 
+            error: 'Erro ao criar sessão',
+            details: error.message 
+          });
+        }
+      }
+    }
+
+    // ===== ATUALIZAR SESSÃO DO BOT =====
+    if (action === 'update_bot_session') {
+      if (req.method === 'POST') {
+        const { session_id, current_profit, trades_count, wins_count, losses_count } = req.body;
+
+        if (!session_id) {
+          return res.status(400).json({ error: 'session_id é obrigatório' });
+        }
+
+        try {
+          await connection.execute(
+            `UPDATE bot_sessions 
+             SET current_profit = ?, trades_count = ?, wins_count = ?, losses_count = ?, 
+                 last_trade_at = NOW(), is_active = FALSE, stopped_at = NOW()
+             WHERE id = ?`,
+            [current_profit, trades_count, wins_count, losses_count, session_id]
+          );
+
+          console.log(`✅ Sessão atualizada: session_id=${session_id}, profit=$${current_profit}, trades=${trades_count}`);
+          return res.status(200).json({ 
+            success: true,
+            message: 'Sessão atualizada com sucesso' 
+          });
+        } catch (error) {
+          console.error('❌ Erro ao atualizar sessão:', error);
+          return res.status(500).json({ 
+            error: 'Erro ao atualizar sessão',
+            details: error.message 
+          });
+        }
+      }
+    }
+
     // ===== SALVAR TELEGRAM CHAT ID =====
     if (action === 'save_telegram_chat_id') {
       if (req.method === 'POST') {
