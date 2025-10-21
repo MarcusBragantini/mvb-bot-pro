@@ -182,11 +182,185 @@ async function executeTrade(session, token, signal) {
   }
 }
 
+// ===== FUNÇÃO: VERIFICAR RESULTADO DO CONTRATO =====
+async function checkContractResult(contractId, token) {
+  try {
+    const url = `https://api.deriv.com/api/v3/proposal_open_contract?${new URLSearchParams({
+      proposal_open_contract: 1,
+      contract_id: contractId,
+      authorize: token
+    })}`;
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (data.error) {
+      console.error(`❌ Erro ao buscar contrato: ${data.error.message}`);
+      return null;
+    }
+    
+    if (!data.proposal_open_contract) {
+      console.error('❌ Contrato não encontrado');
+      return null;
+    }
+    
+    const contract = data.proposal_open_contract;
+    
+    // Verificar se contrato já foi finalizado
+    if (contract.is_settleable || contract.is_sold || contract.status === 'sold') {
+      const profit = parseFloat(contract.profit) || 0;
+      const result = profit > 0 ? 'WIN' : 'LOSS';
+      
+      return {
+        finished: true,
+        result: result,
+        profit: profit,
+        sell_price: contract.sell_price,
+        buy_price: contract.buy_price
+      };
+    }
+    
+    // Contrato ainda em andamento
+    return { finished: false };
+    
+  } catch (error) {
+    console.error('❌ Erro ao verificar contrato:', error.message);
+    return null;
+  }
+}
+
 // ===== FUNÇÃO: EXECUTAR BOT PARA UMA SESSÃO =====
 async function executeBotSession(connection, session) {
   console.log(`🤖 Processando sessão ${session.id} do usuário ${session.user_id}`);
 
   try {
+    // ✅ VERIFICAR SE HÁ CONTRATO PENDENTE
+    if (session.pending_contract_id && session.pending_contract_open_time) {
+      const minutosPassados = Math.floor((Date.now() - new Date(session.pending_contract_open_time).getTime()) / 1000 / 60);
+      
+      console.log(`⏱️ Contrato pendente há ${minutosPassados} minutos`);
+      
+      // Se já passou tempo suficiente (15+ minutos), verificar resultado
+      if (minutosPassados >= 15) {
+        console.log(`🔍 Verificando resultado do contrato ${session.pending_contract_id}...`);
+        
+        // Buscar token
+        const [settings] = await connection.execute(
+          'SELECT deriv_token_demo, deriv_token_real FROM user_settings WHERE user_id = ?',
+          [session.user_id]
+        );
+        
+        if (settings.length === 0) {
+          console.error('❌ Configurações não encontradas');
+          return;
+        }
+        
+        const token = session.account_type === 'demo' 
+          ? settings[0].deriv_token_demo 
+          : settings[0].deriv_token_real;
+        
+        if (!token) {
+          console.error('❌ Token não configurado');
+          return;
+        }
+        
+        const contractResult = await checkContractResult(session.pending_contract_id, token);
+        
+        if (contractResult && contractResult.finished) {
+          console.log(`✅ Resultado: ${contractResult.result} - Lucro: $${contractResult.profit.toFixed(2)}`);
+          
+          // Atualizar sessão
+          const currentProfit = parseFloat(session.current_profit) || 0;
+          const newProfit = currentProfit + contractResult.profit;
+          const newTrades = session.trades_count + 1;
+          const newWins = session.wins_count + (contractResult.result === 'WIN' ? 1 : 0);
+          const newLosses = session.losses_count + (contractResult.result === 'LOSS' ? 1 : 0);
+          
+          await connection.execute(
+            `UPDATE bot_sessions 
+             SET current_profit = ?, trades_count = ?, wins_count = ?, losses_count = ?,
+                 pending_contract_id = NULL, pending_contract_open_time = NULL, pending_contract_signal = NULL,
+                 updated_at = NOW()
+             WHERE id = ?`,
+            [newProfit, newTrades, newWins, newLosses, session.id]
+          );
+          
+          // Salvar no histórico
+          await connection.execute(
+            `INSERT INTO user_trades 
+             (user_id, symbol, trade_signal, stake, result, profit, confidence, account_type)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [session.user_id, session.symbol, session.pending_contract_signal, session.stake, 
+             contractResult.result, contractResult.profit, 0, session.account_type]
+          );
+          
+          // Notificar no Telegram
+          if (session.telegram_chat_id) {
+            const emoji = contractResult.result === 'WIN' ? '✅' : '❌';
+            const accuracy = newTrades > 0 ? ((newWins / newTrades) * 100).toFixed(1) : '0';
+            
+            await sendTelegramNotification(
+              session.telegram_chat_id,
+              `${emoji} <b>Trade Finalizado</b>\n\n📊 ${session.symbol} | ${session.pending_contract_signal}\n💰 ${contractResult.result}: $${contractResult.profit.toFixed(2)}\n📈 Total: $${newProfit.toFixed(2)}\n🎯 Win Rate: ${accuracy}% (${newWins}W/${newLosses}L)`
+            );
+          }
+          
+          // Verificar Stop Loss/Win
+          const stopLoss = parseFloat(session.stop_loss) || -5;
+          const stopWin = parseFloat(session.stop_win) || 3;
+          
+          if (newProfit <= stopLoss) {
+            console.log(`🔴 Stop Loss atingido: $${newProfit}`);
+            await connection.execute(
+              'UPDATE bot_sessions SET is_active = FALSE, stopped_at = NOW() WHERE id = ?',
+              [session.id]
+            );
+            
+            if (session.telegram_chat_id) {
+              await sendTelegramNotification(
+                session.telegram_chat_id,
+                `🔴 <b>Stop Loss Atingido</b>\n\n💰 Lucro final: $${newProfit.toFixed(2)}\n📈 Trades: ${newTrades}\n\nBot parado automaticamente.`
+              );
+            }
+            return;
+          }
+          
+          if (newProfit >= stopWin) {
+            console.log(`🟢 Stop Win atingido: $${newProfit}`);
+            await connection.execute(
+              'UPDATE bot_sessions SET is_active = FALSE, stopped_at = NOW() WHERE id = ?',
+              [session.id]
+            );
+            
+            if (session.telegram_chat_id) {
+              await sendTelegramNotification(
+                session.telegram_chat_id,
+                `🟢 <b>Stop Win Atingido</b>\n\n💰 Lucro final: $${newProfit.toFixed(2)}\n📈 Trades: ${newTrades}\n\n🎉 Parabéns! Meta alcançada!`
+              );
+            }
+            return;
+          }
+        } else if (contractResult && !contractResult.finished) {
+          console.log(`⏳ Contrato ainda em andamento`);
+          return; // Aguardar mais
+        } else {
+          console.error(`❌ Não foi possível verificar contrato`);
+          // Limpar contrato pendente após muitas tentativas
+          if (minutosPassados >= 30) {
+            await connection.execute(
+              'UPDATE bot_sessions SET pending_contract_id = NULL, pending_contract_open_time = NULL, pending_contract_signal = NULL WHERE id = ?',
+              [session.id]
+            );
+          }
+          return;
+        }
+      } else {
+        console.log(`⏳ Aguardando contrato expirar (faltam ${15 - minutosPassados} min)`);
+        return; // Ainda não passou 15 min
+      }
+    }
+    
+    // ✅ SE NÃO HÁ CONTRATO PENDENTE, ANALISAR E ABRIR NOVO TRADE
     // Buscar token do usuário
     const [settings] = await connection.execute(
       'SELECT deriv_token_demo, deriv_token_real FROM user_settings WHERE user_id = ?',
@@ -216,45 +390,6 @@ async function executeBotSession(connection, session) {
         'UPDATE bot_sessions SET is_active = FALSE WHERE id = ?',
         [session.id]
       );
-      return;
-    }
-
-    // Verificar Stop Loss / Stop Win
-    const currentProfit = parseFloat(session.current_profit) || 0;
-    const stopLoss = parseFloat(session.stop_loss) || -5;
-    const stopWin = parseFloat(session.stop_win) || 3;
-
-    if (currentProfit <= stopLoss) {
-      console.log(`🔴 Stop Loss atingido: $${currentProfit}`);
-      
-      await connection.execute(
-        'UPDATE bot_sessions SET is_active = FALSE, stopped_at = NOW() WHERE id = ?',
-        [session.id]
-      );
-
-      if (session.telegram_chat_id) {
-        await sendTelegramNotification(
-          session.telegram_chat_id,
-          `🔴 <b>Stop Loss Atingido</b>\n\n💰 Lucro final: $${currentProfit.toFixed(2)}\n📈 Trades: ${session.trades_count}\n\nBot parado automaticamente.`
-        );
-      }
-      return;
-    }
-
-    if (currentProfit >= stopWin) {
-      console.log(`🟢 Stop Win atingido: $${currentProfit}`);
-      
-      await connection.execute(
-        'UPDATE bot_sessions SET is_active = FALSE, stopped_at = NOW() WHERE id = ?',
-        [session.id]
-      );
-
-      if (session.telegram_chat_id) {
-        await sendTelegramNotification(
-          session.telegram_chat_id,
-          `🟢 <b>Stop Win Atingido</b>\n\n💰 Lucro final: $${currentProfit.toFixed(2)}\n📈 Trades: ${session.trades_count}\n\n🎉 Parabéns! Meta alcançada!`
-        );
-      }
       return;
     }
 
@@ -299,22 +434,27 @@ async function executeBotSession(connection, session) {
 
     console.log(`✅ Trade executado com sucesso! Contrato: ${tradeResult.contract_id}`);
 
+    // ✅ SALVAR CONTRATO PENDENTE
+    await connection.execute(
+      `UPDATE bot_sessions 
+       SET pending_contract_id = ?, 
+           pending_contract_open_time = NOW(), 
+           pending_contract_signal = ?,
+           updated_at = NOW(), 
+           last_trade_at = NOW() 
+       WHERE id = ?`,
+      [tradeResult.contract_id, analysis.signal, session.id]
+    );
+
     // ✅ NOTIFICAR TRADE ABERTO NO TELEGRAM
     if (session.telegram_chat_id) {
       await sendTelegramNotification(
         session.telegram_chat_id,
-        `🔵 <b>Trade Aberto</b>\n\n📊 ${session.symbol} | ${analysis.signal}\n💰 Stake: $${session.stake}\n🎯 Confiança: ${analysis.confidence}%\n📝 Contrato: ${tradeResult.contract_id}\n\n⏳ Aguardando resultado...`
+        `🔵 <b>Trade Aberto</b>\n\n📊 ${session.symbol} | ${analysis.signal}\n💰 Stake: $${session.stake}\n🎯 Confiança: ${analysis.confidence}%\n📝 Contrato: ${tradeResult.contract_id}\n\n⏳ Aguardando 15 minutos para resultado...`
       );
     }
-
-    // ⚠️ IMPORTANTE: Resultado será verificado na próxima execução
-    // Por enquanto, apenas atualizar updated_at para manter sessão ativa
-    await connection.execute(
-      'UPDATE bot_sessions SET updated_at = NOW(), last_trade_at = NOW() WHERE id = ?',
-      [session.id]
-    );
     
-    console.log(`ℹ️ Trade em andamento. Resultado será verificado na próxima execução.`)
+    console.log(`ℹ️ Contrato salvo. Resultado será verificado em 15 minutos.`)
 
   } catch (error) {
     console.error(`❌ Erro ao processar sessão ${session.id}:`, error);
