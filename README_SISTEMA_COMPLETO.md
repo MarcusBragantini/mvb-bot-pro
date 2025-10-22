@@ -46,6 +46,20 @@ https://api.telegram.org/bot<SEU_TOKEN>/setWebhook?url=https://mvb-pro.bragantin
 5. Pode minimizar (não fechar!)
 ```
 
+### **Múltiplas Abas (NOVO!):**
+```
+✅ Pode abrir várias abas simultaneamente
+✅ Testar diferentes ativos em paralelo
+✅ Cada aba opera independentemente
+✅ Ideal para análise comparativa
+
+Exemplo:
+Aba 1: R_10 Index
+Aba 2: R_25 Index
+Aba 3: R_50 Index
+→ Testar estratégia em 3 ativos ao mesmo tempo!
+```
+
 ---
 
 ## 📱 **COMO USAR - OPÇÃO 2: TELEGRAM** (Recomendado!)
