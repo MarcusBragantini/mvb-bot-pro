@@ -92,15 +92,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const data = await response.json();
           consecutiveErrors = 0; // Resetar contador de erros
 
-          if (!data.valid) {
-            alert('⚠️ SESSÃO INVALIDADA\n\nSua licença está sendo usada em outro dispositivo.\n\nApenas 1 dispositivo/sessão por vez é permitido.\n\nVocê será desconectado agora.');
-            logout();
-          }
+          // ✅ MÚLTIPLAS ABAS PERMITIDAS: Não desconectar outras sessões
+          // Apenas manter sessão ativa sem verificar exclusividade
         } else if (response.status === 401) {
-          // ⚠️ 401 = Sessão invalidada por outro dispositivo/aba
-          // Desconectar imediatamente (não é erro temporário)
-          alert('⚠️ SESSÃO INVALIDADA\n\nSua licença está sendo usada em outro dispositivo ou aba.\n\nApenas 1 sessão ativa por vez é permitida.\n\nVocê será desconectado agora.');
-          logout();
+          // ✅ MÚLTIPLAS ABAS PERMITIDAS: Não desconectar
+          // Ignorar 401 de outras abas/dispositivos
+          consecutiveErrors = 0;
         }
       } catch (error) {
         // Silenciar completamente erros de rede
@@ -126,33 +123,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
           const userData = JSON.parse(storedUser);
           
-          // ⚠️ PROTEÇÃO: Gerar novo session_token único para esta aba/instância
-          // Isso invalida outras abas/dispositivos automaticamente
-          const newSessionToken = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}_${Math.random().toString(36).substring(2, 15)}`;
-          const deviceInfo = `${navigator.userAgent} | ${navigator.platform}`;
+          // ✅ MÚLTIPLAS ABAS PERMITIDAS: Não invalida sessões anteriores
+          // Apenas usa o token existente sem criar novo
           
-          // Registrar nova sessão (invalida as anteriores)
-          try {
-            await fetch('/api/auth?action=check-session', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                user_id: userData.id,
-                session_token: newSessionToken,
-                device_info: deviceInfo
-              }),
-            });
-            
-            // Atualizar token local
-            localStorage.setItem('session_token', newSessionToken);
-            setSessionToken(newSessionToken);
-          } catch (error) {
-            // Se falhar, usar o token antigo
-            setSessionToken(storedSessionToken);
-          }
-          
+          setSessionToken(storedSessionToken);
           setUser(userData);
           setToken(storedToken);
           apiClient.setToken(storedToken);
@@ -179,27 +153,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await apiClient.login(email, password);
       const { token: newToken, user: userData } = response;
       
-      // Gerar token de sessão único
+      // ✅ MÚLTIPLAS ABAS PERMITIDAS: Gerar token mas não invalidar outras sessões
       const newSessionToken = generateSessionToken();
-      const deviceInfo = getDeviceInfo();
-
-      // Criar sessão no servidor (invalida sessões anteriores)
-      try {
-        await fetch('/api/auth?action=check-session', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            user_id: userData.id,
-            session_token: newSessionToken,
-            device_info: deviceInfo
-          }),
-        });
-        console.log('✅ Sessão única criada, sessões anteriores invalidadas');
-      } catch (sessionError) {
-        console.error('Erro ao criar sessão:', sessionError);
-      }
       
       localStorage.setItem('auth_token', newToken);
       localStorage.setItem('auth_user', JSON.stringify(userData));
