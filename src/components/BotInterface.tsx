@@ -149,7 +149,7 @@ export default function BotInterface() {
             // Simular clique no botão de iniciar
             const botElement = document.getElementById('bot-container');
             if (botElement) {
-              const startButton = document.getElementById('startBtn');
+              const startButton = document.getElementById('startBtn') as HTMLButtonElement;
               if (startButton && !startButton.disabled) {
                 console.log('🚀 Auto-iniciando bot com configurações do Telegram...');
                 startButton.click();
