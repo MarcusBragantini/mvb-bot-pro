@@ -685,22 +685,8 @@ export default function BotInterface() {
     const currentDeviceId = generateDeviceId();
     setDeviceId(currentDeviceId);
     
-    // Verificar dispositivos registrados
-    const deviceKey = `mvb_device_${key}`;
-    const registeredDevice = localStorage.getItem(deviceKey);
-    
-    if (registeredDevice && registeredDevice !== currentDeviceId) {
-      setLicenseStatus('Esta licença já está em uso em outro dispositivo.');
-      toast({
-        title: "Limite de dispositivos atingido",
-        description: `Esta licença permite apenas ${license.maxDevices} dispositivo(s).`,
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // Registrar dispositivo
-    localStorage.setItem(deviceKey, currentDeviceId);
+    // ===== VERIFICAÇÃO DE DISPOSITIVO REMOVIDA =====
+    // Permite múltiplas abas/dispositivos sem restrição
     
     setLicenseInfo(license);
     setIsLicenseValid(true);
