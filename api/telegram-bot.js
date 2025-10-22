@@ -432,9 +432,14 @@ async function handleConfig(connection, chatId, username, params) {
       }
 
       case 'symbol': {
-        const validSymbols = ['R_10', 'R_25', 'R_50', 'R_75', 'R_100', 'BOOM_1000', 'CRASH_1000'];
+        const validSymbols = [
+          'R_10', 'R_25', 'R_50', 'R_75', 'R_100',
+          'CRASH300N', 'CRASH500N', 'CRASH1000N',
+          'BOOM300N', 'BOOM500N', 'BOOM1000N',
+          'stpRNG', 'JD10', 'JD25', 'JD50', 'JD75', 'JD100'
+        ];
         if (!validSymbols.includes(configValue.toUpperCase())) {
-          return `❌ Símbolo inválido.\n\n<b>Símbolos válidos:</b>\n${validSymbols.join(', ')}`;
+          return `❌ Símbolo inválido.\n\n<b>Símbolos válidos:</b>\nVolatility: R_10, R_25, R_50, R_75, R_100\nCrash: CRASH300N, CRASH500N, CRASH1000N\nBoom: BOOM300N, BOOM500N, BOOM1000N\nStep: stpRNG\nJump: JD10, JD25, JD50, JD75, JD100`;
         }
         
         await connection.execute(
@@ -618,9 +623,17 @@ module.exports = async (req, res) => {
       if (data.startsWith('cfg_symbol_')) {
         newText = `📊 <b>Escolha o Símbolo</b>\n\nSelecione o ativo que deseja operar:`;
         newKeyboard = [
-          [{ text: 'Volatility 10', callback_data: 'set_symbol_R_10' }, { text: 'Volatility 25', callback_data: 'set_symbol_R_25' }],
-          [{ text: 'Volatility 50', callback_data: 'set_symbol_R_50' }, { text: 'Volatility 75', callback_data: 'set_symbol_R_75' }],
-          [{ text: 'Volatility 100', callback_data: 'set_symbol_R_100' }],
+          [{ text: '🎲 Vol 10', callback_data: 'set_symbol_R_10' }, { text: '🎲 Vol 25', callback_data: 'set_symbol_R_25' }],
+          [{ text: '🎲 Vol 50', callback_data: 'set_symbol_R_50' }, { text: '🎲 Vol 75', callback_data: 'set_symbol_R_75' }],
+          [{ text: '🎲 Vol 100', callback_data: 'set_symbol_R_100' }],
+          [{ text: '📉 Crash 300', callback_data: 'set_symbol_CRASH300N' }, { text: '📉 Crash 500', callback_data: 'set_symbol_CRASH500N' }],
+          [{ text: '📉 Crash 1000', callback_data: 'set_symbol_CRASH1000N' }],
+          [{ text: '📈 Boom 300', callback_data: 'set_symbol_BOOM300N' }, { text: '📈 Boom 500', callback_data: 'set_symbol_BOOM500N' }],
+          [{ text: '📈 Boom 1000', callback_data: 'set_symbol_BOOM1000N' }],
+          [{ text: '🪜 Step Index', callback_data: 'set_symbol_stpRNG' }],
+          [{ text: '🎯 Jump 10', callback_data: 'set_symbol_JD10' }, { text: '🎯 Jump 25', callback_data: 'set_symbol_JD25' }],
+          [{ text: '🎯 Jump 50', callback_data: 'set_symbol_JD50' }, { text: '🎯 Jump 75', callback_data: 'set_symbol_JD75' }],
+          [{ text: '🎯 Jump 100', callback_data: 'set_symbol_JD100' }],
           [{ text: '🔙 Voltar', callback_data: 'back_main' }]
         ];
       }

@@ -1182,17 +1182,32 @@ ${tradesList || 'Nenhuma operação realizada'}
             <div class="form-group">
               <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #f1f5f9; font-size: 0.9rem;">📈 Símbolo:</label>
               <select id="symbol" style="width: 100%; padding: 14px; border: 2px solid #334155; border-radius: 12px; font-size: 16px; background: #0f172a; color: #e2e8f0;">
-                <optgroup label="ÍNDICES VOLÁTEIS">
+                <optgroup label="🎲 ÍNDICES VOLÁTEIS">
                   <option value="R_10">Volatility 10 Index</option>
                   <option value="R_25">Volatility 25 Index</option>
                   <option value="R_50">Volatility 50 Index</option>
                   <option value="R_75">Volatility 75 Index</option>
                   <option value="R_100">Volatility 100 Index</option>
                 </optgroup>
-                <optgroup label="FOREX MAJORS">
-                  <option value="frxEURUSD">EUR/USD</option>
-                  <option value="frxGBPUSD">GBP/USD</option>
-                  <option value="frxUSDJPY">USD/JPY</option>
+                <optgroup label="📉 CRASH INDICES">
+                  <option value="CRASH300N">Crash 300 Index</option>
+                  <option value="CRASH500N">Crash 500 Index</option>
+                  <option value="CRASH1000N">Crash 1000 Index</option>
+                </optgroup>
+                <optgroup label="📈 BOOM INDICES">
+                  <option value="BOOM300N">Boom 300 Index</option>
+                  <option value="BOOM500N">Boom 500 Index</option>
+                  <option value="BOOM1000N">Boom 1000 Index</option>
+                </optgroup>
+                <optgroup label="🪜 STEP INDICES">
+                  <option value="stpRNG">Step Index</option>
+                </optgroup>
+                <optgroup label="🎯 JUMP INDICES">
+                  <option value="JD10">Jump 10 Index</option>
+                  <option value="JD25">Jump 25 Index</option>
+                  <option value="JD50">Jump 50 Index</option>
+                  <option value="JD75">Jump 75 Index</option>
+                  <option value="JD100">Jump 100 Index</option>
                 </optgroup>
               </select>
             </div>

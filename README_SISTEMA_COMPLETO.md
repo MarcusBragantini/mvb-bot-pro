@@ -76,7 +76,12 @@ Aba 3: R_50 Index
 ```
 1. Telegram: /start
 2. Escolher opções com botões:
-   - Símbolo (R_10, R_25, R_50...)
+   - Símbolo:
+     🎲 Volatility (10, 25, 50, 75, 100)
+     📉 Crash (300, 500, 1000)
+     📈 Boom (300, 500, 1000)
+     🪜 Step Index
+     🎯 Jump (10, 25, 50, 75, 100)
    - Conta (Demo/Real)
    - Stake ($0.50, $1, $2...)
    - Duration (5, 10, 15, 20, 30 min)
@@ -103,7 +108,9 @@ Aba 3: R_50 Index
 | `/stop` | Parar bot |
 | `/status` | Ver estatísticas em tempo real |
 | `/config stake 2` | Alterar stake para $2 |
-| `/config symbol R_25` | Mudar para Volatility 25 |
+| `/config symbol CRASH500N` | Mudar para Crash 500 |
+| `/config symbol BOOM1000N` | Mudar para Boom 1000 |
+| `/config symbol JD25` | Mudar para Jump 25 |
 | `/config account real` | Mudar para conta real |
 | `/help` | Menu com botões clicáveis |
 
