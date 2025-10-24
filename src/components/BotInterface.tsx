@@ -1302,13 +1302,12 @@ export default function BotInterface() {
                   <option value="demo">🎮 Conta DEMO</option>
                   <option value="real">💰 Conta REAL</option>
                 </select>
-                <input 
-                  type="text" 
-                  id="token" 
-                  placeholder="Token será carregado automaticamente..." 
-                  readonly
-                  style="flex: 2; padding: 14px; border: 2px solid #334155; border-radius: 12px; font-size: 16px; background: #1e293b; color: #94a3b8;"
-                />
+                <div 
+                  id="tokenStatus" 
+                  style="flex: 2; padding: 14px; border: 2px solid #334155; border-radius: 12px; font-size: 16px; background: #1e293b; color: #94a3b8; display: flex; align-items: center; justify-content: center;"
+                >
+                  🔍 Verificando token...
+                </div>
                 <button 
                   onclick="window.reloadSettings().then(() => window.loadTokenByAccountType())" 
                   style="padding: 14px 12px; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3); transition: transform 0.2s;"
@@ -1742,12 +1741,12 @@ export default function BotInterface() {
       }
     };
     
-    // Função para carregar token por tipo de conta
+    // Função para verificar status do token (sem expor o valor)
     (window as any).loadTokenByAccountType = () => {
       const accountTypeSelect = document.getElementById('accountType') as HTMLSelectElement;
-      const tokenInput = document.getElementById('token') as HTMLInputElement;
+      const tokenStatus = document.getElementById('tokenStatus') as HTMLDivElement;
       
-      if (!accountTypeSelect || !tokenInput) return;
+      if (!accountTypeSelect || !tokenStatus) return;
       
       const accountType = accountTypeSelect.value;
       
@@ -1768,15 +1767,17 @@ export default function BotInterface() {
       }
       
       if (tokenValue && tokenValue.trim() !== '') {
-        tokenInput.value = tokenValue;
-        tokenInput.style.background = '#0f172a';
-        tokenInput.style.color = '#e2e8f0';
-        console.log('✅ Token carregado com sucesso:', accountType);
-        (window as any).showToast('✅ Token Carregado', `Token ${accountType.toUpperCase()} carregado com sucesso!`);
+        tokenStatus.innerHTML = '✅ Token Configurado';
+        tokenStatus.style.background = '#0f172a';
+        tokenStatus.style.color = '#10b981';
+        tokenStatus.style.borderColor = '#10b981';
+        console.log('✅ Token verificado com sucesso:', accountType);
+        (window as any).showToast('✅ Token Verificado', `Token ${accountType.toUpperCase()} configurado e pronto para uso!`);
       } else {
-        tokenInput.value = 'Token não configurado';
-        tokenInput.style.background = '#7f1d1d';
-        tokenInput.style.color = '#fca5a5';
+        tokenStatus.innerHTML = '⚠️ Token Não Configurado';
+        tokenStatus.style.background = '#7f1d1d';
+        tokenStatus.style.color = '#fca5a5';
+        tokenStatus.style.borderColor = '#ef4444';
         console.log('⚠️ Token não encontrado:', accountType);
         (window as any).showToast('⚠️ Token Não Encontrado', `Configure o token ${accountType.toUpperCase()} na aba Configurações!`);
       }
@@ -1794,12 +1795,27 @@ export default function BotInterface() {
       
       // Verificar configurações
       const symbol = (document.getElementById('symbol') as HTMLSelectElement)?.value;
-      const token = (document.getElementById('token') as HTMLInputElement)?.value;
+      const accountType = (document.getElementById('accountType') as HTMLSelectElement)?.value;
       
       if (!symbol) {
         console.error('❌ Símbolo não selecionado!');
         (window as any).showToast('❌ Erro', 'Selecione um símbolo para operar!');
         return;
+      }
+      
+      // Buscar token das configurações automaticamente
+      const settingsKey = user?.id ? `mvb_bot_settings_${user.id}` : 'mvb_bot_settings_temp';
+      const savedSettings = localStorage.getItem(settingsKey);
+      let token = '';
+      
+      if (savedSettings) {
+        try {
+          const parsed = JSON.parse(savedSettings);
+          token = accountType === 'demo' ? parsed.derivTokenDemo : parsed.derivTokenReal;
+          console.log('🔍 Token carregado das configurações:', accountType, token ? `Configurado (${token.length} chars)` : 'Não configurado');
+        } catch (error) {
+          console.error('❌ Erro ao parsear configurações:', error);
+        }
       }
       
       if (!token) {
@@ -1882,9 +1898,25 @@ export default function BotInterface() {
   // Re-inicializar bot quando voltar para aba trading
   useEffect(() => {
     if (activeTab === 'trading' && isLicenseValid) {
-      console.log('🔄 Aba trading ativada - forçando re-inicialização...');
+      console.log('🔄 Aba trading ativada - verificando se precisa re-inicializar...');
       
-      // Forçar re-inicialização sempre
+      // Verificar se o bot já está rodando
+      const isBotRunning = (window as any).botRunning;
+      const hasContent = botContainerRef.current?.innerHTML.trim() !== '';
+      
+      if (isBotRunning) {
+        console.log('🤖 Bot já está rodando - mantendo funcionamento em background');
+        return;
+      }
+      
+      if (hasContent) {
+        console.log('📦 Container já tem conteúdo - não re-inicializando');
+        return;
+      }
+      
+      console.log('🔄 Re-inicializando painel do bot...');
+      
+      // Forçar re-inicialização apenas se necessário
       setTimeout(() => {
         if (botContainerRef.current) {
           console.log('📦 Container encontrado, inicializando bot...');
