@@ -1261,10 +1261,10 @@ export default function BotInterface() {
     botContainerRef.current.innerHTML = '';
 
     botContainerRef.current.innerHTML = `
-      <div class="bot-interface-original" style="background: #0f172a; border-radius: 12px; padding: 12px; margin: 8px 0; border: 1px solid #334155;">
+      <div class="bot-interface-original" style="background: #0f172a; border-radius: 8px; padding: 8px; border: 1px solid #334155;">
         <!-- Controles Principais -->
-        <div class="main-controls" style="background: #1e293b; border-radius: 12px; padding: 16px; margin: 12px 0; box-shadow: 0 4px 20px rgba(0,0,0,0.3); border: 1px solid #334155;">
-          <div class="control-grid" style="display: grid; gap: 16px;">
+        <div class="main-controls" style="background: #1e293b; border-radius: 8px; padding: 12px; margin: 8px 0; border: 1px solid #334155;">
+          <div class="control-grid" style="display: grid; gap: 12px;">
             <div class="form-group">
               <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #f1f5f9; font-size: 0.9rem;">🔑 Conta Deriv:</label>
               <div style="display: flex; gap: 8px;">
@@ -1320,65 +1320,65 @@ export default function BotInterface() {
           </div>
 
           <!-- Botões de Controle -->
-          <div class="button-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px;">
+          <div class="button-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px;">
             <button 
               onclick="startBot()" 
               ${!isLicenseValid ? 'disabled' : ''}
-              style="background: ${isLicenseValid ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#6b7280'}; color: white; border: none; padding: 12px 16px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: ${isLicenseValid ? 'pointer' : 'not-allowed'}; box-shadow: 0 2px 8px ${isLicenseValid ? 'rgba(16, 185, 129, 0.3)' : 'rgba(107, 114, 128, 0.3)'}; transition: transform 0.2s; opacity: ${isLicenseValid ? '1' : '0.5'}; width: 100%; min-height: 44px;" 
+              style="background: ${isLicenseValid ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#6b7280'}; color: white; border: none; padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: ${isLicenseValid ? 'pointer' : 'not-allowed'}; box-shadow: 0 2px 6px ${isLicenseValid ? 'rgba(16, 185, 129, 0.3)' : 'rgba(107, 114, 128, 0.3)'}; transition: transform 0.2s; opacity: ${isLicenseValid ? '1' : '0.5'}; width: 100%; min-height: 40px;" 
               onmouseover="if(this.style.cursor==='pointer') this.style.transform='scale(1.02)'" 
               onmouseout="if(this.style.cursor==='pointer') this.style.transform='scale(1)'"
             >
-              🚀 Iniciar Bot
+              🚀 Iniciar
             </button>
             <button 
               onclick="stopBot()" 
-              style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; padding: 12px 16px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3); transition: transform 0.2s; width: 100%; min-height: 44px;" 
+              style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3); transition: transform 0.2s; width: 100%; min-height: 40px;" 
               onmouseover="this.style.transform='scale(1.02)'" 
               onmouseout="this.style.transform='scale(1)'"
             >
-              ⏸️ Parar Bot
+              ⏸️ Parar
             </button>
           </div>
         </div>
 
         <!-- Gráfico Profissional -->
-        <div style="background: #1e293b; border: 1px solid #475569; border-radius: 12px; padding: 12px; margin: 12px 0;">
-          <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 12px;">
-            <h3 style="color: #f1f5f9; margin: 0; font-size: 1rem; font-weight: 600;">📈 Gráfico Profissional</h3>
-            <div style="display: flex; gap: 8px;">
-              <select id="chartType" style="padding: 6px 10px; border-radius: 6px; background: #0f172a; color: #e2e8f0; border: 1px solid #475569; font-size: 0.8rem;">
-                <option value="candlestick">Candlestick</option>
+        <div style="background: #1e293b; border: 1px solid #475569; border-radius: 8px; padding: 8px; margin: 8px 0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+            <h3 style="color: #f1f5f9; margin: 0; font-size: 0.9rem; font-weight: 600;">📈 Gráfico</h3>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <select id="chartType" style="padding: 4px 8px; border-radius: 4px; background: #0f172a; color: #e2e8f0; border: 1px solid #475569; font-size: 0.75rem;">
+                <option value="candlestick">Velas</option>
                 <option value="line">Linha</option>
               </select>
-              <select id="chartTimeframe" style="padding: 6px 10px; border-radius: 6px; background: #0f172a; color: #e2e8f0; border: 1px solid #475569; font-size: 0.8rem;">
-                <option value="1m">1 minuto</option>
-                <option value="5m">5 minutos</option>
-                <option value="15m">15 minutos</option>
-                <option value="1h">1 hora</option>
-                <option value="4h">4 horas</option>
-                <option value="1d">1 dia</option>
+              <select id="chartTimeframe" style="padding: 4px 8px; border-radius: 4px; background: #0f172a; color: #e2e8f0; border: 1px solid #475569; font-size: 0.75rem;">
+                <option value="1m">1m</option>
+                <option value="5m">5m</option>
+                <option value="15m">15m</option>
+                <option value="1h">1h</option>
+                <option value="4h">4h</option>
+                <option value="1d">1d</option>
               </select>
             </div>
           </div>
-          <div style="position: relative; width: 100%; height: 300px; max-height: 300px; overflow: visible;">
-            <canvas id="priceChart" style="display: block; width: 100%; height: 300px; background: #0f172a; border: 1px solid #475569; border-radius: 8px;"></canvas>
+          <div style="position: relative; width: 100%; height: 250px; overflow: hidden;">
+            <canvas id="priceChart" style="display: block; width: 100%; height: 250px; background: #0f172a; border: 1px solid #475569; border-radius: 6px;"></canvas>
           </div>
         </div>
 
         <!-- Status e Logs -->
-        <div class="status-section" style="background: #1e293b; border-radius: 12px; padding: 16px; margin: 12px 0; border: 1px solid #334155;">
-          <div class="status-header" style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-            <div class="status-indicator" id="status-indicator" style="width: 12px; height: 12px; border-radius: 50%; background: #ef4444;"></div>
-            <h3 style="margin: 0; font-size: 1rem; font-weight: 600; color: #f1f5f9;">Status do Bot</h3>
+        <div class="status-section" style="background: #1e293b; border-radius: 8px; padding: 12px; margin: 8px 0; border: 1px solid #334155;">
+          <div class="status-header" style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+            <div class="status-indicator" id="status-indicator" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></div>
+            <h3 style="margin: 0; font-size: 0.9rem; font-weight: 600; color: #f1f5f9;">Status</h3>
           </div>
-          <div id="status" style="color: #94a3b8; font-size: 0.9rem; min-height: 20px; line-height: 1.4;">⏸️ Bot Parado</div>
+          <div id="status" style="color: #94a3b8; font-size: 0.8rem; min-height: 16px; line-height: 1.3;">⏸️ Bot Parado</div>
         </div>
 
         <!-- Logs de Operações -->
-        <div class="logs-section" style="background: #1e293b; border-radius: 12px; padding: 16px; margin: 12px 0; border: 1px solid #334155;">
-          <h3 style="margin: 0 0 12px 0; font-size: 1rem; font-weight: 600; color: #f1f5f9;">📋 Logs de Operações</h3>
-          <div id="logs" style="max-height: 200px; overflow-y: auto; font-size: 0.8rem; color: #cbd5e1; line-height: 1.4;">
-            <div style="padding: 4px 0; color: #94a3b8;">Aguardando início das operações...</div>
+        <div class="logs-section" style="background: #1e293b; border-radius: 8px; padding: 12px; margin: 8px 0; border: 1px solid #334155;">
+          <h3 style="margin: 0 0 8px 0; font-size: 0.9rem; font-weight: 600; color: #f1f5f9;">📋 Logs</h3>
+          <div id="logs" style="max-height: 120px; overflow-y: auto; font-size: 0.75rem; color: #cbd5e1; line-height: 1.3;">
+            <div style="padding: 2px 0; color: #94a3b8;">Aguardando início das operações...</div>
           </div>
         </div>
       </div>
@@ -1760,15 +1760,10 @@ export default function BotInterface() {
   // Re-inicializar bot quando voltar para aba trading
   useEffect(() => {
     if (activeTab === 'trading' && isLicenseValid && botContainerRef.current) {
-      // Verificar se o container está vazio ou não tem o bot
-      const container = botContainerRef.current;
-      const hasBotContent = container.querySelector('.bot-interface-original');
-      const hasChart = document.getElementById('priceChart');
+      console.log('🔄 Verificando painel na aba trading...');
       
-      if (!hasBotContent || !hasChart) {
-        console.log('🔄 Re-inicializando bot na aba trading...');
-        console.log('📦 Container vazio:', !hasBotContent);
-        console.log('📊 Gráfico ausente:', !hasChart);
+      // Sempre re-inicializar para garantir que apareça
+      setTimeout(() => {
         initializeOriginalBot();
         
         // Carregar token automaticamente após inicialização
@@ -1777,11 +1772,10 @@ export default function BotInterface() {
           if (accountTypeSelect) {
             accountTypeSelect.value = settings.selectedTokenType || 'demo';
             (window as any).loadTokenByAccountType();
+            console.log('🔑 Token carregado automaticamente');
           }
-        }, 300);
-      } else {
-        console.log('✅ Bot já está inicializado na aba trading');
-      }
+        }, 200);
+      }, 100);
     }
   }, [activeTab, isLicenseValid]);
 
@@ -1940,10 +1934,10 @@ export default function BotInterface() {
           )}
 
 
-          {/* Grid Principal - Layout Responsivo */}
-          <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
+          {/* Layout Responsivo Melhorado */}
+          <div className="flex flex-col lg:flex-row gap-4">
             {/* Coluna Esquerda - Estratégias e Configurações */}
-            <div className="xl:col-span-1 space-y-4">
+            <div className="lg:w-1/3 space-y-4">
               {/* Estratégias Pré-configuradas */}
               <Card className="bg-slate-800 border-slate-700">
                 <CardHeader>
@@ -2044,8 +2038,8 @@ export default function BotInterface() {
               </Card>
             </div>
 
-            {/* Coluna Central - Bot Principal */}
-            <div className="xl:col-span-3">
+            {/* Coluna Direita - Bot Principal */}
+            <div className="lg:w-2/3">
               <Card className="bg-slate-800 border-slate-700 h-full">
                 <CardHeader>
                   <CardTitle className="text-white flex items-center">
@@ -2056,14 +2050,14 @@ export default function BotInterface() {
                     Controle principal do sistema automatizado
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="p-4">
-                  <div ref={botContainerRef} id="bot-container" className="min-h-[400px]">
+                <CardContent className="p-2">
+                  <div ref={botContainerRef} id="bot-container" className="w-full">
                     {/* Loading placeholder */}
                     {!isLicenseValid && (
-                      <div className="flex items-center justify-center h-64 bg-slate-700 rounded-lg">
+                      <div className="flex items-center justify-center h-48 bg-slate-700 rounded-lg">
                         <div className="text-center">
-                          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                          <p className="text-slate-300">Carregando sistema de trading...</p>
+                          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                          <p className="text-slate-300 text-sm">Carregando sistema...</p>
                         </div>
                       </div>
                     )}
