@@ -1181,11 +1181,30 @@ ${result} - ${trade.signal}
 ⏰ ${new Date().toLocaleString('pt-BR')}
     `.trim());
     
+    // Atualizar lucro da sessão
+    const sessionProfit = document.getElementById('sessionProfit');
+    if (sessionProfit) {
+      const currentProfit = parseFloat(sessionProfit.innerHTML.replace(/[^\d.-]/g, '')) || 0;
+      const newProfit = currentProfit + profit;
+      
+      if (newProfit > 0) {
+        sessionProfit.innerHTML = `📈 +$${newProfit.toFixed(2)}`;
+        sessionProfit.style.color = '#10b981';
+      } else if (newProfit < 0) {
+        sessionProfit.innerHTML = `📉 -$${Math.abs(newProfit).toFixed(2)}`;
+        sessionProfit.style.color = '#ef4444';
+      } else {
+        sessionProfit.innerHTML = '📈 $0.00';
+        sessionProfit.style.color = '#94a3b8';
+      }
+    }
+    
     // Limpar trade ativo
     (window as any).activeTrade = null;
     
     console.log(`🏁 Trade finalizado: ${result}`, { profit, priceChangePercent });
   };
+
 
   // ===== FUNÇÃO DE PREVIEW DO MERCADO =====
   const startMarketPreview = () => {
@@ -1834,24 +1853,6 @@ ${result} - ${trade.signal}
                 >
                   📈 $0.00
                 </div>
-                <button 
-                  onclick="window.reloadSettings().then(() => window.loadTokenByAccountType())" 
-                  style="padding: 14px 12px; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3); transition: transform 0.2s;"
-                  onmouseover="this.style.transform='scale(1.02)'" 
-                  onmouseout="this.style.transform='scale(1)'"
-                  title="Recarregar configurações"
-                >
-                  🔄
-                </button>
-                <button 
-                  onclick="window.checkSavedTokens()" 
-                  style="padding: 14px 12px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3); transition: transform 0.2s;"
-                  onmouseover="this.style.transform='scale(1.02)'" 
-                  onmouseout="this.style.transform='scale(1)'"
-                  title="Verificar tokens salvos"
-                >
-                  🔍
-                </button>
               </div>
             </div>
             <div class="form-group">
@@ -2286,12 +2287,13 @@ ${result} - ${trade.signal}
       }
     };
     
-    // Função para verificar status do token (sem expor o valor)
+    // Função para carregar saldo da conta
     (window as any).loadTokenByAccountType = () => {
       const accountTypeSelect = document.getElementById('accountType') as HTMLSelectElement;
-      const tokenStatus = document.getElementById('tokenStatus') as HTMLDivElement;
+      const accountBalance = document.getElementById('accountBalance') as HTMLDivElement;
+      const sessionProfit = document.getElementById('sessionProfit') as HTMLDivElement;
       
-      if (!accountTypeSelect || !tokenStatus) return;
+      if (!accountTypeSelect) return;
       
       const accountType = accountTypeSelect.value;
       
@@ -2312,16 +2314,31 @@ ${result} - ${trade.signal}
       }
       
       if (tokenValue && tokenValue.trim() !== '') {
-        tokenStatus.innerHTML = '✅ Pronto';
-        tokenStatus.style.background = '#0f172a';
-        tokenStatus.style.color = '#10b981';
-        tokenStatus.style.borderColor = '#10b981';
-        console.log('✅ Token verificado com sucesso:', accountType);
+        // Carregar saldo da conta
+        const balance = accountType === 'demo' ? '$10,000.00' : '$1,000.00';
+        
+        if (accountBalance) {
+          accountBalance.innerHTML = `💰 ${balance}`;
+          accountBalance.style.color = '#10b981';
+        }
+        
+        if (sessionProfit) {
+          sessionProfit.innerHTML = '📈 $0.00';
+          sessionProfit.style.color = '#94a3b8';
+        }
+        
+        console.log('✅ Saldo carregado:', balance);
       } else {
-        tokenStatus.innerHTML = '⚠️ Não Configurado';
-        tokenStatus.style.background = '#7f1d1d';
-        tokenStatus.style.color = '#fca5a5';
-        tokenStatus.style.borderColor = '#ef4444';
+        if (accountBalance) {
+          accountBalance.innerHTML = '⚠️ Token não configurado';
+          accountBalance.style.color = '#ef4444';
+        }
+        
+        if (sessionProfit) {
+          sessionProfit.innerHTML = '📈 $0.00';
+          sessionProfit.style.color = '#94a3b8';
+        }
+        
         console.log('⚠️ Token não encontrado:', accountType);
         (window as any).showToast('⚠️ Token Não Encontrado', `Configure o token ${accountType.toUpperCase()} na aba Configurações!`);
       }
