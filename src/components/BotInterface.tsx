@@ -1928,7 +1928,7 @@ export default function BotInterface() {
         </TabsList>
 
         {/* TAB TRADING */}
-        <TabsContent value="trading" className="space-y-6">
+        <TabsContent value="trading" className="space-y-4">
           {/* Alertas de Licença */}
           {licenseInfo && licenseInfo.type === 'free' && (
             <Alert className="bg-amber-500/20 border-amber-500/30">
@@ -1939,28 +1939,11 @@ export default function BotInterface() {
             </Alert>
           )}
 
-          {/* Container do Bot - Sempre Visível */}
-          <div 
-            ref={botContainerRef} 
-            id="bot-container"
-            className="w-full"
-            style={{ minHeight: '600px' }}
-          >
-            {/* Loading placeholder */}
-            {!isLicenseValid && (
-              <div className="flex items-center justify-center h-96 bg-slate-800 rounded-lg border border-slate-700">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                  <p className="text-slate-300 text-lg">Carregando sistema de trading...</p>
-                </div>
-              </div>
-            )}
-          </div>
 
-          {/* Grid Principal */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Grid Principal - Layout Responsivo */}
+          <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
             {/* Coluna Esquerda - Estratégias e Configurações */}
-            <div className="lg:col-span-1 space-y-6">
+            <div className="xl:col-span-1 space-y-4">
               {/* Estratégias Pré-configuradas */}
               <Card className="bg-slate-800 border-slate-700">
                 <CardHeader>
@@ -2062,7 +2045,7 @@ export default function BotInterface() {
             </div>
 
             {/* Coluna Central - Bot Principal */}
-            <div className="lg:col-span-2">
+            <div className="xl:col-span-3">
               <Card className="bg-slate-800 border-slate-700 h-full">
                 <CardHeader>
                   <CardTitle className="text-white flex items-center">
@@ -2073,9 +2056,17 @@ export default function BotInterface() {
                     Controle principal do sistema automatizado
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div ref={botContainerRef} id="bot-container">
-                    {/* O bot original será renderizado aqui */}
+                <CardContent className="p-4">
+                  <div ref={botContainerRef} id="bot-container" className="min-h-[400px]">
+                    {/* Loading placeholder */}
+                    {!isLicenseValid && (
+                      <div className="flex items-center justify-center h-64 bg-slate-700 rounded-lg">
+                        <div className="text-center">
+                          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                          <p className="text-slate-300">Carregando sistema de trading...</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
