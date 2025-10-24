@@ -221,7 +221,16 @@ export default function BotInterface() {
     autoCloseProfit: 20,
     autoStopLoss: 50,
     trailingStop: false,
-    trailingStopPercent: 10
+    trailingStopPercent: 10,
+    strategies: {
+      trend: true,
+      rsi: true,
+      mhi: true,
+      bollinger: false,
+      fibonacci: false
+    },
+    bollingerPeriod: 20,
+    bollingerStdDev: 2
   });
 
   // ===== ESTADOS DO TELEGRAM =====
@@ -728,6 +737,9 @@ export default function BotInterface() {
     if (strategies.fibonacci) {
       analyzeFibonacciStrategy(price, timestamp);
     }
+    
+    // Executar análise combinada para gerar sinais de trading
+    executeTradingAnalysis(price, timestamp);
   };
 
   const analyze24HourTrend = (price: number, timestamp: number) => {
@@ -957,6 +969,160 @@ export default function BotInterface() {
     while (logsElement.children.length > 15) {
       logsElement.removeChild(logsElement.firstChild!);
     }
+  };
+
+  // ===== SISTEMA DE TRADING REAL =====
+  const executeTradingAnalysis = (price: number, timestamp: number) => {
+    const chart = (window as any).priceChartInstance;
+    if (!chart || chart.data.datasets[0].data.length < 60) return;
+    
+    const data = chart.data.datasets[0].data;
+    const strategies = (settings as any).strategies || {};
+    
+    // Coletar sinais de todas as estratégias
+    const signals = {
+      trend: strategies.trend ? getTrendSignal(data) : 0,
+      rsi: strategies.rsi ? getRSISignal(data) : 0,
+      mhi: strategies.mhi ? getMHISignal(data) : 0,
+      bollinger: strategies.bollinger ? getBollingerSignal(data, price) : 0,
+      fibonacci: strategies.fibonacci ? getFibonacciSignal(data, price) : 0
+    };
+    
+    // Calcular score total
+    const totalScore = Object.values(signals).reduce((sum, signal) => sum + signal, 0);
+    const activeStrategies = Object.values(strategies).filter(Boolean).length;
+    const averageScore = activeStrategies > 0 ? totalScore / activeStrategies : 0;
+    
+    // Verificar se deve executar trade
+    if (Math.abs(averageScore) >= settings.confidence / 100) {
+      const signal = averageScore > 0 ? 'CALL' : 'PUT';
+      const confidence = Math.abs(averageScore) * 100;
+      
+      // Executar trade
+      executeTrade(signal, price, confidence, signals);
+    }
+  };
+
+  const getTrendSignal = (data: any[]) => {
+    if (data.length < settings.emaSlow) return 0;
+    
+    const emaFast = calculateEMA(data, settings.emaFast);
+    const emaSlow = calculateEMA(data, settings.emaSlow);
+    
+    if (emaFast > emaSlow) return 0.3; // Sinal de alta
+    if (emaFast < emaSlow) return -0.3; // Sinal de baixa
+    return 0;
+  };
+
+  const getRSISignal = (data: any[]) => {
+    if (data.length < settings.rsiPeriods) return 0;
+    
+    const rsi = calculateRSI(data, settings.rsiPeriods);
+    
+    if (rsi < 30) return 0.4; // Sobrevendido - sinal de alta
+    if (rsi > 70) return -0.4; // Sobrecomprado - sinal de baixa
+    return 0;
+  };
+
+  const getMHISignal = (data: any[]) => {
+    if (data.length < settings.mhiPeriods) return 0;
+    
+    const mhi = calculateMHI(data, settings.mhiPeriods);
+    
+    if (mhi > 0.6) return 0.2; // Favorável para alta
+    if (mhi < 0.4) return -0.2; // Favorável para baixa
+    return 0;
+  };
+
+  const getBollingerSignal = (data: any[], price: number) => {
+    if (data.length < ((settings as any).bollingerPeriod || 20)) return 0;
+    
+    const bb = calculateBollingerBands(data, (settings as any).bollingerPeriod || 20, (settings as any).bollingerStdDev || 2);
+    
+    if (price < bb.lower) return 0.3; // Preço abaixo da banda inferior - sinal de alta
+    if (price > bb.upper) return -0.3; // Preço acima da banda superior - sinal de baixa
+    return 0;
+  };
+
+  const getFibonacciSignal = (data: any[], price: number) => {
+    if (data.length < 20) return 0;
+    
+    const fib = calculateFibonacci(data);
+    
+    if (price >= fib.retracement_618) return 0.2; // Nível de retração favorável
+    if (price <= fib.retracement_382) return -0.2; // Nível crítico
+    return 0;
+  };
+
+  const executeTrade = (signal: 'CALL' | 'PUT', price: number, confidence: number, signals: any) => {
+    // Verificar se já há trade ativo
+    if ((window as any).activeTrade) {
+      return;
+    }
+    
+    // Log do sinal
+    const signalColor = signal === 'CALL' ? '#10b981' : '#ef4444';
+    const signalEmoji = signal === 'CALL' ? '📈' : '📉';
+    
+    logAnalysis(
+      `${signalEmoji} SINAL ${signal} - Confiança: ${confidence.toFixed(1)}%`,
+      `Preço: $${price.toFixed(4)} | Stake: $${settings.stake}`
+    );
+    
+    // Simular execução do trade
+    const tradeId = Date.now();
+    const trade = {
+      id: tradeId,
+      signal,
+      price,
+      stake: settings.stake,
+      timestamp: Date.now(),
+      status: 'active'
+    };
+    
+    (window as any).activeTrade = trade;
+    
+    // Adicionar marcador no gráfico
+    addTradeMarker(price, Date.now(), signal);
+    
+    // Simular resultado após duração configurada
+    setTimeout(() => {
+      executeTradeResult(trade, price);
+    }, settings.duration * 1000);
+    
+    console.log(`🎯 Trade ${signal} executado:`, trade);
+  };
+
+  const executeTradeResult = (trade: any, currentPrice: number) => {
+    if (!(window as any).activeTrade) return;
+    
+    const priceChange = currentPrice - trade.price;
+    const priceChangePercent = (priceChange / trade.price) * 100;
+    
+    let result: 'WIN' | 'LOSS';
+    let profit: number;
+    
+    if (trade.signal === 'CALL') {
+      result = priceChange > 0 ? 'WIN' : 'LOSS';
+      profit = result === 'WIN' ? trade.stake * (settings.stopWin / 100) : -trade.stake * (Math.abs(settings.stopLoss) / 100);
+    } else {
+      result = priceChange < 0 ? 'WIN' : 'LOSS';
+      profit = result === 'WIN' ? trade.stake * (settings.stopWin / 100) : -trade.stake * (Math.abs(settings.stopLoss) / 100);
+    }
+    
+    // Log do resultado
+    const resultColor = result === 'WIN' ? '#10b981' : '#ef4444';
+    const resultEmoji = result === 'WIN' ? '✅' : '❌';
+    
+    logAnalysis(
+      `${resultEmoji} ${result} - ${trade.signal}`,
+      `Lucro: $${profit.toFixed(2)} | Variação: ${priceChangePercent.toFixed(2)}%`
+    );
+    
+    // Limpar trade ativo
+    (window as any).activeTrade = null;
+    
+    console.log(`🏁 Trade finalizado: ${result}`, { profit, priceChangePercent });
   };
 
   // ===== FUNÇÃO DE PREVIEW DO MERCADO =====
