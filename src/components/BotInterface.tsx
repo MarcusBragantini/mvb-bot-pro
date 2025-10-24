@@ -680,10 +680,30 @@ export default function BotInterface() {
     console.log('📊 Iniciando preview do mercado...');
     
     const symbol = (document.getElementById('symbol') as HTMLSelectElement)?.value;
-    const token = (document.getElementById('token') as HTMLInputElement)?.value;
+    const accountType = (document.getElementById('accountType') as HTMLSelectElement)?.value;
     
-    if (!symbol || !token) {
-      console.error('❌ Símbolo ou token não configurado!');
+    if (!symbol) {
+      console.error('❌ Símbolo não selecionado!');
+      return;
+    }
+    
+    // Buscar token das configurações
+    const settingsKey = user?.id ? `mvb_bot_settings_${user.id}` : 'mvb_bot_settings_temp';
+    const savedSettings = localStorage.getItem(settingsKey);
+    let token = '';
+    
+    if (savedSettings) {
+      try {
+        const parsed = JSON.parse(savedSettings);
+        token = accountType === 'demo' ? parsed.derivTokenDemo : parsed.derivTokenReal;
+        console.log('🔍 Token carregado para preview:', accountType, token ? `Configurado (${token.length} chars)` : 'Não configurado');
+      } catch (error) {
+        console.error('❌ Erro ao parsear configurações:', error);
+      }
+    }
+    
+    if (!token) {
+      console.error('❌ Token não configurado!');
       return;
     }
     
@@ -1767,14 +1787,13 @@ export default function BotInterface() {
       }
       
       if (tokenValue && tokenValue.trim() !== '') {
-        tokenStatus.innerHTML = '✅ Token Configurado';
+        tokenStatus.innerHTML = '✅ Pronto';
         tokenStatus.style.background = '#0f172a';
         tokenStatus.style.color = '#10b981';
         tokenStatus.style.borderColor = '#10b981';
         console.log('✅ Token verificado com sucesso:', accountType);
-        (window as any).showToast('✅ Token Verificado', `Token ${accountType.toUpperCase()} configurado e pronto para uso!`);
       } else {
-        tokenStatus.innerHTML = '⚠️ Token Não Configurado';
+        tokenStatus.innerHTML = '⚠️ Não Configurado';
         tokenStatus.style.background = '#7f1d1d';
         tokenStatus.style.color = '#fca5a5';
         tokenStatus.style.borderColor = '#ef4444';
@@ -1909,9 +1928,14 @@ export default function BotInterface() {
         return;
       }
       
-      if (hasContent) {
+      if (hasContent && !isBotRunning) {
         console.log('📦 Container já tem conteúdo - não re-inicializando');
         return;
+      }
+      
+      // Se o bot não está rodando mas o container está vazio, re-inicializar
+      if (!hasContent) {
+        console.log('📦 Container vazio - re-inicializando painel');
       }
       
       console.log('🔄 Re-inicializando painel do bot...');
