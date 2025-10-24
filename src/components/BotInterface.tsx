@@ -775,13 +775,8 @@ export default function BotInterface() {
     const last5Candles = data.slice(-5);
     const confirmationTrend = analyzeConfirmationTrend(last5Candles);
     
-    // Log da análise apenas se houver dados suficientes e tendência significativa
-    if (availableData >= 60 && Math.abs(trend24h) > 0.5) {
-      const trendDirection = trend24h > 0 ? 'Alta' : 'Baixa';
-      const confirmation = confirmationTrend > 0 ? 'Confirmando Alta' : 'Confirmando Baixa';
-      const timeFrame = availableData >= 1440 ? '24h' : `${availableData}min`;
-      
-      // Mostrar horário real em vez de contador
+    // Log simples - apenas "Analisando"
+    if (availableData >= 60) {
       const now = new Date();
       const timeString = now.toLocaleTimeString('pt-BR', { 
         hour: '2-digit', 
@@ -790,8 +785,8 @@ export default function BotInterface() {
       });
       
       logAnalysis(
-        `📊 Análise ${timeFrame} (${timeString}): ${trendDirection} ${Math.abs(trend24h).toFixed(2)}%`,
-        `${confirmation} - Últimas 5 velas: ${confirmationTrend > 0 ? 'Alta' : 'Baixa'}`
+        `🔍 Analisando mercado (${timeString})`,
+        `Dados: ${availableData} velas | Aguardando sinais...`
       );
     }
   };
@@ -1006,6 +1001,8 @@ export default function BotInterface() {
     const data = chart.data.datasets[0].data;
     const strategies = (settings as any).strategies || {};
     
+    console.log('🔍 Verificando estratégias ativas:', strategies);
+    
     // Coletar sinais de todas as estratégias
     const signals = {
       trend: strategies.trend ? getTrendSignal(data) : 0,
@@ -1015,18 +1012,26 @@ export default function BotInterface() {
       fibonacci: strategies.fibonacci ? getFibonacciSignal(data, price) : 0
     };
     
+    console.log('📊 Sinais coletados:', signals);
+    
     // Calcular score total
     const totalScore = Object.values(signals).reduce((sum, signal) => sum + signal, 0);
     const activeStrategies = Object.values(strategies).filter(Boolean).length;
     const averageScore = activeStrategies > 0 ? totalScore / activeStrategies : 0;
+    
+    console.log(`📈 Score: ${averageScore.toFixed(3)} | Confiança mínima: ${settings.confidence / 100}`);
     
     // Verificar se deve executar trade
     if (Math.abs(averageScore) >= settings.confidence / 100) {
       const signal = averageScore > 0 ? 'CALL' : 'PUT';
       const confidence = Math.abs(averageScore) * 100;
       
+      console.log(`🎯 Sinal detectado: ${signal} com confiança ${confidence.toFixed(1)}%`);
+      
       // Executar trade
       executeTrade(signal, price, confidence, signals);
+    } else {
+      console.log('⏳ Aguardando sinal mais forte...');
     }
   };
 
@@ -1087,14 +1092,30 @@ export default function BotInterface() {
       return;
     }
     
-    // Log do sinal
-    const signalColor = signal === 'CALL' ? '#10b981' : '#ef4444';
+    // Calcular confluência (quantas estratégias concordam)
+    const activeStrategies = Object.values(signals).filter((s: any) => s !== 0).length;
+    const confluence = activeStrategies > 0 ? Math.round((activeStrategies / Object.keys(signals).length) * 100) : 0;
+    
+    // Log do sinal com confluência
     const signalEmoji = signal === 'CALL' ? '📈' : '📉';
+    const signalColor = signal === 'CALL' ? 'Alta' : 'Baixa';
     
     logAnalysis(
-      `${signalEmoji} SINAL ${signal} - Confiança: ${confidence.toFixed(1)}%`,
-      `Preço: $${price.toFixed(4)} | Stake: $${settings.stake}`
+      `${signalEmoji} OPERAÇÃO ${signal} - Confluência: ${confluence}%`,
+      `Preço: $${price.toFixed(4)} | Stake: $${settings.stake} | Confiança: ${confidence.toFixed(1)}%`
     );
+    
+    // Enviar notificação para Telegram
+    sendTelegramNotification(`
+🎯 <b>NOVA OPERAÇÃO EXECUTADA</b>
+
+${signalEmoji} <b>${signal}</b> - Confluência: ${confluence}%
+💰 Preço: $${price.toFixed(4)}
+🎯 Stake: $${settings.stake}
+📊 Confiança: ${confidence.toFixed(1)}%
+
+⏰ ${new Date().toLocaleString('pt-BR')}
+    `.trim());
     
     // Simular execução do trade
     const tradeId = Date.now();
@@ -1104,7 +1125,9 @@ export default function BotInterface() {
       price,
       stake: settings.stake,
       timestamp: Date.now(),
-      status: 'active'
+      status: 'active',
+      confluence,
+      confidence
     };
     
     (window as any).activeTrade = trade;
@@ -1145,6 +1168,18 @@ export default function BotInterface() {
       `${resultEmoji} ${result} - ${trade.signal}`,
       `Lucro: $${profit.toFixed(2)} | Variação: ${priceChangePercent.toFixed(2)}%`
     );
+    
+    // Enviar notificação de resultado para Telegram
+    sendTelegramNotification(`
+${resultEmoji} <b>RESULTADO DA OPERAÇÃO</b>
+
+${result} - ${trade.signal}
+💰 Lucro: $${profit.toFixed(2)}
+📊 Variação: ${priceChangePercent.toFixed(2)}%
+🎯 Confluência: ${trade.confluence}%
+
+⏰ ${new Date().toLocaleString('pt-BR')}
+    `.trim());
     
     // Limpar trade ativo
     (window as any).activeTrade = null;
@@ -1788,10 +1823,16 @@ export default function BotInterface() {
                   <option value="real">💰 Conta REAL</option>
                 </select>
                 <div 
-                  id="tokenStatus" 
-                  style="flex: 2; padding: 14px; border: 2px solid #334155; border-radius: 12px; font-size: 16px; background: #1e293b; color: #94a3b8; display: flex; align-items: center; justify-content: center;"
+                  id="accountBalance" 
+                  style="flex: 1; padding: 14px; border: 2px solid #334155; border-radius: 12px; font-size: 16px; background: #1e293b; color: #94a3b8; display: flex; align-items: center; justify-content: center;"
                 >
-                  🔍 Verificando token...
+                  💰 $0.00
+                </div>
+                <div 
+                  id="sessionProfit" 
+                  style="flex: 1; padding: 14px; border: 2px solid #334155; border-radius: 12px; font-size: 16px; background: #1e293b; color: #94a3b8; display: flex; align-items: center; justify-content: center;"
+                >
+                  📈 $0.00
                 </div>
                 <button 
                   onclick="window.reloadSettings().then(() => window.loadTokenByAccountType())" 
