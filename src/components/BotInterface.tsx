@@ -206,7 +206,7 @@ export default function BotInterface() {
     duration: 15,
     stopWin: 3,
     stopLoss: -5,
-    confidence: 70,
+    confidence: 30,
     strategy: 'martingale',
     moneyManagement: 'martingale_inteligente',
     derivTokenDemo: '',
@@ -1025,16 +1025,20 @@ export default function BotInterface() {
     console.log(`📈 Score: ${averageScore.toFixed(3)} | Confiança mínima: ${settings.confidence / 100}`);
     
     // Verificar se deve executar trade
-    if (Math.abs(averageScore) >= settings.confidence / 100) {
+    const confidenceThreshold = settings.confidence / 100;
+    console.log(`🎯 Verificando sinal: Score ${averageScore.toFixed(3)} vs Threshold ${confidenceThreshold.toFixed(3)}`);
+    
+    if (Math.abs(averageScore) >= confidenceThreshold) {
       const signal = averageScore > 0 ? 'CALL' : 'PUT';
       const confidence = Math.abs(averageScore) * 100;
       
-      console.log(`🎯 Sinal detectado: ${signal} com confiança ${confidence.toFixed(1)}%`);
+      console.log(`🚀 SINAL DETECTADO: ${signal} com confiança ${confidence.toFixed(1)}%`);
+      console.log(`📊 Sinais detalhados:`, signals);
       
       // Executar trade
       executeTrade(signal, price, confidence, signals);
     } else {
-      console.log('⏳ Aguardando sinal mais forte...');
+      console.log(`⏳ Aguardando sinal mais forte... (Score: ${averageScore.toFixed(3)} < ${confidenceThreshold.toFixed(3)})`);
     }
   };
 
