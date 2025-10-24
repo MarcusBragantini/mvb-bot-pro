@@ -1310,7 +1310,7 @@ export default function BotInterface() {
                   style="flex: 2; padding: 14px; border: 2px solid #334155; border-radius: 12px; font-size: 16px; background: #1e293b; color: #94a3b8;"
                 />
                 <button 
-                  onclick="(window as any).reloadSettings().then(() => (window as any).loadTokenByAccountType())" 
+                  onclick="window.reloadSettings().then(() => window.loadTokenByAccountType())" 
                   style="padding: 14px 12px; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3); transition: transform 0.2s;"
                   onmouseover="this.style.transform='scale(1.02)'" 
                   onmouseout="this.style.transform='scale(1)'"
@@ -1319,7 +1319,7 @@ export default function BotInterface() {
                   🔄
                 </button>
                 <button 
-                  onclick="(window as any).checkSavedTokens()" 
+                  onclick="window.checkSavedTokens()" 
                   style="padding: 14px 12px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3); transition: transform 0.2s;"
                   onmouseover="this.style.transform='scale(1.02)'" 
                   onmouseout="this.style.transform='scale(1)'"
@@ -1879,7 +1879,7 @@ export default function BotInterface() {
           setTimeout(() => {
             const accountTypeSelect = document.getElementById('accountType') as HTMLSelectElement;
             if (accountTypeSelect) {
-              (accountTypeSelect as HTMLSelectElement).value = settings.selectedTokenType || 'demo';
+              accountTypeSelect.value = settings.selectedTokenType || 'demo';
               console.log('🔑 Tentando carregar token automaticamente...');
               console.log('📊 Settings disponíveis:', {
                 selectedTokenType: settings.selectedTokenType,
