@@ -1002,6 +1002,8 @@ export default function BotInterface() {
     const strategies = (settings as any).strategies || {};
     
     console.log('🔍 Verificando estratégias ativas:', strategies);
+    console.log('📊 Dados disponíveis:', data.length, 'velas');
+    console.log('💰 Preço atual:', price);
     
     // Coletar sinais de todas as estratégias
     const signals = {
@@ -1013,6 +1015,7 @@ export default function BotInterface() {
     };
     
     console.log('📊 Sinais coletados:', signals);
+    console.log('🎯 Estratégias ativas:', Object.keys(strategies).filter(k => strategies[k]));
     
     // Calcular score total
     const totalScore = Object.values(signals).reduce((sum, signal) => sum + signal, 0);
@@ -1036,33 +1039,67 @@ export default function BotInterface() {
   };
 
   const getTrendSignal = (data: any[]) => {
-    if (data.length < settings.emaSlow) return 0;
+    if (data.length < settings.emaSlow) {
+      console.log('⚠️ Trend: Dados insuficientes', data.length, 'vs', settings.emaSlow);
+      return 0;
+    }
     
     const emaFast = calculateEMA(data, settings.emaFast);
     const emaSlow = calculateEMA(data, settings.emaSlow);
     
-    if (emaFast > emaSlow) return 0.3; // Sinal de alta
-    if (emaFast < emaSlow) return -0.3; // Sinal de baixa
+    console.log('📈 Trend: EMA Fast:', emaFast.toFixed(4), 'EMA Slow:', emaSlow.toFixed(4));
+    
+    if (emaFast > emaSlow) {
+      console.log('📈 Trend: Sinal de ALTA');
+      return 0.3;
+    }
+    if (emaFast < emaSlow) {
+      console.log('📉 Trend: Sinal de BAIXA');
+      return -0.3;
+    }
+    console.log('➡️ Trend: Sem sinal');
     return 0;
   };
 
   const getRSISignal = (data: any[]) => {
-    if (data.length < settings.rsiPeriods) return 0;
+    if (data.length < settings.rsiPeriods) {
+      console.log('⚠️ RSI: Dados insuficientes', data.length, 'vs', settings.rsiPeriods);
+      return 0;
+    }
     
     const rsi = calculateRSI(data, settings.rsiPeriods);
+    console.log('📊 RSI:', rsi.toFixed(2));
     
-    if (rsi < 30) return 0.4; // Sobrevendido - sinal de alta
-    if (rsi > 70) return -0.4; // Sobrecomprado - sinal de baixa
+    if (rsi < 30) {
+      console.log('🟢 RSI: Sobrevendido - Sinal de ALTA');
+      return 0.4;
+    }
+    if (rsi > 70) {
+      console.log('🔴 RSI: Sobrecomprado - Sinal de BAIXA');
+      return -0.4;
+    }
+    console.log('➡️ RSI: Neutro');
     return 0;
   };
 
   const getMHISignal = (data: any[]) => {
-    if (data.length < settings.mhiPeriods) return 0;
+    if (data.length < settings.mhiPeriods) {
+      console.log('⚠️ MHI: Dados insuficientes', data.length, 'vs', settings.mhiPeriods);
+      return 0;
+    }
     
     const mhi = calculateMHI(data, settings.mhiPeriods);
+    console.log('🎯 MHI:', mhi.toFixed(2));
     
-    if (mhi > 0.6) return 0.2; // Favorável para alta
-    if (mhi < 0.4) return -0.2; // Favorável para baixa
+    if (mhi > 0.6) {
+      console.log('🟢 MHI: Favorável para ALTA');
+      return 0.2;
+    }
+    if (mhi < 0.4) {
+      console.log('🔴 MHI: Favorável para BAIXA');
+      return -0.2;
+    }
+    console.log('➡️ MHI: Neutro');
     return 0;
   };
 
@@ -2052,26 +2089,28 @@ ${result} - ${trade.signal}
           <div class="control-grid" style="display: grid; gap: 12px;">
             <div class="form-group">
               <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #f1f5f9; font-size: 0.9rem;">🔑 Conta Deriv:</label>
-              <div style="display: flex; gap: 8px;">
+              <div style="display: flex; flex-direction: column; gap: 8px;">
                 <select 
                   id="accountType" 
                   onchange="loadTokenByAccountType()"
-                  style="flex: 1; padding: 14px; border: 2px solid #334155; border-radius: 12px; font-size: 16px; background: #0f172a; color: #e2e8f0;"
+                  style="width: 100%; padding: 12px; border: 2px solid #334155; border-radius: 8px; font-size: 14px; background: #0f172a; color: #e2e8f0;"
                 >
                   <option value="demo">🎮 Conta DEMO</option>
                   <option value="real">💰 Conta REAL</option>
                 </select>
-                <div 
-                  id="accountBalance" 
-                  style="flex: 1; padding: 14px; border: 2px solid #334155; border-radius: 12px; font-size: 16px; background: #1e293b; color: #94a3b8; display: flex; align-items: center; justify-content: center;"
-                >
-                  💰 $0.00
-                </div>
-                <div 
-                  id="sessionProfit" 
-                  style="flex: 1; padding: 14px; border: 2px solid #334155; border-radius: 12px; font-size: 16px; background: #1e293b; color: #94a3b8; display: flex; align-items: center; justify-content: center;"
-                >
-                  📈 $0.00
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                  <div 
+                    id="accountBalance" 
+                    style="flex: 1; min-width: 120px; padding: 12px; border: 2px solid #334155; border-radius: 8px; font-size: 14px; background: #1e293b; color: #94a3b8; display: flex; align-items: center; justify-content: center;"
+                  >
+                    💰 $0.00
+                  </div>
+                  <div 
+                    id="sessionProfit" 
+                    style="flex: 1; min-width: 120px; padding: 12px; border: 2px solid #334155; border-radius: 8px; font-size: 14px; background: #1e293b; color: #94a3b8; display: flex; align-items: center; justify-content: center;"
+                  >
+                    📈 $0.00
+                  </div>
                 </div>
               </div>
             </div>
@@ -2110,7 +2149,7 @@ ${result} - ${trade.signal}
           </div>
 
           <!-- Botões de Controle -->
-          <div class="button-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px;">
+          <div class="button-group" style="display: flex; flex-direction: column; gap: 8px; margin-top: 16px;">
             <button 
               onclick="startBot()" 
               ${!isLicenseValid ? 'disabled' : ''}
@@ -2150,8 +2189,8 @@ ${result} - ${trade.signal}
               </select>
             </div>
           </div>
-          <div style="position: relative; width: 100%; height: 250px; overflow: hidden;">
-            <canvas id="priceChart" style="display: block; width: 100%; height: 250px; background: #0f172a; border: 1px solid #475569; border-radius: 6px;"></canvas>
+          <div style="position: relative; width: 100%; height: 200px; overflow: hidden;">
+            <canvas id="priceChart" style="display: block; width: 100%; height: 200px; background: #0f172a; border: 1px solid #475569; border-radius: 6px;"></canvas>
           </div>
         </div>
 
@@ -2878,9 +2917,9 @@ ${result} - ${trade.signal}
 
 
           {/* Layout Responsivo Melhorado */}
-          <div className="flex flex-col lg:flex-row gap-4">
+          <div className="flex flex-col xl:flex-row gap-4">
             {/* Coluna Esquerda - Estratégias e Configurações */}
-            <div className="lg:w-1/3 space-y-4">
+            <div className="xl:w-1/3 w-full space-y-4">
               {/* Estratégias Pré-configuradas */}
               <Card className="bg-slate-800 border-slate-700">
                 <CardHeader>
@@ -2982,7 +3021,7 @@ ${result} - ${trade.signal}
             </div>
 
             {/* Coluna Direita - Bot Principal */}
-            <div className="lg:w-2/3">
+            <div className="xl:w-2/3 w-full">
               <Card className="bg-slate-800 border-slate-700 h-full">
                 <CardHeader>
                   <CardTitle className="text-white flex items-center">
@@ -2993,14 +3032,14 @@ ${result} - ${trade.signal}
                     Controle principal do sistema automatizado
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="p-2">
+                <CardContent className="p-2 sm:p-4">
                   <div ref={botContainerRef} id="bot-container" className="w-full">
                     {/* Loading placeholder */}
                     {!isLicenseValid && (
-                      <div className="flex items-center justify-center h-48 bg-slate-700 rounded-lg">
+                      <div className="flex items-center justify-center h-32 sm:h-48 bg-slate-700 rounded-lg">
                         <div className="text-center">
-                          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                          <p className="text-slate-300 text-sm">Carregando sistema...</p>
+                          <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-t-2 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                          <p className="text-slate-300 text-xs sm:text-sm">Carregando sistema...</p>
                         </div>
                       </div>
                     )}
