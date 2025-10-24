@@ -961,12 +961,15 @@ export default function BotInterface() {
   // ===== FUNÇÕES DE CONFIGURAÇÃO =====
   const loadSettings = async () => {
     try {
+      console.log('🔍 Carregando configurações...');
+      
       if (user?.id) {
         try {
           const response = await fetch(`/api/data?action=settings&user_id=${user.id}`);
           if (response.ok) {
             const data = await response.json();
             if (data.settings) {
+              console.log('✅ Configurações carregadas do servidor:', data.settings);
               setSettings(prev => ({ ...prev, ...data.settings }));
               return;
             }
@@ -980,7 +983,10 @@ export default function BotInterface() {
       const savedSettings = localStorage.getItem(settingsKey);
       if (savedSettings) {
         const parsed = JSON.parse(savedSettings);
+        console.log('✅ Configurações carregadas do localStorage:', parsed);
         setSettings(parsed);
+      } else {
+        console.log('⚠️ Nenhuma configuração encontrada');
       }
     } catch (error) {
       console.error('❌ Erro ao carregar configurações:', error);
@@ -1295,6 +1301,14 @@ export default function BotInterface() {
                   readonly
                   style="flex: 2; padding: 14px; border: 2px solid #334155; border-radius: 12px; font-size: 16px; background: #1e293b; color: #94a3b8;"
                 />
+                <button 
+                  onclick="(window as any).reloadSettings().then(() => (window as any).loadTokenByAccountType())" 
+                  style="padding: 14px 12px; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3); transition: transform 0.2s;"
+                  onmouseover="this.style.transform='scale(1.02)'" 
+                  onmouseout="this.style.transform='scale(1)'"
+                >
+                  🔄
+                </button>
               </div>
             </div>
             <div class="form-group">
@@ -1673,27 +1687,45 @@ export default function BotInterface() {
     (window as any).updateEMAsOnChart = updateEMAsOnChart;
     (window as any).startMarketPreview = startMarketPreview;
     
+    // Função para recarregar configurações
+    (window as any).reloadSettings = async () => {
+      console.log('🔄 Recarregando configurações...');
+      await loadSettings();
+      console.log('✅ Configurações recarregadas');
+    };
+    
     // Função para carregar token por tipo de conta
     (window as any).loadTokenByAccountType = () => {
       const accountTypeSelect = document.getElementById('accountType') as HTMLSelectElement;
       const tokenInput = document.getElementById('token') as HTMLInputElement;
       
-      if (!accountTypeSelect || !tokenInput) return;
+      if (!accountTypeSelect || !tokenInput) {
+        console.error('❌ Elementos não encontrados:', { accountTypeSelect, tokenInput });
+        return;
+      }
       
       const accountType = accountTypeSelect.value;
+      console.log('🔍 Carregando token para:', accountType);
+      console.log('📊 Settings atuais:', {
+        selectedTokenType: settings.selectedTokenType,
+        derivTokenDemo: settings.derivTokenDemo ? 'Configurado' : 'Não configurado',
+        derivTokenReal: settings.derivTokenReal ? 'Configurado' : 'Não configurado'
+      });
+      
       const tokenValue = accountType === 'demo' ? settings.derivTokenDemo : settings.derivTokenReal;
       
-      if (tokenValue) {
+      if (tokenValue && tokenValue.trim() !== '') {
         tokenInput.value = tokenValue;
         tokenInput.style.background = '#0f172a';
         tokenInput.style.color = '#e2e8f0';
-        console.log('✅ Token carregado:', accountType);
+        console.log('✅ Token carregado com sucesso:', accountType, 'Length:', tokenValue.length);
         (window as any).showToast('✅ Token Carregado', `Token ${accountType.toUpperCase()} carregado com sucesso!`);
       } else {
         tokenInput.value = 'Token não configurado';
         tokenInput.style.background = '#7f1d1d';
         tokenInput.style.color = '#fca5a5';
-        console.log('⚠️ Token não encontrado:', accountType);
+        console.log('⚠️ Token não encontrado para:', accountType);
+        console.log('🔍 Token value:', tokenValue);
         (window as any).showToast('⚠️ Token Não Encontrado', `Configure o token ${accountType.toUpperCase()} na aba Configurações!`);
       }
     };
@@ -1811,10 +1843,15 @@ export default function BotInterface() {
             const accountTypeSelect = document.getElementById('accountType') as HTMLSelectElement;
             if (accountTypeSelect) {
               accountTypeSelect.value = settings.selectedTokenType || 'demo';
+              console.log('🔑 Tentando carregar token automaticamente...');
+              console.log('📊 Settings disponíveis:', {
+                selectedTokenType: settings.selectedTokenType,
+                derivTokenDemo: settings.derivTokenDemo ? 'Configurado' : 'Não configurado',
+                derivTokenReal: settings.derivTokenReal ? 'Configurado' : 'Não configurado'
+              });
               (window as any).loadTokenByAccountType();
-              console.log('🔑 Token carregado automaticamente');
             }
-          }, 300);
+          }, 500);
         } else {
           console.error('❌ Container do bot não encontrado!');
           // Mostrar fallback
