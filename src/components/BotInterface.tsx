@@ -1728,6 +1728,12 @@ export default function BotInterface() {
             derivTokenDemo: parsed.derivTokenDemo ? `Configurado (${parsed.derivTokenDemo.length} chars)` : 'Não configurado',
             derivTokenReal: parsed.derivTokenReal ? `Configurado (${parsed.derivTokenReal.length} chars)` : 'Não configurado'
           });
+          
+          // Forçar atualização das configurações
+          if (parsed.derivTokenDemo || parsed.derivTokenReal) {
+            setSettings(prev => ({ ...prev, ...parsed }));
+            console.log('✅ Settings forçados a atualizar com tokens do localStorage');
+          }
         } catch (error) {
           console.error('❌ Erro ao parsear configurações:', error);
         }
@@ -1737,47 +1743,26 @@ export default function BotInterface() {
     };
     
     // Função para carregar token por tipo de conta
-    (window as any).loadTokenByAccountType = async () => {
+    (window as any).loadTokenByAccountType = () => {
       const accountTypeSelect = document.getElementById('accountType') as HTMLSelectElement;
       const tokenInput = document.getElementById('token') as HTMLInputElement;
       
-      if (!accountTypeSelect || !tokenInput) {
-        console.error('❌ Elementos não encontrados:', { accountTypeSelect, tokenInput });
-        return;
-      }
+      if (!accountTypeSelect || !tokenInput) return;
       
       const accountType = accountTypeSelect.value;
-      console.log('🔍 Carregando token para:', accountType);
-      
-      // Tentar recarregar configurações primeiro
-      console.log('🔄 Recarregando configurações...');
-      await (window as any).reloadSettings();
-      
-      // Aguardar um pouco para as configurações serem atualizadas
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      console.log('📊 Settings após recarregar:', {
-        selectedTokenType: settings.selectedTokenType,
-        derivTokenDemo: settings.derivTokenDemo ? `Configurado (${settings.derivTokenDemo.length} chars)` : 'Não configurado',
-        derivTokenReal: settings.derivTokenReal ? `Configurado (${settings.derivTokenReal.length} chars)` : 'Não configurado'
-      });
-      
       const tokenValue = accountType === 'demo' ? settings.derivTokenDemo : settings.derivTokenReal;
       
-      if (tokenValue && tokenValue.trim() !== '') {
+      if (tokenValue) {
         tokenInput.value = tokenValue;
         tokenInput.style.background = '#0f172a';
         tokenInput.style.color = '#e2e8f0';
-        console.log('✅ Token carregado com sucesso:', accountType, 'Length:', tokenValue.length);
+        console.log('✅ Token carregado:', accountType);
         (window as any).showToast('✅ Token Carregado', `Token ${accountType.toUpperCase()} carregado com sucesso!`);
       } else {
         tokenInput.value = 'Token não configurado';
         tokenInput.style.background = '#7f1d1d';
         tokenInput.style.color = '#fca5a5';
-        console.log('⚠️ Token não encontrado para:', accountType);
-        console.log('🔍 Token value:', tokenValue);
-        console.log('🔍 Token type:', typeof tokenValue);
-        console.log('🔍 Token length:', tokenValue ? tokenValue.length : 'undefined');
+        console.log('⚠️ Token não encontrado:', accountType);
         (window as any).showToast('⚠️ Token Não Encontrado', `Configure o token ${accountType.toUpperCase()} na aba Configurações!`);
       }
     };
@@ -1894,7 +1879,7 @@ export default function BotInterface() {
           setTimeout(() => {
             const accountTypeSelect = document.getElementById('accountType') as HTMLSelectElement;
             if (accountTypeSelect) {
-              accountTypeSelect.value = settings.selectedTokenType || 'demo';
+              (accountTypeSelect as HTMLSelectElement).value = settings.selectedTokenType || 'demo';
               console.log('🔑 Tentando carregar token automaticamente...');
               console.log('📊 Settings disponíveis:', {
                 selectedTokenType: settings.selectedTokenType,
