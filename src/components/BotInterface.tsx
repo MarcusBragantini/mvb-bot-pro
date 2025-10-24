@@ -262,25 +262,64 @@ export default function BotInterface() {
   };
 
   const initializeProfessionalChart = () => {
+    console.log('📊 Inicializando gráfico profissional...');
+    
     const canvas = document.getElementById('priceChart') as HTMLCanvasElement;
-    if (!canvas || typeof (window as any).Chart === 'undefined') {
-      console.error('Canvas ou Chart.js não disponível');
+    if (!canvas) {
+      console.error('❌ Canvas do gráfico não encontrado!');
+      return null;
+    }
+    
+    if (typeof (window as any).Chart === 'undefined') {
+      console.error('❌ Chart.js não está disponível!');
       return null;
     }
 
     // Destruir gráfico existente
     const existingChart = (window as any).priceChartInstance;
     if (existingChart) {
+      console.log('🗑️ Destruindo gráfico existente...');
       existingChart.destroy();
     }
 
     const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
+    if (!ctx) {
+      console.error('❌ Contexto do canvas não encontrado!');
+      return null;
+    }
+    
+    console.log('✅ Canvas e contexto prontos');
 
     // Criar gradiente para o fundo do gráfico
     const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
     gradient.addColorStop(0, 'rgba(15, 23, 42, 0.8)');
     gradient.addColorStop(1, 'rgba(15, 23, 42, 0.2)');
+
+    // Dados iniciais para o gráfico
+    const initialData = [];
+    const now = Date.now();
+    const timeframeMs = getTimeframeMilliseconds(chartConfig.timeframe);
+    
+    // Criar 20 velas iniciais com dados simulados
+    for (let i = 20; i >= 0; i--) {
+      const timestamp = now - (i * timeframeMs);
+      const basePrice = 1.0000 + Math.random() * 0.1;
+      const variation = (Math.random() - 0.5) * 0.05;
+      
+      const open = basePrice + variation;
+      const close = basePrice + variation + (Math.random() - 0.5) * 0.02;
+      const high = Math.max(open, close) + Math.random() * 0.01;
+      const low = Math.min(open, close) - Math.random() * 0.01;
+      
+      initialData.push({
+        x: timestamp,
+        o: open,
+        h: high,
+        l: low,
+        c: close,
+        time: new Date(timestamp).toISOString()
+      });
+    }
 
     // Configurações profissionais do gráfico
     const chart = new (window as any).Chart(ctx, {
@@ -289,7 +328,7 @@ export default function BotInterface() {
         datasets: [
           {
             label: `Ativo - ${chartConfig.timeframe}`,
-            data: [],
+            data: initialData,
             ...(chartConfig.type === 'candlestick' && {
               color: {
                 up: '#10b981',
@@ -423,6 +462,12 @@ export default function BotInterface() {
 
     // Salvar instância globalmente
     (window as any).priceChartInstance = chart;
+    
+    console.log('✅ Gráfico profissional criado com sucesso!');
+    console.log('📊 Canvas element:', canvas);
+    console.log('📊 Chart instance:', chart);
+    console.log('📊 Chart data:', chart.data);
+    
     return chart;
   };
 
@@ -1115,7 +1160,15 @@ export default function BotInterface() {
 
   // ===== INICIALIZAR BOT ORIGINAL =====
   const initializeOriginalBot = () => {
-    if (!botContainerRef.current) return;
+    if (!botContainerRef.current) {
+      console.error('❌ Container do bot não encontrado!');
+      return;
+    }
+
+    console.log('🤖 Inicializando bot original...');
+    
+    // Limpar container antes de inserir novo conteúdo
+    botContainerRef.current.innerHTML = '';
 
     botContainerRef.current.innerHTML = `
       <div class="bot-interface-original" style="background: #0f172a; border-radius: 12px; padding: 12px; margin: 8px 0; border: 1px solid #334155;">
@@ -1224,31 +1277,38 @@ export default function BotInterface() {
 
     // Inicializar gráfico profissional
     setTimeout(() => {
-      initializeProfessionalChart();
-      
-      // Adicionar event listeners para controles do gráfico
-      const chartTypeSelect = document.getElementById('chartType') as HTMLSelectElement;
-      const chartTimeframeSelect = document.getElementById('chartTimeframe') as HTMLSelectElement;
-      
-      if (chartTypeSelect) {
-        chartTypeSelect.value = chartConfig.type;
-        chartTypeSelect.addEventListener('change', (e) => {
-          changeChartType((e.target as HTMLSelectElement).value as 'candlestick' | 'line');
-        });
+      try {
+        console.log('📊 Inicializando gráfico profissional...');
+        initializeProfessionalChart();
+        
+        // Adicionar event listeners para controles do gráfico
+        const chartTypeSelect = document.getElementById('chartType') as HTMLSelectElement;
+        const chartTimeframeSelect = document.getElementById('chartTimeframe') as HTMLSelectElement;
+        
+        if (chartTypeSelect) {
+          chartTypeSelect.value = chartConfig.type;
+          chartTypeSelect.addEventListener('change', (e) => {
+            changeChartType((e.target as HTMLSelectElement).value as 'candlestick' | 'line');
+          });
+          console.log('📈 Seletor de tipo de gráfico configurado');
+        }
+        
+        if (chartTimeframeSelect) {
+          chartTimeframeSelect.value = chartConfig.timeframe;
+          chartTimeframeSelect.addEventListener('change', (e) => {
+            changeChartTimeframe((e.target as HTMLSelectElement).value as '1m' | '5m' | '15m' | '1h' | '4h' | '1d');
+          });
+          console.log('⏰ Seletor de timeframe configurado');
+        }
+        
+        console.log('✅ Gráfico profissional inicializado com sucesso!');
+      } catch (error) {
+        console.error('❌ Erro ao inicializar gráfico:', error);
       }
-      
-      if (chartTimeframeSelect) {
-        chartTimeframeSelect.value = chartConfig.timeframe;
-        chartTimeframeSelect.addEventListener('change', (e) => {
-          changeChartTimeframe((e.target as HTMLSelectElement).value as '1m' | '5m' | '15m' | '1h' | '4h' | '1d');
-        });
-      }
-    }, 100);
+    }, 200);
 
-    if (!isInitialized.current) {
-      isInitialized.current = true;
-      console.log('🤖 Bot original inicializado com gráfico profissional');
-    }
+    console.log('🤖 Bot original inicializado com gráfico profissional');
+    isInitialized.current = true;
   };
 
   // ===== EFFECTS PRINCIPAIS =====
@@ -1490,6 +1550,25 @@ export default function BotInterface() {
       initializeOriginalBot();
     }
   }, [isLicenseValid]);
+
+  // Re-inicializar bot quando voltar para aba trading
+  useEffect(() => {
+    if (activeTab === 'trading' && isLicenseValid && botContainerRef.current) {
+      // Verificar se o container está vazio ou não tem o bot
+      const container = botContainerRef.current;
+      const hasBotContent = container.querySelector('.bot-interface-original');
+      const hasChart = document.getElementById('priceChart');
+      
+      if (!hasBotContent || !hasChart) {
+        console.log('🔄 Re-inicializando bot na aba trading...');
+        console.log('📦 Container vazio:', !hasBotContent);
+        console.log('📊 Gráfico ausente:', !hasChart);
+        initializeOriginalBot();
+      } else {
+        console.log('✅ Bot já está inicializado na aba trading');
+      }
+    }
+  }, [activeTab, isLicenseValid]);
 
   // Atualizar gráfico quando configurações mudarem
   useEffect(() => {
