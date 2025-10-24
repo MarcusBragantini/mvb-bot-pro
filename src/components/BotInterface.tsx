@@ -1117,7 +1117,7 @@ ${signalEmoji} <b>${signal}</b> - Confluência: ${confluence}%
 ⏰ ${new Date().toLocaleString('pt-BR')}
     `.trim());
     
-    // Simular execução do trade
+    // Executar trade real com Deriv API
     const tradeId = Date.now();
     const trade = {
       id: tradeId,
@@ -1135,38 +1135,25 @@ ${signalEmoji} <b>${signal}</b> - Confluência: ${confluence}%
     // Adicionar marcador no gráfico
     addTradeMarker(price, Date.now(), signal);
     
-    // Simular resultado após duração configurada
-    setTimeout(() => {
-      executeTradeResult(trade, price);
-    }, settings.duration * 1000);
+    // Executar trade real
+    executeRealTrade(trade);
     
     console.log(`🎯 Trade ${signal} executado:`, trade);
   };
 
-  const executeTradeResult = (trade: any, currentPrice: number) => {
+  const executeTradeResult = (trade: any, realProfit: number) => {
     if (!(window as any).activeTrade) return;
     
-    const priceChange = currentPrice - trade.price;
-    const priceChangePercent = (priceChange / trade.price) * 100;
-    
-    let result: 'WIN' | 'LOSS';
-    let profit: number;
-    
-    if (trade.signal === 'CALL') {
-      result = priceChange > 0 ? 'WIN' : 'LOSS';
-      profit = result === 'WIN' ? trade.stake * (settings.stopWin / 100) : -trade.stake * (Math.abs(settings.stopLoss) / 100);
-    } else {
-      result = priceChange < 0 ? 'WIN' : 'LOSS';
-      profit = result === 'WIN' ? trade.stake * (settings.stopWin / 100) : -trade.stake * (Math.abs(settings.stopLoss) / 100);
-    }
+    // Usar lucro real da Deriv
+    const profit = realProfit;
+    const result: 'WIN' | 'LOSS' = profit > 0 ? 'WIN' : 'LOSS';
     
     // Log do resultado
-    const resultColor = result === 'WIN' ? '#10b981' : '#ef4444';
     const resultEmoji = result === 'WIN' ? '✅' : '❌';
     
     logAnalysis(
       `${resultEmoji} ${result} - ${trade.signal}`,
-      `Lucro: $${profit.toFixed(2)} | Variação: ${priceChangePercent.toFixed(2)}%`
+      `Lucro: $${profit.toFixed(2)} | Confluência: ${trade.confluence}%`
     );
     
     // Enviar notificação de resultado para Telegram
@@ -1175,7 +1162,6 @@ ${resultEmoji} <b>RESULTADO DA OPERAÇÃO</b>
 
 ${result} - ${trade.signal}
 💰 Lucro: $${profit.toFixed(2)}
-📊 Variação: ${priceChangePercent.toFixed(2)}%
 🎯 Confluência: ${trade.confluence}%
 
 ⏰ ${new Date().toLocaleString('pt-BR')}
@@ -1199,12 +1185,246 @@ ${result} - ${trade.signal}
       }
     }
     
+    // Atualizar saldo da conta
+    updateAccountBalance(profit);
+    
     // Limpar trade ativo
     (window as any).activeTrade = null;
     
-    console.log(`🏁 Trade finalizado: ${result}`, { profit, priceChangePercent });
+    console.log(`🏁 Trade finalizado: ${result}`, { profit });
   };
 
+  // ===== FUNÇÃO PARA ATUALIZAR SALDO DA CONTA =====
+  const updateAccountBalance = (profit: number) => {
+    const accountBalance = document.getElementById('accountBalance');
+    if (!accountBalance) return;
+    
+    // Extrair saldo atual
+    const currentBalanceText = accountBalance.innerHTML;
+    const currentBalance = parseFloat(currentBalanceText.replace(/[^\d.-]/g, '')) || 0;
+    const newBalance = currentBalance + profit;
+    
+    // Atualizar display
+    const currency = currentBalanceText.includes('USD') ? 'USD' : 'USD';
+    accountBalance.innerHTML = `💰 ${currency} ${newBalance.toFixed(2)}`;
+    
+    if (profit > 0) {
+      accountBalance.style.color = '#10b981';
+    } else if (profit < 0) {
+      accountBalance.style.color = '#ef4444';
+    } else {
+      accountBalance.style.color = '#10b981';
+    }
+    
+    console.log('💰 Saldo da conta atualizado:', newBalance);
+  };
+
+
+  // ===== FUNÇÃO PARA EXECUTAR TRADE REAL COM DERIV =====
+  const executeRealTrade = async (trade: any) => {
+    try {
+      console.log('🎯 Executando trade real com Deriv...');
+      
+      const accountType = (document.getElementById('accountType') as HTMLSelectElement)?.value;
+      const symbol = (document.getElementById('symbol') as HTMLSelectElement)?.value;
+      
+      if (!accountType || !symbol) {
+        console.error('❌ Tipo de conta ou símbolo não encontrado');
+        return;
+      }
+      
+      // Buscar token
+      const settingsKey = user?.id ? `mvb_bot_settings_${user.id}` : 'mvb_bot_settings_temp';
+      const savedSettings = localStorage.getItem(settingsKey);
+      
+      if (!savedSettings) {
+        console.error('❌ Configurações não encontradas');
+        return;
+      }
+      
+      const parsed = JSON.parse(savedSettings);
+      const token = accountType === 'demo' ? parsed.derivTokenDemo : parsed.derivTokenReal;
+      
+      if (!token) {
+        console.error('❌ Token não encontrado');
+        return;
+      }
+      
+      // Conectar com Deriv API
+      const ws = new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=1089');
+      
+      await new Promise((resolve, reject) => {
+        ws.onopen = () => {
+          console.log('🔗 Conectado com Deriv para trade');
+          
+          // Autorizar
+          ws.send(JSON.stringify({
+            authorize: token
+          }));
+        };
+        
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          
+          if (data.authorize) {
+            console.log('✅ Autorizado para trade');
+            
+            // Executar trade
+            const buyRequest = {
+              buy: trade.id,
+              price: trade.stake,
+              amount: trade.stake,
+              basis: 'stake',
+              contract_type: trade.signal === 'CALL' ? 'CALL' : 'PUT',
+              currency: 'USD',
+              duration: settings.duration,
+              duration_unit: 'm',
+              symbol: symbol
+            };
+            
+            console.log('📤 Enviando ordem de compra:', buyRequest);
+            ws.send(JSON.stringify(buyRequest));
+            
+          } else if (data.buy) {
+            console.log('✅ Trade executado:', data.buy);
+            
+            // Monitorar resultado
+            const contractId = data.buy.contract_id;
+            monitorTradeResult(contractId, trade, ws);
+            
+            resolve(data.buy);
+            
+          } else if (data.error) {
+            console.error('❌ Erro no trade:', data.error);
+            reject(data.error);
+          }
+        };
+        
+        ws.onerror = (error) => {
+          console.error('❌ Erro de conexão:', error);
+          reject(error);
+        };
+      });
+      
+    } catch (error) {
+      console.error('❌ Erro ao executar trade:', error);
+    }
+  };
+
+  // ===== FUNÇÃO PARA MONITORAR RESULTADO DO TRADE =====
+  const monitorTradeResult = (contractId: string, trade: any, ws: WebSocket) => {
+    console.log('👀 Monitorando resultado do trade:', contractId);
+    
+    // Verificar resultado após duração
+    setTimeout(() => {
+      ws.send(JSON.stringify({
+        contract_details: contractId
+      }));
+    }, settings.duration * 1000);
+    
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      
+      if (data.contract_details) {
+        const contract = data.contract_details;
+        const profit = parseFloat(contract.profit || '0');
+        
+        console.log('📊 Resultado do trade:', contract);
+        
+        // Executar resultado
+        executeTradeResult(trade, profit);
+        
+        // Fechar conexão
+        ws.close();
+      }
+    };
+  };
+
+  // ===== FUNÇÃO PARA CARREGAR SALDO REAL DA DERIV =====
+  const loadRealAccountBalance = async (accountType: string, token: string) => {
+    try {
+      console.log('💰 Carregando saldo real da Deriv...');
+      
+      const accountBalance = document.getElementById('accountBalance');
+      if (accountBalance) {
+        accountBalance.innerHTML = '⏳ Carregando...';
+        accountBalance.style.color = '#f59e0b';
+      }
+      
+      // Conectar com Deriv API
+      const ws = new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=1089');
+      
+      await new Promise((resolve, reject) => {
+        ws.onopen = () => {
+          console.log('🔗 Conectado com Deriv API');
+          
+          // Autorizar com token
+          ws.send(JSON.stringify({
+            authorize: token
+          }));
+        };
+        
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          
+          if (data.authorize) {
+            console.log('✅ Autorizado com Deriv');
+            
+            // Buscar saldo da conta
+            ws.send(JSON.stringify({
+              balance: 1,
+              subscribe: 1
+            }));
+          } else if (data.balance) {
+            const balance = parseFloat(data.balance.balance);
+            const currency = data.balance.currency || 'USD';
+            
+            if (accountBalance) {
+              accountBalance.innerHTML = `💰 ${currency} ${balance.toFixed(2)}`;
+              accountBalance.style.color = '#10b981';
+            }
+            
+            console.log('✅ Saldo real carregado:', `${currency} ${balance.toFixed(2)}`);
+            
+            // Fechar conexão
+            ws.close();
+            resolve(balance);
+          } else if (data.error) {
+            console.error('❌ Erro da Deriv:', data.error);
+            if (accountBalance) {
+              accountBalance.innerHTML = '❌ Erro ao carregar';
+              accountBalance.style.color = '#ef4444';
+            }
+            ws.close();
+            reject(data.error);
+          }
+        };
+        
+        ws.onerror = (error) => {
+          console.error('❌ Erro de conexão:', error);
+          if (accountBalance) {
+            accountBalance.innerHTML = '❌ Erro de conexão';
+            accountBalance.style.color = '#ef4444';
+          }
+          reject(error);
+        };
+        
+        // Timeout de 10 segundos
+        setTimeout(() => {
+          ws.close();
+          reject(new Error('Timeout'));
+        }, 10000);
+      });
+      
+    } catch (error) {
+      console.error('❌ Erro ao carregar saldo:', error);
+      const accountBalance = document.getElementById('accountBalance');
+      if (accountBalance) {
+        accountBalance.innerHTML = '❌ Erro ao carregar';
+        accountBalance.style.color = '#ef4444';
+      }
+    }
+  };
 
   // ===== FUNÇÃO DE PREVIEW DO MERCADO =====
   const startMarketPreview = () => {
@@ -2314,20 +2534,15 @@ ${result} - ${trade.signal}
       }
       
       if (tokenValue && tokenValue.trim() !== '') {
-        // Carregar saldo da conta
-        const balance = accountType === 'demo' ? '$10,000.00' : '$1,000.00';
-        
-        if (accountBalance) {
-          accountBalance.innerHTML = `💰 ${balance}`;
-          accountBalance.style.color = '#10b981';
-        }
+        // Carregar saldo real da Deriv
+        loadRealAccountBalance(accountType, tokenValue);
         
         if (sessionProfit) {
           sessionProfit.innerHTML = '📈 $0.00';
           sessionProfit.style.color = '#94a3b8';
         }
         
-        console.log('✅ Saldo carregado:', balance);
+        console.log('✅ Token verificado, carregando saldo real...');
       } else {
         if (accountBalance) {
           accountBalance.innerHTML = '⚠️ Token não configurado';
