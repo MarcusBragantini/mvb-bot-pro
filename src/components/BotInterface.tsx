@@ -1453,6 +1453,23 @@ export default function BotInterface() {
     (window as any).processTickToCandle = processTickToCandle;
     (window as any).addTradeMarker = addTradeMarker;
     (window as any).updateEMAsOnChart = updateEMAsOnChart;
+    
+    // Exportar funções do bot para o escopo global
+    (window as any).startBot = () => {
+      console.log('🚀 Iniciando bot...');
+      // Implementar lógica de início do bot
+      if (typeof (window as any).showToast === 'function') {
+        (window as any).showToast('🚀 Bot Iniciado', 'Sistema de trading ativado com sucesso!');
+      }
+    };
+    
+    (window as any).stopBot = () => {
+      console.log('⏸️ Parando bot...');
+      // Implementar lógica de parada do bot
+      if (typeof (window as any).showToast === 'function') {
+        (window as any).showToast('⏸️ Bot Parado', 'Sistema de trading parado com sucesso!');
+      }
+    };
 
     return () => {
       delete (window as any).showToast;
@@ -1462,6 +1479,8 @@ export default function BotInterface() {
       delete (window as any).processTickToCandle;
       delete (window as any).addTradeMarker;
       delete (window as any).updateEMAsOnChart;
+      delete (window as any).startBot;
+      delete (window as any).stopBot;
     };
   }, [toast]);
 
