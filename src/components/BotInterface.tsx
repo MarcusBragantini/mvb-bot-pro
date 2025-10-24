@@ -295,21 +295,27 @@ export default function BotInterface() {
     gradient.addColorStop(0, 'rgba(15, 23, 42, 0.8)');
     gradient.addColorStop(1, 'rgba(15, 23, 42, 0.2)');
 
-    // Dados iniciais para o gráfico
+    // Dados iniciais para o gráfico - 60 velas (1 hora de dados)
     const initialData = [];
     const now = Date.now();
     const timeframeMs = getTimeframeMilliseconds(chartConfig.timeframe);
     
-    // Criar 20 velas iniciais com dados simulados
-    for (let i = 20; i >= 0; i--) {
+    // Criar 60 velas iniciais com dados simulados mais realistas
+    let basePrice = 1.0000;
+    for (let i = 60; i >= 0; i--) {
       const timestamp = now - (i * timeframeMs);
-      const basePrice = 1.0000 + Math.random() * 0.1;
-      const variation = (Math.random() - 0.5) * 0.05;
       
-      const open = basePrice + variation;
-      const close = basePrice + variation + (Math.random() - 0.5) * 0.02;
-      const high = Math.max(open, close) + Math.random() * 0.01;
-      const low = Math.min(open, close) - Math.random() * 0.01;
+      // Simular movimento de preço mais realista
+      const trend = Math.sin(i * 0.1) * 0.02; // Tendência suave
+      const noise = (Math.random() - 0.5) * 0.01; // Ruído
+      const priceChange = trend + noise;
+      
+      basePrice += priceChange;
+      
+      const open = basePrice;
+      const close = basePrice + (Math.random() - 0.5) * 0.005;
+      const high = Math.max(open, close) + Math.random() * 0.003;
+      const low = Math.min(open, close) - Math.random() * 0.003;
       
       initialData.push({
         x: timestamp,
@@ -426,11 +432,12 @@ export default function BotInterface() {
             ticks: {
               color: '#94a3b8',
               font: {
-                size: 10
+                size: 11,
+                family: 'Inter, system-ui, sans-serif'
               },
               maxRotation: 0,
               autoSkip: true,
-              maxTicksLimit: 8
+              maxTicksLimit: 10
             }
           },
           y: {
@@ -442,8 +449,9 @@ export default function BotInterface() {
             ticks: {
               color: '#cbd5e1',
               font: {
-                size: 10,
-                weight: 'bold'
+                size: 11,
+                weight: 'bold',
+                family: 'Inter, system-ui, sans-serif'
               },
               callback: function(value: any) {
                 return value.toFixed(4);
@@ -481,9 +489,9 @@ export default function BotInterface() {
       // Adicionar nova vela
       mainDataset.data.push(candle);
       
-      // Manter apenas últimas 100 velas para performance
-      if (mainDataset.data.length > 100) {
-        mainDataset.data = mainDataset.data.slice(-100);
+      // Manter apenas últimas 200 velas para performance (mais dados para análise)
+      if (mainDataset.data.length > 200) {
+        mainDataset.data = mainDataset.data.slice(-200);
       }
       
       // Atualizar gráfico
@@ -710,27 +718,31 @@ export default function BotInterface() {
   const analyze24HourTrend = (price: number, timestamp: number) => {
     // Análise de 24 horas com velas de 1 minuto (1440 velas)
     const chart = (window as any).priceChartInstance;
-    if (!chart || chart.data.datasets[0].data.length < 1440) return;
+    if (!chart || chart.data.datasets[0].data.length < 60) return; // Mínimo 60 velas para análise
     
     const data = chart.data.datasets[0].data;
-    const last24Hours = data.slice(-1440); // Últimas 1440 velas (24h de 1min)
+    const availableData = data.length;
     
-    // Calcular tendência de 24 horas
-    const firstPrice = last24Hours[0]?.c || last24Hours[0]?.y || 0;
-    const lastPrice = last24Hours[last24Hours.length - 1]?.c || last24Hours[last24Hours.length - 1]?.y || 0;
-    const trend24h = ((lastPrice - firstPrice) / firstPrice) * 100;
+    // Usar todos os dados disponíveis (mínimo 60 velas)
+    const analysisData = data.slice(-Math.min(availableData, 200)); // Máximo 200 velas
+    
+    // Calcular tendência com dados disponíveis
+    const firstPrice = analysisData[0]?.c || analysisData[0]?.y || 0;
+    const lastPrice = analysisData[analysisData.length - 1]?.c || analysisData[analysisData.length - 1]?.y || 0;
+    const trend24h = firstPrice > 0 ? ((lastPrice - firstPrice) / firstPrice) * 100 : 0;
     
     // Analisar últimas 5 velas para confirmação
     const last5Candles = data.slice(-5);
     const confirmationTrend = analyzeConfirmationTrend(last5Candles);
     
-    // Log da análise
-    if (Math.abs(trend24h) > 1) { // Só logar se tendência for significativa
+    // Log da análise apenas se houver dados suficientes
+    if (availableData >= 60 && Math.abs(trend24h) > 0.5) { // Só logar se tendência for significativa
       const trendDirection = trend24h > 0 ? 'Alta' : 'Baixa';
       const confirmation = confirmationTrend > 0 ? 'Confirmando Alta' : 'Confirmando Baixa';
+      const timeFrame = availableData >= 1440 ? '24h' : `${availableData}min`;
       
       logAnalysis(
-        `📊 Análise 24h: ${trendDirection} ${Math.abs(trend24h).toFixed(2)}%`,
+        `📊 Análise ${timeFrame}: ${trendDirection} ${Math.abs(trend24h).toFixed(2)}%`,
         `${confirmation} - Últimas 5 velas: ${confirmationTrend > 0 ? 'Alta' : 'Baixa'}`
       );
     }
