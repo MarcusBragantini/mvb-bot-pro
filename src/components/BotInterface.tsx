@@ -970,7 +970,11 @@ export default function BotInterface() {
             const data = await response.json();
             if (data.settings) {
               console.log('✅ Configurações carregadas do servidor:', data.settings);
-              setSettings(prev => ({ ...prev, ...data.settings }));
+              setSettings(prev => {
+                const newSettings = { ...prev, ...data.settings };
+                console.log('📊 Novas configurações aplicadas:', newSettings);
+                return newSettings;
+              });
               return;
             }
           }
@@ -984,7 +988,11 @@ export default function BotInterface() {
       if (savedSettings) {
         const parsed = JSON.parse(savedSettings);
         console.log('✅ Configurações carregadas do localStorage:', parsed);
-        setSettings(parsed);
+        setSettings(prev => {
+          const newSettings = { ...prev, ...parsed };
+          console.log('📊 Novas configurações aplicadas:', newSettings);
+          return newSettings;
+        });
       } else {
         console.log('⚠️ Nenhuma configuração encontrada');
       }
@@ -1306,8 +1314,18 @@ export default function BotInterface() {
                   style="padding: 14px 12px; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3); transition: transform 0.2s;"
                   onmouseover="this.style.transform='scale(1.02)'" 
                   onmouseout="this.style.transform='scale(1)'"
+                  title="Recarregar configurações"
                 >
                   🔄
+                </button>
+                <button 
+                  onclick="(window as any).checkSavedTokens()" 
+                  style="padding: 14px 12px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3); transition: transform 0.2s;"
+                  onmouseover="this.style.transform='scale(1.02)'" 
+                  onmouseout="this.style.transform='scale(1)'"
+                  title="Verificar tokens salvos"
+                >
+                  🔍
                 </button>
               </div>
             </div>
@@ -1694,8 +1712,32 @@ export default function BotInterface() {
       console.log('✅ Configurações recarregadas');
     };
     
+    // Função para verificar tokens salvos
+    (window as any).checkSavedTokens = () => {
+      const settingsKey = user?.id ? `mvb_bot_settings_${user.id}` : 'mvb_bot_settings_temp';
+      const savedSettings = localStorage.getItem(settingsKey);
+      
+      console.log('🔍 Verificando tokens salvos...');
+      console.log('📦 Settings key:', settingsKey);
+      console.log('📦 Saved settings:', savedSettings);
+      
+      if (savedSettings) {
+        try {
+          const parsed = JSON.parse(savedSettings);
+          console.log('📊 Tokens encontrados:', {
+            derivTokenDemo: parsed.derivTokenDemo ? `Configurado (${parsed.derivTokenDemo.length} chars)` : 'Não configurado',
+            derivTokenReal: parsed.derivTokenReal ? `Configurado (${parsed.derivTokenReal.length} chars)` : 'Não configurado'
+          });
+        } catch (error) {
+          console.error('❌ Erro ao parsear configurações:', error);
+        }
+      } else {
+        console.log('⚠️ Nenhuma configuração encontrada no localStorage');
+      }
+    };
+    
     // Função para carregar token por tipo de conta
-    (window as any).loadTokenByAccountType = () => {
+    (window as any).loadTokenByAccountType = async () => {
       const accountTypeSelect = document.getElementById('accountType') as HTMLSelectElement;
       const tokenInput = document.getElementById('token') as HTMLInputElement;
       
@@ -1706,10 +1748,18 @@ export default function BotInterface() {
       
       const accountType = accountTypeSelect.value;
       console.log('🔍 Carregando token para:', accountType);
-      console.log('📊 Settings atuais:', {
+      
+      // Tentar recarregar configurações primeiro
+      console.log('🔄 Recarregando configurações...');
+      await (window as any).reloadSettings();
+      
+      // Aguardar um pouco para as configurações serem atualizadas
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      console.log('📊 Settings após recarregar:', {
         selectedTokenType: settings.selectedTokenType,
-        derivTokenDemo: settings.derivTokenDemo ? 'Configurado' : 'Não configurado',
-        derivTokenReal: settings.derivTokenReal ? 'Configurado' : 'Não configurado'
+        derivTokenDemo: settings.derivTokenDemo ? `Configurado (${settings.derivTokenDemo.length} chars)` : 'Não configurado',
+        derivTokenReal: settings.derivTokenReal ? `Configurado (${settings.derivTokenReal.length} chars)` : 'Não configurado'
       });
       
       const tokenValue = accountType === 'demo' ? settings.derivTokenDemo : settings.derivTokenReal;
@@ -1726,6 +1776,8 @@ export default function BotInterface() {
         tokenInput.style.color = '#fca5a5';
         console.log('⚠️ Token não encontrado para:', accountType);
         console.log('🔍 Token value:', tokenValue);
+        console.log('🔍 Token type:', typeof tokenValue);
+        console.log('🔍 Token length:', tokenValue ? tokenValue.length : 'undefined');
         (window as any).showToast('⚠️ Token Não Encontrado', `Configure o token ${accountType.toUpperCase()} na aba Configurações!`);
       }
     };
