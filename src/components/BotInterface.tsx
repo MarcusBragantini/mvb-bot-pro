@@ -45,6 +45,23 @@ interface TelegramSettings {
   notificationsEnabled: boolean;
 }
 
+// ===== INTERFACES DO GRÁFICO PROFISSIONAL =====
+interface CandleData {
+  x: number;
+  o: number;
+  h: number;
+  l: number;
+  c: number;
+  t: number;
+}
+
+interface ChartConfig {
+  type: 'candlestick' | 'line';
+  timeframe: '1m' | '5m' | '15m' | '1h';
+  showEMAs: boolean;
+  showVolume: boolean;
+}
+
 // ===== SISTEMA DE LICENÇAS =====
 const LICENSE_KEYS: Record<string, LicenseInfo> = {
   'STANDARD-MVB-2025': {
@@ -414,6 +431,14 @@ export default function BotInterface() {
   
   // ===== REFS PARA INTEGRAÇÃO COM CÓDIGO ORIGINAL =====
   const botContainerRef = useRef<HTMLDivElement>(null);
+  
+  // ===== ESTADO DO GRÁFICO PROFISSIONAL =====
+  const [chartConfig, setChartConfig] = useState<ChartConfig>({
+    type: 'candlestick',
+    timeframe: '1m',
+    showEMAs: true,
+    showVolume: false
+  });
   const isInitialized = useRef(false);
 
   // ===== FUNÇÕES DE CONFIGURAÇÃO =====
@@ -1153,6 +1178,271 @@ ${tradesList || 'Nenhuma operação realizada'}
     }
   }, [settings.duration, settings.stake, settings.martingale, settings.stopWin, settings.stopLoss, settings.confidence, settings.mhiPeriods, settings.emaFast, settings.emaSlow, settings.rsiPeriods, settings.autoCloseTime, settings.autoCloseProfit]);
 
+  // ===== FUNÇÕES DO GRÁFICO PROFISSIONAL =====
+  const initializeProfessionalChart = () => {
+    console.log('📊 Inicializando gráfico profissional...');
+    
+    const canvas = document.getElementById('professionalChart') as HTMLCanvasElement;
+    if (!canvas) {
+      console.error('❌ Canvas do gráfico profissional não encontrado!');
+      return;
+    }
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      console.error('❌ Contexto do canvas não encontrado!');
+      return;
+    }
+
+    // Dados iniciais de teste
+    const initialData: CandleData[] = [];
+    const now = Date.now();
+    
+    // Gerar 50 velas de teste
+    for (let i = 0; i < 50; i++) {
+      const time = now - (50 - i) * 60000; // 1 minuto entre velas
+      const basePrice = 100 + Math.random() * 10;
+      const open = basePrice + (Math.random() - 0.5) * 2;
+      const close = open + (Math.random() - 0.5) * 3;
+      const high = Math.max(open, close) + Math.random() * 1;
+      const low = Math.min(open, close) - Math.random() * 1;
+      
+      initialData.push({
+        x: i,
+        o: open,
+        h: high,
+        l: low,
+        c: close,
+        t: time
+      });
+    }
+
+    // Configuração do gráfico
+    const chart = new (window as any).Chart(ctx, {
+      type: 'candlestick',
+      data: {
+        datasets: [{
+          label: 'Preço',
+          data: initialData,
+          borderColor: {
+            up: '#10b981',
+            down: '#ef4444',
+            unchanged: '#6b7280'
+          },
+          backgroundColor: {
+            up: 'rgba(16, 185, 129, 0.1)',
+            down: 'rgba(239, 68, 68, 0.1)',
+            unchanged: 'rgba(107, 114, 128, 0.1)'
+          },
+          borderWidth: 2,
+          borderSkipped: false
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            labels: {
+              color: '#f1f5f9',
+              font: {
+                size: 12,
+                weight: '600'
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            type: 'linear',
+            position: 'bottom',
+            ticks: {
+              color: '#94a3b8',
+              font: {
+                size: 10
+              },
+              callback: function(value: any) {
+                return 'Vela ' + Math.floor(value);
+              }
+            },
+            grid: {
+              color: 'rgba(148, 163, 184, 0.1)',
+              drawBorder: false
+            }
+          },
+          y: {
+            ticks: {
+              color: '#94a3b8',
+              font: {
+                size: 10
+              },
+              callback: function(value: any) {
+                return '$' + value.toFixed(2);
+              }
+            },
+            grid: {
+              color: 'rgba(148, 163, 184, 0.1)',
+              drawBorder: false
+            }
+          }
+        },
+        interaction: {
+          intersect: false,
+          mode: 'index'
+        }
+      }
+    });
+
+    // Armazenar referência do gráfico
+    (window as any).professionalChart = chart;
+    
+    console.log('✅ Gráfico profissional inicializado com sucesso!');
+  };
+
+  const updateChartWithCandle = (candleData: CandleData) => {
+    const chart = (window as any).professionalChart;
+    if (!chart) return;
+
+    const data = chart.data.datasets[0].data;
+    data.push(candleData);
+    
+    // Manter apenas os últimos 100 pontos
+    if (data.length > 100) {
+      data.shift();
+    }
+    
+    chart.update('none');
+  };
+
+  const processTickToCandle = (tick: any) => {
+    const now = Date.now();
+    const price = parseFloat(tick.quote);
+    
+    return {
+      x: now,
+      o: price,
+      h: price,
+      l: price,
+      c: price,
+      t: now
+    };
+  };
+
+  const addTradeMarker = (price: number, type: 'CALL' | 'PUT', time: number) => {
+    const chart = (window as any).professionalChart;
+    if (!chart) return;
+
+    // Adicionar marcador de trade
+    const marker = {
+      x: time,
+      y: price,
+      type: type,
+      color: type === 'CALL' ? '#10b981' : '#ef4444'
+    };
+
+    // Implementar lógica de marcadores
+    console.log(`📍 Marcador de trade adicionado: ${type} em $${price}`);
+  };
+
+  const updateCurrentPriceLine = (price: number) => {
+    const chart = (window as any).professionalChart;
+    if (!chart) return;
+
+    // Atualizar linha de preço atual
+    console.log(`💰 Preço atual: $${price}`);
+  };
+
+  const calculateEMAValues = (data: CandleData[], period: number) => {
+    if (data.length < period) return [];
+    
+    const emaValues = [];
+    const multiplier = 2 / (period + 1);
+    
+    for (let i = 0; i < data.length; i++) {
+      if (i === 0) {
+        emaValues.push(data[i].c);
+      } else {
+        const ema = (data[i].c * multiplier) + (emaValues[i - 1] * (1 - multiplier));
+        emaValues.push(ema);
+      }
+    }
+    
+    return emaValues;
+  };
+
+  const updateEMAsOnChart = (data: CandleData[]) => {
+    const chart = (window as any).professionalChart;
+    if (!chart) return;
+
+    const ema8 = calculateEMAValues(data, 8);
+    const ema18 = calculateEMAValues(data, 18);
+
+    // Adicionar EMAs ao gráfico
+    chart.data.datasets.push({
+      label: 'EMA 8',
+      data: ema8.map((value, index) => ({ x: index, y: value })),
+      borderColor: '#3b82f6',
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      pointRadius: 0,
+      tension: 0.1
+    });
+
+    chart.data.datasets.push({
+      label: 'EMA 18',
+      data: ema18.map((value, index) => ({ x: index, y: value })),
+      borderColor: '#f59e0b',
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      pointRadius: 0,
+      tension: 0.1
+    });
+
+    chart.update('none');
+  };
+
+  const getTimeUnit = (timeframe: string) => {
+    switch (timeframe) {
+      case '1m': return 'minute';
+      case '5m': return 'minute';
+      case '15m': return 'minute';
+      case '1h': return 'hour';
+      default: return 'minute';
+    }
+  };
+
+  const getTimeframeMilliseconds = (timeframe: string) => {
+    switch (timeframe) {
+      case '1m': return 60000;
+      case '5m': return 300000;
+      case '15m': return 900000;
+      case '1h': return 3600000;
+      default: return 60000;
+    }
+  };
+
+  const clearChart = () => {
+    const chart = (window as any).professionalChart;
+    if (!chart) return;
+
+    chart.data.datasets[0].data = [];
+    chart.update('none');
+  };
+
+  const changeChartType = (type: 'candlestick' | 'line') => {
+    const chart = (window as any).professionalChart;
+    if (!chart) return;
+
+    chart.config.type = type;
+    chart.update('none');
+  };
+
+  const changeChartTimeframe = (timeframe: string) => {
+    console.log(`⏰ Mudando timeframe para: ${timeframe}`);
+    // Implementar lógica de mudança de timeframe
+  };
+
   // ===== FUNÇÃO PARA INICIALIZAR O BOT ORIGINAL =====
   const initializeOriginalBot = () => {
     if (!botContainerRef.current) return;
@@ -1250,11 +1540,25 @@ ${tradesList || 'Nenhuma operação realizada'}
           </div>
         </div>
 
-        <!-- Gráfico de Preços em Tempo Real - Design Moderno -->
+        <!-- Gráfico Profissional de Velas -->
         <div style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); border: 1px solid #475569; border-radius: 20px; padding: 24px; margin: 20px 0; box-shadow: 0 12px 40px rgba(0,0,0,0.6); backdrop-filter: blur(15px);">
-          <h3 style="color: #f1f5f9; margin-bottom: 20px; font-size: 1.2rem; font-weight: 700; text-align: center; text-transform: uppercase; letter-spacing: 1px;">📈 Gráfico de Preços em Tempo Real</h3>
-          <div style="position: relative; width: 100%; height: 400px; max-height: 400px; overflow: visible; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);">
-            <canvas id="priceChart" style="display: block; width: 100%; height: 400px; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border: 2px solid #475569; border-radius: 16px; box-shadow: inset 0 4px 16px rgba(0,0,0,0.3);"></canvas>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="color: #f1f5f9; margin: 0; font-size: 1.2rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">📈 Gráfico Profissional</h3>
+            <div style="display: flex; gap: 12px;">
+              <select id="chartType" style="background: #0f172a; color: #f1f5f9; border: 1px solid #475569; border-radius: 8px; padding: 8px 12px; font-size: 0.9rem;">
+                <option value="candlestick">Velas</option>
+                <option value="line">Linha</option>
+              </select>
+              <select id="timeframe" style="background: #0f172a; color: #f1f5f9; border: 1px solid #475569; border-radius: 8px; padding: 8px 12px; font-size: 0.9rem;">
+                <option value="1m">1 Minuto</option>
+                <option value="5m">5 Minutos</option>
+                <option value="15m">15 Minutos</option>
+                <option value="1h">1 Hora</option>
+              </select>
+            </div>
+          </div>
+          <div style="position: relative; width: 100%; height: 500px; max-height: 500px; overflow: visible; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);">
+            <canvas id="professionalChart" style="display: block; width: 100%; height: 500px; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border: 2px solid #475569; border-radius: 16px; box-shadow: inset 0 4px 16px rgba(0,0,0,0.3);"></canvas>
           </div>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-top: 20px; font-size: 0.9rem;">
             <div style="display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-weight: 600; padding: 8px 12px; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid #334155;">
@@ -2073,6 +2377,10 @@ ${tradesList || 'Nenhuma operação realizada'}
             // Inicializar gráfico após conectar
             setTimeout(() => {
               initializeChart();
+              // Inicializar gráfico profissional
+              if (typeof initializeProfessionalChart === 'function') {
+                initializeProfessionalChart();
+              }
             }, 1000);
           };
 
@@ -3461,6 +3769,34 @@ ${tradesList || 'Nenhuma operação realizada'}
     `;
     
     botContainerRef.current.appendChild(mainScript);
+    
+    // Inicializar gráfico profissional
+    setTimeout(() => {
+      console.log('📊 Inicializando gráfico profissional...');
+      initializeProfessionalChart();
+      
+      // Configurar event listeners do gráfico
+      const chartTypeSelect = document.getElementById('chartType') as HTMLSelectElement;
+      const timeframeSelect = document.getElementById('timeframe') as HTMLSelectElement;
+      
+      if (chartTypeSelect) {
+        chartTypeSelect.addEventListener('change', (e) => {
+          const target = e.target as HTMLSelectElement;
+          changeChartType(target.value as 'candlestick' | 'line');
+        });
+        console.log('📈 Seletor de tipo de gráfico configurado');
+      }
+      
+      if (timeframeSelect) {
+        timeframeSelect.addEventListener('change', (e) => {
+          const target = e.target as HTMLSelectElement;
+          changeChartTimeframe(target.value);
+        });
+        console.log('⏰ Seletor de timeframe configurado');
+      }
+      
+      console.log('🤖 Bot original inicializado com sucesso!');
+    }, 100);
     
     // Preencher automaticamente o token baseado na seleção
     setTimeout(() => {
