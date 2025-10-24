@@ -1750,13 +1750,28 @@ export default function BotInterface() {
       if (!accountTypeSelect || !tokenInput) return;
       
       const accountType = accountTypeSelect.value;
-      const tokenValue = accountType === 'demo' ? settings.derivTokenDemo : settings.derivTokenReal;
       
-      if (tokenValue) {
+      // Buscar token diretamente do localStorage
+      const settingsKey = user?.id ? `mvb_bot_settings_${user.id}` : 'mvb_bot_settings_temp';
+      const savedSettings = localStorage.getItem(settingsKey);
+      
+      let tokenValue = '';
+      
+      if (savedSettings) {
+        try {
+          const parsed = JSON.parse(savedSettings);
+          tokenValue = accountType === 'demo' ? parsed.derivTokenDemo : parsed.derivTokenReal;
+          console.log('🔍 Token encontrado no localStorage:', accountType, tokenValue ? `Configurado (${tokenValue.length} chars)` : 'Não configurado');
+        } catch (error) {
+          console.error('❌ Erro ao parsear configurações:', error);
+        }
+      }
+      
+      if (tokenValue && tokenValue.trim() !== '') {
         tokenInput.value = tokenValue;
         tokenInput.style.background = '#0f172a';
         tokenInput.style.color = '#e2e8f0';
-        console.log('✅ Token carregado:', accountType);
+        console.log('✅ Token carregado com sucesso:', accountType);
         (window as any).showToast('✅ Token Carregado', `Token ${accountType.toUpperCase()} carregado com sucesso!`);
       } else {
         tokenInput.value = 'Token não configurado';
