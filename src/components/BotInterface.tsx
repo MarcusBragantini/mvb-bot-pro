@@ -1250,9 +1250,21 @@ export default function BotInterface() {
 
   // ===== INICIALIZAR BOT ORIGINAL =====
   const initializeOriginalBot = () => {
+    console.log('🤖 Iniciando initializeOriginalBot...');
+    console.log('📦 botContainerRef.current:', botContainerRef.current);
+    
     if (!botContainerRef.current) {
       console.error('❌ Container do bot não encontrado!');
-      return;
+      // Tentar encontrar o container pelo ID
+      const containerById = document.getElementById('bot-container');
+      console.log('🔍 Container por ID:', containerById);
+      if (containerById) {
+        botContainerRef.current = containerById as HTMLDivElement;
+        console.log('✅ Container encontrado por ID, atualizando ref');
+      } else {
+        console.error('❌ Container não encontrado nem por ID!');
+        return;
+      }
     }
 
     console.log('🤖 Inicializando bot original...');
@@ -1428,6 +1440,32 @@ export default function BotInterface() {
     }, 200);
 
     console.log('🤖 Bot original inicializado com gráfico profissional');
+    
+    // Adicionar indicador visual de sucesso
+    const successIndicator = document.createElement('div');
+    successIndicator.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #10b981;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      z-index: 9999;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    `;
+    successIndicator.textContent = '✅ Bot Inicializado';
+    document.body.appendChild(successIndicator);
+    
+    // Remover indicador após 3 segundos
+    setTimeout(() => {
+      if (successIndicator.parentNode) {
+        successIndicator.parentNode.removeChild(successIndicator);
+      }
+    }, 3000);
+    
     isInitialized.current = true;
   };
 
@@ -1759,23 +1797,34 @@ export default function BotInterface() {
 
   // Re-inicializar bot quando voltar para aba trading
   useEffect(() => {
-    if (activeTab === 'trading' && isLicenseValid && botContainerRef.current) {
-      console.log('🔄 Verificando painel na aba trading...');
+    if (activeTab === 'trading' && isLicenseValid) {
+      console.log('🔄 Aba trading ativada - forçando re-inicialização...');
       
-      // Sempre re-inicializar para garantir que apareça
+      // Forçar re-inicialização sempre
       setTimeout(() => {
-        initializeOriginalBot();
-        
-        // Carregar token automaticamente após inicialização
-        setTimeout(() => {
-          const accountTypeSelect = document.getElementById('accountType') as HTMLSelectElement;
-          if (accountTypeSelect) {
-            accountTypeSelect.value = settings.selectedTokenType || 'demo';
-            (window as any).loadTokenByAccountType();
-            console.log('🔑 Token carregado automaticamente');
+        if (botContainerRef.current) {
+          console.log('📦 Container encontrado, inicializando bot...');
+          initializeOriginalBot();
+          
+          // Carregar token automaticamente após inicialização
+          setTimeout(() => {
+            const accountTypeSelect = document.getElementById('accountType') as HTMLSelectElement;
+            if (accountTypeSelect) {
+              accountTypeSelect.value = settings.selectedTokenType || 'demo';
+              (window as any).loadTokenByAccountType();
+              console.log('🔑 Token carregado automaticamente');
+            }
+          }, 300);
+        } else {
+          console.error('❌ Container do bot não encontrado!');
+          // Mostrar fallback
+          const fallback = document.getElementById('bot-fallback');
+          if (fallback) {
+            fallback.classList.remove('hidden');
+            console.log('🔄 Mostrando fallback de re-inicialização');
           }
-        }, 200);
-      }, 100);
+        }
+      }, 200);
     }
   }, [activeTab, isLicenseValid]);
 
@@ -2058,6 +2107,24 @@ export default function BotInterface() {
                         <div className="text-center">
                           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto mb-2"></div>
                           <p className="text-slate-300 text-sm">Carregando sistema...</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Fallback se o bot não carregar */}
+                    {isLicenseValid && (
+                      <div id="bot-fallback" className="hidden">
+                        <div className="bg-slate-700 rounded-lg p-4 text-center">
+                          <p className="text-slate-300 mb-4">Bot não carregado automaticamente</p>
+                          <button 
+                            onClick={() => {
+                              console.log('🔄 Tentando re-inicializar bot...');
+                              initializeOriginalBot();
+                            }}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                          >
+                            🔄 Re-inicializar Bot
+                          </button>
                         </div>
                       </div>
                     )}
