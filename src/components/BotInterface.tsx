@@ -384,6 +384,14 @@ export default function BotInterface() {
           intersect: false,
           mode: 'index'
         },
+        layout: {
+          padding: {
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }
+        },
         plugins: {
           legend: {
             display: true,
@@ -471,10 +479,17 @@ export default function BotInterface() {
     // Salvar instância globalmente
     (window as any).priceChartInstance = chart;
     
+    // Forçar atualização do gráfico para mostrar dados iniciais
+    setTimeout(() => {
+      chart.update('none');
+      console.log('📊 Gráfico atualizado com dados iniciais');
+    }, 100);
+    
     console.log('✅ Gráfico profissional criado com sucesso!');
     console.log('📊 Canvas element:', canvas);
     console.log('📊 Chart instance:', chart);
     console.log('📊 Chart data:', chart.data);
+    console.log('📊 Dados iniciais:', initialData.length, 'velas');
     
     return chart;
   };
@@ -1708,7 +1723,26 @@ export default function BotInterface() {
     setTimeout(() => {
       try {
         console.log('📊 Inicializando gráfico profissional...');
-        initializeProfessionalChart();
+        const chart = initializeProfessionalChart();
+        
+        if (chart) {
+          // Verificar se o gráfico foi criado corretamente
+          setTimeout(() => {
+            const chartInstance = (window as any).priceChartInstance;
+            if (chartInstance && chartInstance.data.datasets[0].data.length > 0) {
+              console.log('✅ Gráfico renderizado com', chartInstance.data.datasets[0].data.length, 'velas');
+            } else {
+              console.warn('⚠️ Gráfico não renderizado corretamente, tentando novamente...');
+              // Tentar renderizar novamente
+              setTimeout(() => {
+                if (chartInstance) {
+                  chartInstance.update('none');
+                  console.log('🔄 Gráfico forçado a atualizar');
+                }
+              }, 500);
+            }
+          }, 300);
+        }
         
         // Adicionar event listeners para controles do gráfico
         const chartTypeSelect = document.getElementById('chartType') as HTMLSelectElement;
