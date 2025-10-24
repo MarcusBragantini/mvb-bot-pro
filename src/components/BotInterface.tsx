@@ -712,6 +712,19 @@ export default function BotInterface() {
     // Verificar se bot está rodando
     if (!(window as any).botRunning) return;
     
+    // Verificar se é um novo minuto (análise apenas a cada minuto)
+    const currentMinute = Math.floor(timestamp / 60000);
+    const lastAnalysisMinute = (window as any).lastAnalysisMinute || 0;
+    
+    if (currentMinute === lastAnalysisMinute) {
+      return; // Não analisar no mesmo minuto
+    }
+    
+    // Atualizar último minuto analisado
+    (window as any).lastAnalysisMinute = currentMinute;
+    
+    console.log(`🕐 Análise executada no minuto ${currentMinute}`);
+    
     // Análise de 24 horas com velas de 1 minuto
     analyze24HourTrend(price, timestamp);
     
@@ -762,14 +775,22 @@ export default function BotInterface() {
     const last5Candles = data.slice(-5);
     const confirmationTrend = analyzeConfirmationTrend(last5Candles);
     
-    // Log da análise apenas se houver dados suficientes
-    if (availableData >= 60 && Math.abs(trend24h) > 0.5) { // Só logar se tendência for significativa
+    // Log da análise apenas se houver dados suficientes e tendência significativa
+    if (availableData >= 60 && Math.abs(trend24h) > 0.5) {
       const trendDirection = trend24h > 0 ? 'Alta' : 'Baixa';
       const confirmation = confirmationTrend > 0 ? 'Confirmando Alta' : 'Confirmando Baixa';
       const timeFrame = availableData >= 1440 ? '24h' : `${availableData}min`;
       
+      // Mostrar horário real em vez de contador
+      const now = new Date();
+      const timeString = now.toLocaleTimeString('pt-BR', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        second: '2-digit'
+      });
+      
       logAnalysis(
-        `📊 Análise ${timeFrame}: ${trendDirection} ${Math.abs(trend24h).toFixed(2)}%`,
+        `📊 Análise ${timeFrame} (${timeString}): ${trendDirection} ${Math.abs(trend24h).toFixed(2)}%`,
         `${confirmation} - Últimas 5 velas: ${confirmationTrend > 0 ? 'Alta' : 'Baixa'}`
       );
     }
