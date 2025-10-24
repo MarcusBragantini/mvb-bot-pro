@@ -1266,22 +1266,23 @@ export default function BotInterface() {
         <div class="main-controls" style="background: #1e293b; border-radius: 12px; padding: 16px; margin: 12px 0; box-shadow: 0 4px 20px rgba(0,0,0,0.3); border: 1px solid #334155;">
           <div class="control-grid" style="display: grid; gap: 16px;">
             <div class="form-group">
-              <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #f1f5f9; font-size: 0.9rem;">🔑 Token Deriv:</label>
+              <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #f1f5f9; font-size: 0.9rem;">🔑 Conta Deriv:</label>
               <div style="display: flex; gap: 8px;">
+                <select 
+                  id="accountType" 
+                  onchange="loadTokenByAccountType()"
+                  style="flex: 1; padding: 14px; border: 2px solid #334155; border-radius: 12px; font-size: 16px; background: #0f172a; color: #e2e8f0;"
+                >
+                  <option value="demo">🎮 Conta DEMO</option>
+                  <option value="real">💰 Conta REAL</option>
+                </select>
                 <input 
                   type="text" 
                   id="token" 
-                  placeholder="Cole seu token da Deriv aqui..." 
-                  style="flex: 1; padding: 14px; border: 2px solid #334155; border-radius: 12px; font-size: 16px; background: #0f172a; color: #e2e8f0;"
+                  placeholder="Token será carregado automaticamente..." 
+                  readonly
+                  style="flex: 2; padding: 14px; border: 2px solid #334155; border-radius: 12px; font-size: 16px; background: #1e293b; color: #94a3b8;"
                 />
-                <button 
-                  onclick="loadTokenFromSettings()" 
-                  style="padding: 14px 16px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3); transition: transform 0.2s;"
-                  onmouseover="this.style.transform='scale(1.02)'" 
-                  onmouseout="this.style.transform='scale(1)'"
-                >
-                  🔄 Carregar
-                </button>
               </div>
             </div>
             <div class="form-group">
@@ -1410,6 +1411,17 @@ export default function BotInterface() {
         }
         
         console.log('✅ Gráfico profissional inicializado com sucesso!');
+        
+        // Carregar token automaticamente
+        setTimeout(() => {
+          const accountTypeSelect = document.getElementById('accountType') as HTMLSelectElement;
+          if (accountTypeSelect) {
+            accountTypeSelect.value = settings.selectedTokenType || 'demo';
+            (window as any).loadTokenByAccountType();
+            console.log('🔑 Token carregado automaticamente:', settings.selectedTokenType || 'demo');
+          }
+        }, 100);
+        
       } catch (error) {
         console.error('❌ Erro ao inicializar gráfico:', error);
       }
@@ -1623,22 +1635,28 @@ export default function BotInterface() {
     (window as any).updateEMAsOnChart = updateEMAsOnChart;
     (window as any).startMarketPreview = startMarketPreview;
     
-    // Função para carregar token das configurações
-    (window as any).loadTokenFromSettings = () => {
+    // Função para carregar token por tipo de conta
+    (window as any).loadTokenByAccountType = () => {
+      const accountTypeSelect = document.getElementById('accountType') as HTMLSelectElement;
       const tokenInput = document.getElementById('token') as HTMLInputElement;
-      if (!tokenInput) return;
       
-      // Carregar token das configurações salvas
-      const selectedType = settings.selectedTokenType || 'demo';
-      const tokenValue = selectedType === 'demo' ? settings.derivTokenDemo : settings.derivTokenReal;
+      if (!accountTypeSelect || !tokenInput) return;
+      
+      const accountType = accountTypeSelect.value;
+      const tokenValue = accountType === 'demo' ? settings.derivTokenDemo : settings.derivTokenReal;
       
       if (tokenValue) {
         tokenInput.value = tokenValue;
-        console.log('✅ Token carregado das configurações:', selectedType);
-        (window as any).showToast('✅ Token Carregado', `Token ${selectedType} carregado com sucesso!`);
+        tokenInput.style.background = '#0f172a';
+        tokenInput.style.color = '#e2e8f0';
+        console.log('✅ Token carregado:', accountType);
+        (window as any).showToast('✅ Token Carregado', `Token ${accountType.toUpperCase()} carregado com sucesso!`);
       } else {
-        console.log('⚠️ Token não encontrado nas configurações');
-        (window as any).showToast('⚠️ Token Não Encontrado', 'Configure o token na aba Configurações primeiro!');
+        tokenInput.value = 'Token não configurado';
+        tokenInput.style.background = '#7f1d1d';
+        tokenInput.style.color = '#fca5a5';
+        console.log('⚠️ Token não encontrado:', accountType);
+        (window as any).showToast('⚠️ Token Não Encontrado', `Configure o token ${accountType.toUpperCase()} na aba Configurações!`);
       }
     };
     
@@ -1752,6 +1770,15 @@ export default function BotInterface() {
         console.log('📦 Container vazio:', !hasBotContent);
         console.log('📊 Gráfico ausente:', !hasChart);
         initializeOriginalBot();
+        
+        // Carregar token automaticamente após inicialização
+        setTimeout(() => {
+          const accountTypeSelect = document.getElementById('accountType') as HTMLSelectElement;
+          if (accountTypeSelect) {
+            accountTypeSelect.value = settings.selectedTokenType || 'demo';
+            (window as any).loadTokenByAccountType();
+          }
+        }, 300);
       } else {
         console.log('✅ Bot já está inicializado na aba trading');
       }
@@ -1911,6 +1938,24 @@ export default function BotInterface() {
               </AlertDescription>
             </Alert>
           )}
+
+          {/* Container do Bot - Sempre Visível */}
+          <div 
+            ref={botContainerRef} 
+            id="bot-container"
+            className="w-full"
+            style={{ minHeight: '600px' }}
+          >
+            {/* Loading placeholder */}
+            {!isLicenseValid && (
+              <div className="flex items-center justify-center h-96 bg-slate-800 rounded-lg border border-slate-700">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                  <p className="text-slate-300 text-lg">Carregando sistema de trading...</p>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Grid Principal */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
