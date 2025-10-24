@@ -963,12 +963,18 @@ export default function BotInterface() {
     logEntry.style.marginBottom = '4px';
     logEntry.innerHTML = `<strong>${title}</strong><br><small>${description}</small>`;
     
-    logsElement.appendChild(logEntry);
+    // Adicionar no INÍCIO (topo) para sempre mostrar o mais recente
+    logsElement.insertBefore(logEntry, logsElement.firstChild);
     
     // Manter apenas últimas 15 entradas
     while (logsElement.children.length > 15) {
-      logsElement.removeChild(logsElement.firstChild!);
+      logsElement.removeChild(logsElement.lastChild!);
     }
+    
+    // Auto-scroll para o topo para mostrar o último log
+    setTimeout(() => {
+      logsElement.scrollTop = 0;
+    }, 10);
   };
 
   // ===== SISTEMA DE TRADING REAL =====
