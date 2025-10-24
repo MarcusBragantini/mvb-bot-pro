@@ -675,6 +675,96 @@ export default function BotInterface() {
     setChartConfig(prev => ({ ...prev, timeframe }));
   };
 
+  // ===== FUNÇÃO DE PREVIEW DO MERCADO =====
+  const startMarketPreview = () => {
+    console.log('📊 Iniciando preview do mercado...');
+    
+    const symbol = (document.getElementById('symbol') as HTMLSelectElement)?.value;
+    const token = (document.getElementById('token') as HTMLInputElement)?.value;
+    
+    if (!symbol || !token) {
+      console.error('❌ Símbolo ou token não configurado!');
+      return;
+    }
+    
+    // Fechar WebSocket existente
+    if ((window as any).marketPreviewWS) {
+      (window as any).marketPreviewWS.close();
+    }
+    
+    // Conectar com Deriv
+    const wsUrl = 'wss://ws.binaryws.com/websockets/v3?app_id=1089';
+    const ws = new WebSocket(wsUrl);
+    (window as any).marketPreviewWS = ws;
+    
+    ws.onopen = () => {
+      console.log('🔗 Conectado com Deriv');
+      
+      // Autenticar
+      ws.send(JSON.stringify({
+        authorize: token
+      }));
+      
+      // Subscribir a ticks
+      ws.send(JSON.stringify({
+        ticks: symbol,
+        subscribe: 1
+      }));
+    };
+    
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        if (data.msg_type === 'tick') {
+          const tick = data.tick;
+          console.log('📈 Tick recebido:', tick);
+          
+          // Atualizar gráfico
+          const candle = processTickToCandle(tick.quote, tick.epoch * 1000);
+          if (candle) {
+            updateChartWithCandle(candle);
+          }
+          
+          // Atualizar preço atual
+          updateCurrentPriceLine(tick.quote, tick.epoch * 1000);
+          
+          // Log do preço
+          const logsElement = document.getElementById('logs');
+          if (logsElement) {
+            const logEntry = document.createElement('div');
+            logEntry.style.padding = '4px 0';
+            logEntry.style.color = '#cbd5e1';
+            logEntry.style.fontSize = '0.8rem';
+            logEntry.innerHTML = `📊 ${symbol}: $${tick.quote.toFixed(4)} - ${new Date().toLocaleTimeString()}`;
+            
+            logsElement.appendChild(logEntry);
+            
+            // Manter apenas últimas 10 entradas
+            while (logsElement.children.length > 10) {
+              logsElement.removeChild(logsElement.firstChild!);
+            }
+          }
+        }
+        
+        if (data.msg_type === 'authorize') {
+          console.log('✅ Autorizado com Deriv');
+        }
+        
+      } catch (error) {
+        console.error('❌ Erro ao processar mensagem:', error);
+      }
+    };
+    
+    ws.onerror = (error) => {
+      console.error('❌ Erro no WebSocket:', error);
+    };
+    
+    ws.onclose = () => {
+      console.log('🔌 WebSocket fechado');
+    };
+  };
+
   // ===== FUNÇÕES AUXILIARES =====
   const isBotRunning = () => {
     const statusElement = document.getElementById('status');
@@ -1175,7 +1265,25 @@ export default function BotInterface() {
         <!-- Controles Principais -->
         <div class="main-controls" style="background: #1e293b; border-radius: 12px; padding: 16px; margin: 12px 0; box-shadow: 0 4px 20px rgba(0,0,0,0.3); border: 1px solid #334155;">
           <div class="control-grid" style="display: grid; gap: 16px;">
-            <input type="hidden" id="token" value="">
+            <div class="form-group">
+              <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #f1f5f9; font-size: 0.9rem;">🔑 Token Deriv:</label>
+              <div style="display: flex; gap: 8px;">
+                <input 
+                  type="text" 
+                  id="token" 
+                  placeholder="Cole seu token da Deriv aqui..." 
+                  style="flex: 1; padding: 14px; border: 2px solid #334155; border-radius: 12px; font-size: 16px; background: #0f172a; color: #e2e8f0;"
+                />
+                <button 
+                  onclick="loadTokenFromSettings()" 
+                  style="padding: 14px 16px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3); transition: transform 0.2s;"
+                  onmouseover="this.style.transform='scale(1.02)'" 
+                  onmouseout="this.style.transform='scale(1)'"
+                >
+                  🔄 Carregar
+                </button>
+              </div>
+            </div>
             <div class="form-group">
               <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #f1f5f9; font-size: 0.9rem;">📈 Símbolo:</label>
               <select id="symbol" style="width: 100%; padding: 14px; border: 2px solid #334155; border-radius: 12px; font-size: 16px; background: #0f172a; color: #e2e8f0;">
@@ -1513,22 +1621,102 @@ export default function BotInterface() {
     (window as any).processTickToCandle = processTickToCandle;
     (window as any).addTradeMarker = addTradeMarker;
     (window as any).updateEMAsOnChart = updateEMAsOnChart;
+    (window as any).startMarketPreview = startMarketPreview;
+    
+    // Função para carregar token das configurações
+    (window as any).loadTokenFromSettings = () => {
+      const tokenInput = document.getElementById('token') as HTMLInputElement;
+      if (!tokenInput) return;
+      
+      // Carregar token das configurações salvas
+      const selectedType = settings.selectedTokenType || 'demo';
+      const tokenValue = selectedType === 'demo' ? settings.derivTokenDemo : settings.derivTokenReal;
+      
+      if (tokenValue) {
+        tokenInput.value = tokenValue;
+        console.log('✅ Token carregado das configurações:', selectedType);
+        (window as any).showToast('✅ Token Carregado', `Token ${selectedType} carregado com sucesso!`);
+      } else {
+        console.log('⚠️ Token não encontrado nas configurações');
+        (window as any).showToast('⚠️ Token Não Encontrado', 'Configure o token na aba Configurações primeiro!');
+      }
+    };
     
     // Exportar funções do bot para o escopo global
     (window as any).startBot = () => {
       console.log('🚀 Iniciando bot...');
-      // Implementar lógica de início do bot
-      if (typeof (window as any).showToast === 'function') {
-        (window as any).showToast('🚀 Bot Iniciado', 'Sistema de trading ativado com sucesso!');
+      
+      // Verificar se já está rodando
+      if ((window as any).botRunning) {
+        console.log('⚠️ Bot já está rodando!');
+        return;
       }
+      
+      // Verificar configurações
+      const symbol = (document.getElementById('symbol') as HTMLSelectElement)?.value;
+      const token = (document.getElementById('token') as HTMLInputElement)?.value;
+      
+      if (!symbol) {
+        console.error('❌ Símbolo não selecionado!');
+        (window as any).showToast('❌ Erro', 'Selecione um símbolo para operar!');
+        return;
+      }
+      
+      if (!token) {
+        console.error('❌ Token não configurado!');
+        (window as any).showToast('❌ Erro', 'Configure o token da Deriv na aba Configurações!');
+        return;
+      }
+      
+      // Iniciar bot real
+      (window as any).botRunning = true;
+      (window as any).botStartTime = Date.now();
+      
+      // Atualizar status
+      const statusElement = document.getElementById('status');
+      if (statusElement) {
+        statusElement.innerHTML = '🟢 Bot Operando - Aguardando sinais...';
+      }
+      
+      // Atualizar indicador
+      const indicator = document.getElementById('status-indicator');
+      if (indicator) {
+        indicator.style.background = '#10b981';
+      }
+      
+      // Iniciar preview do mercado
+      startMarketPreview();
+      
+      console.log('✅ Bot iniciado com sucesso!');
+      (window as any).showToast('🚀 Bot Iniciado', 'Sistema de trading ativado com sucesso!');
     };
     
     (window as any).stopBot = () => {
       console.log('⏸️ Parando bot...');
-      // Implementar lógica de parada do bot
-      if (typeof (window as any).showToast === 'function') {
-        (window as any).showToast('⏸️ Bot Parado', 'Sistema de trading parado com sucesso!');
+      
+      // Parar bot
+      (window as any).botRunning = false;
+      
+      // Parar WebSocket
+      if ((window as any).marketPreviewWS) {
+        (window as any).marketPreviewWS.close();
+        (window as any).marketPreviewWS = null;
       }
+      
+      // Atualizar status
+      const statusElement = document.getElementById('status');
+      if (statusElement) {
+        statusElement.innerHTML = '⏸️ Bot Parado';
+      }
+      
+      // Atualizar indicador
+      const indicator = document.getElementById('status-indicator');
+      if (indicator) {
+        indicator.style.background = '#ef4444';
+      }
+      
+      console.log('✅ Bot parado com sucesso!');
+      (window as any).showToast('⏸️ Bot Parado', 'Sistema de trading parado com sucesso!');
     };
 
     return () => {
