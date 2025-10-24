@@ -1159,9 +1159,9 @@ ${tradesList || 'Nenhuma operação realizada'}
 
     // Inserir HTML do bot original - OTIMIZADO PARA MOBILE
     botContainerRef.current.innerHTML = `
-      <div class="bot-interface-original" style="background: #0f172a; border-radius: 12px; padding: 12px; margin: 8px 0; border: 1px solid #334155;">
-        <!-- Controles Principais - Simplified for Mobile -->
-        <div class="main-controls" style="background: #1e293b; border-radius: 12px; padding: 16px; margin: 12px 0; box-shadow: 0 4px 20px rgba(0,0,0,0.3); border: 1px solid #334155;">
+      <div class="bot-interface-original" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: 20px; padding: 24px; margin: 12px 0; border: 1px solid #334155; box-shadow: 0 12px 40px rgba(0,0,0,0.5); backdrop-filter: blur(10px);">
+        <!-- Controles Principais - Design Moderno -->
+        <div class="main-controls" style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); border-radius: 20px; padding: 24px; margin: 16px 0; box-shadow: 0 12px 40px rgba(0,0,0,0.6); border: 1px solid #475569; backdrop-filter: blur(15px);">
           <div class="control-grid" style="display: grid; gap: 16px;">
             <!-- Token oculto - será preenchido automaticamente -->
             <input type="hidden" id="token" value="">
@@ -1199,89 +1199,95 @@ ${tradesList || 'Nenhuma operação realizada'}
             </div>
           </div>
 
-          <!-- Botões de Controle - Mobile Optimized -->
-          <div class="button-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px;">
+          <!-- Botões de Controle - Design Moderno -->
+          <div class="button-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px;">
             <button 
+              id="startBtn"
               onclick="startBot()" 
               ${!isLicenseValid ? 'disabled' : ''}
-              style="background: ${isLicenseValid ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#6b7280'}; color: white; border: none; padding: 12px 16px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: ${isLicenseValid ? 'pointer' : 'not-allowed'}; box-shadow: 0 2px 8px ${isLicenseValid ? 'rgba(16, 185, 129, 0.3)' : 'rgba(107, 114, 128, 0.3)'}; transition: transform 0.2s; opacity: ${isLicenseValid ? '1' : '0.5'}; width: 100%; min-height: 44px;" 
-              onmousedown="this.style.transform='scale(0.95)'" 
-              onmouseup="this.style.transform='scale(1)'"
+              style="background: ${isLicenseValid ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)'}; color: white; border: none; padding: 16px 24px; border-radius: 16px; font-size: 16px; font-weight: 700; cursor: ${isLicenseValid ? 'pointer' : 'not-allowed'}; box-shadow: 0 8px 24px ${isLicenseValid ? 'rgba(16, 185, 129, 0.4)' : 'rgba(107, 114, 128, 0.4)'}; transition: all 0.3s ease; opacity: ${isLicenseValid ? '1' : '0.6'}; width: 100%; min-height: 56px; text-transform: uppercase; letter-spacing: 0.5px;" 
+              onmouseover="if(this.style.cursor==='pointer') this.style.transform='scale(1.05) translateY(-2px)'" 
+              onmouseout="if(this.style.cursor==='pointer') this.style.transform='scale(1) translateY(0px)'"
               title="${!isLicenseValid ? 'Licença expirada - Renove para continuar' : 'Iniciar trading automático'}">
-              ${isLicenseValid ? '▶ Iniciar Bot' : '🔒 Licença Expirada'}
+              ${isLicenseValid ? '🚀 Iniciar Bot' : '🔒 Licença Expirada'}
             </button>
-            <button onclick="stopBot()" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; padding: 12px 16px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3); transition: transform 0.2s; width: 100%; min-height: 44px;" onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">
-              ⏹ Parar Bot
+            <button 
+              id="stopBtn"
+              onclick="stopBot()" 
+              style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; padding: 16px 24px; border-radius: 16px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4); transition: all 0.3s ease; width: 100%; min-height: 56px; text-transform: uppercase; letter-spacing: 0.5px;" 
+              onmouseover="this.style.transform='scale(1.05) translateY(-2px)'" 
+              onmouseout="this.style.transform='scale(1) translateY(0px)'">
+              ⏸️ Parar Bot
             </button>
           </div>
         </div>
 
-        <!-- Status Cards - Mobile Grid -->
-        <div class="status-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 12px 0;">
-          <div class="status-card" style="background: #0f172a; padding: 10px; border-radius: 10px; text-align: center; border: 2px solid #3b82f6;">
-            <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px;">Status</div>
-            <div class="status-value" id="status" style="font-size: 0.85rem; font-weight: bold; color: #f1f5f9;">⏳ Aguardando...</div>
+        <!-- Status Cards - Design Moderno -->
+        <div class="status-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; margin: 20px 0;">
+          <div class="status-card" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 16px; border-radius: 16px; text-align: center; border: 2px solid #3b82f6; box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2); backdrop-filter: blur(10px);">
+            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Status</div>
+            <div class="status-value" id="status" style="font-size: 1rem; font-weight: 700; color: #f1f5f9;">⏳ Aguardando...</div>
           </div>
-          <div class="status-card" style="background: #0f172a; padding: 10px; border-radius: 10px; text-align: center; border: 2px solid #10b981;">
-            <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px;">Saldo</div>
-            <div class="status-value" style="font-size: 0.9rem; font-weight: bold; color: #f1f5f9;">$<span id="balance">0</span></div>
+          <div class="status-card" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 16px; border-radius: 16px; text-align: center; border: 2px solid #10b981; box-shadow: 0 8px 24px rgba(16, 185, 129, 0.2); backdrop-filter: blur(10px);">
+            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Saldo</div>
+            <div class="status-value" style="font-size: 1.1rem; font-weight: 700; color: #f1f5f9;">$<span id="balance">0</span></div>
           </div>
-          <div class="status-card" style="background: #0f172a; padding: 10px; border-radius: 10px; text-align: center; border: 2px solid #8b5cf6;">
-            <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px;">Lucro</div>
-            <div class="status-value" id="profit" style="font-size: 0.9rem; font-weight: bold; color: #f1f5f9;">$0</div>
+          <div class="status-card" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 16px; border-radius: 16px; text-align: center; border: 2px solid #8b5cf6; box-shadow: 0 8px 24px rgba(139, 92, 246, 0.2); backdrop-filter: blur(10px);">
+            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Lucro</div>
+            <div class="status-value" id="profit" style="font-size: 1.1rem; font-weight: 700; color: #f1f5f9;">$0</div>
           </div>
-          <div class="status-card" style="background: #0f172a; padding: 10px; border-radius: 10px; text-align: center; border: 2px solid #f59e0b;">
-            <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px;">Precisão</div>
-            <div class="status-value" id="accuracy" style="font-size: 0.9rem; font-weight: bold; color: #f1f5f9;">0%</div>
+          <div class="status-card" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 16px; border-radius: 16px; text-align: center; border: 2px solid #f59e0b; box-shadow: 0 8px 24px rgba(245, 158, 11, 0.2); backdrop-filter: blur(10px);">
+            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Precisão</div>
+            <div class="status-value" id="accuracy" style="font-size: 1.1rem; font-weight: 700; color: #f1f5f9;">0%</div>
           </div>
-          <div class="status-card" style="background: #0f172a; padding: 10px; border-radius: 10px; text-align: center; border: 2px solid #06b6d4;">
-            <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px;">Dados</div>
-            <div class="status-value" id="dataCount" style="font-size: 0.9rem; font-weight: bold; color: #f1f5f9;">0</div>
+          <div class="status-card" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 16px; border-radius: 16px; text-align: center; border: 2px solid #06b6d4; box-shadow: 0 8px 24px rgba(6, 182, 212, 0.2); backdrop-filter: blur(10px);">
+            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Dados</div>
+            <div class="status-value" id="dataCount" style="font-size: 1.1rem; font-weight: 700; color: #f1f5f9;">0</div>
           </div>
-          <div class="status-card" style="background: #0f172a; padding: 10px; border-radius: 10px; text-align: center; border: 2px solid #84cc16;">
-            <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px;">Entrada</div>
-            <div class="status-value" id="currentStake" style="font-size: 0.9rem; font-weight: bold; color: #f1f5f9;">$1</div>
-          </div>
-        </div>
-
-        <!-- Gráfico de Preços em Tempo Real -->
-        <div style="background: #1e293b; border: 1px solid #475569; border-radius: 12px; padding: 12px; margin: 12px 0;">
-          <h3 style="color: #f1f5f9; margin-bottom: 12px; font-size: 1rem; font-weight: 600;">📈 Gráfico de Preços</h3>
-          <div style="position: relative; width: 100%; height: 300px; max-height: 300px; overflow: visible;">
-            <canvas id="priceChart" style="display: block; width: 100%; height: 300px; background: #0f172a; border: 1px solid #475569; border-radius: 8px;"></canvas>
-          </div>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 12px; font-size: 0.85rem;">
-            <div style="display: flex; align-items: center; gap: 6px; color: #cbd5e1; font-weight: 500;">
-              <div style="width: 14px; height: 3px; background: #60a5fa; border-radius: 2px; flex-shrink: 0;"></div>
-              <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Preço</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px; color: #cbd5e1; font-weight: 500;">
-              <div style="width: 14px; height: 3px; background: #f59e0b; border-radius: 2px; border: 1px dashed #f59e0b; flex-shrink: 0;"></div>
-              <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Operação</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px; color: #cbd5e1; font-weight: 500;">
-              <div style="width: 14px; height: 3px; background: #10b981; border-radius: 2px; flex-shrink: 0;"></div>
-              <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">CALL</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px; color: #cbd5e1; font-weight: 500;">
-              <div style="width: 14px; height: 3px; background: #ef4444; border-radius: 2px; flex-shrink: 0;"></div>
-              <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">PUT</span>
-            </div>
+          <div class="status-card" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 16px; border-radius: 16px; text-align: center; border: 2px solid #84cc16; box-shadow: 0 8px 24px rgba(132, 204, 22, 0.2); backdrop-filter: blur(10px);">
+            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Entrada</div>
+            <div class="status-value" id="currentStake" style="font-size: 1.1rem; font-weight: 700; color: #f1f5f9;">$1</div>
           </div>
         </div>
 
-        <!-- Log Compacto para Mobile -->
-        <div class="log-container" style="background: #1e293b; border-radius: 12px; margin: 12px 0; overflow: hidden; border: 1px solid #334155;">
-          <div style="background: #0f172a; padding: 10px; border-bottom: 1px solid #334155;">
-            <h3 style="color: #f1f5f9; margin: 0; font-size: 0.95rem; font-weight: 600;">📋 Log do Sistema</h3>
+        <!-- Gráfico de Preços em Tempo Real - Design Moderno -->
+        <div style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); border: 1px solid #475569; border-radius: 20px; padding: 24px; margin: 20px 0; box-shadow: 0 12px 40px rgba(0,0,0,0.6); backdrop-filter: blur(15px);">
+          <h3 style="color: #f1f5f9; margin-bottom: 20px; font-size: 1.2rem; font-weight: 700; text-align: center; text-transform: uppercase; letter-spacing: 1px;">📈 Gráfico de Preços em Tempo Real</h3>
+          <div style="position: relative; width: 100%; height: 400px; max-height: 400px; overflow: visible; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);">
+            <canvas id="priceChart" style="display: block; width: 100%; height: 400px; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border: 2px solid #475569; border-radius: 16px; box-shadow: inset 0 4px 16px rgba(0,0,0,0.3);"></canvas>
           </div>
-          <div id="log" style="background: #0f172a; color: #34d399; padding: 12px; font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace; height: 180px; overflow-y: auto; font-size: 0.8rem; line-height: 1.4;"></div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-top: 20px; font-size: 0.9rem;">
+            <div style="display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-weight: 600; padding: 8px 12px; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid #334155;">
+              <div style="width: 16px; height: 4px; background: linear-gradient(90deg, #60a5fa 0%, #3b82f6 100%); border-radius: 4px; flex-shrink: 0; box-shadow: 0 2px 8px rgba(96, 165, 250, 0.3);"></div>
+              <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; letter-spacing: 0.5px;">Preço</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-weight: 600; padding: 8px 12px; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid #334155;">
+              <div style="width: 16px; height: 4px; background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%); border-radius: 4px; border: 1px dashed #f59e0b; flex-shrink: 0; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);"></div>
+              <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; letter-spacing: 0.5px;">Operação</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-weight: 600; padding: 8px 12px; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid #334155;">
+              <div style="width: 16px; height: 4px; background: linear-gradient(90deg, #10b981 0%, #059669 100%); border-radius: 4px; flex-shrink: 0; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);"></div>
+              <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; letter-spacing: 0.5px;">CALL</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-weight: 600; padding: 8px 12px; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid #334155;">
+              <div style="width: 16px; height: 4px; background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%); border-radius: 4px; flex-shrink: 0; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);"></div>
+              <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; letter-spacing: 0.5px;">PUT</span>
+            </div>
+          </div>
         </div>
 
-        <!-- Histórico Responsivo -->
-        <div class="history-container" style="background: #1e293b; border-radius: 12px; margin: 12px 0; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.3); border: 1px solid #334155;">
-          <div style="background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); padding: 12px; color: #e2e8f0; border-bottom: 1px solid #334155;">
-            <h3 style="margin: 0; font-size: 0.95rem; font-weight: 600;">📊 Histórico</h3>
+        <!-- Log Compacto para Mobile - Design Moderno -->
+        <div class="log-container" style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); border-radius: 20px; margin: 20px 0; overflow: hidden; border: 1px solid #475569; box-shadow: 0 12px 40px rgba(0,0,0,0.6); backdrop-filter: blur(15px);">
+          <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 16px; border-bottom: 2px solid #475569;">
+            <h3 style="color: #f1f5f9; margin: 0; font-size: 1.1rem; font-weight: 700; text-align: center; text-transform: uppercase; letter-spacing: 1px;">📋 Log do Sistema</h3>
+          </div>
+          <div id="log" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #34d399; padding: 20px; font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace; height: 200px; overflow-y: auto; font-size: 0.9rem; line-height: 1.5; border-radius: 0 0 20px 20px;"></div>
+        </div>
+
+        <!-- Histórico Responsivo - Design Moderno -->
+        <div class="history-container" style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); border-radius: 20px; margin: 20px 0; overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,0.6); border: 1px solid #475569; backdrop-filter: blur(15px);">
+          <div style="background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); padding: 20px; color: #e2e8f0; border-bottom: 2px solid #475569;">
+            <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; text-align: center; text-transform: uppercase; letter-spacing: 1px;">📊 Histórico de Operações</h3>
           </div>
           <div class="table-container" style="overflow-x: auto;">
             <table style="width: 100%; border-collapse: collapse; min-width: 500px;">
