@@ -195,20 +195,6 @@ export default function BotInterfaceSimple() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
-      {/* Header */}
-      <header className="mb-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-3 rounded-xl">
-              <Bot className="h-8 w-8 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white">{user?.name || 'Usuário'} - Bot de Trading</h1>
-              <p className="text-slate-400">{user?.email || 'Sistema automatizado profissional'}</p>
-            </div>
-          </div>
-        </div>
-      </header>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
