@@ -675,6 +675,263 @@ export default function BotInterface() {
     setChartConfig(prev => ({ ...prev, timeframe }));
   };
 
+  // ===== FUNÇÕES DE ANÁLISE E TRADING =====
+  const analyzeStrategies = (price: number, timestamp: number) => {
+    // Verificar se bot está rodando
+    if (!(window as any).botRunning) return;
+    
+    // Análise de 24 horas com velas de 1 minuto
+    analyze24HourTrend(price, timestamp);
+    
+    // Analisar estratégias ativas
+    const strategies = (settings as any).strategies || {};
+    
+    if (strategies.trend) {
+      analyzeTrendStrategy(price, timestamp);
+    }
+    
+    if (strategies.rsi) {
+      analyzeRSIStrategy(price, timestamp);
+    }
+    
+    if (strategies.mhi) {
+      analyzeMHIStrategy(price, timestamp);
+    }
+    
+    if (strategies.bollinger) {
+      analyzeBollingerStrategy(price, timestamp);
+    }
+    
+    if (strategies.fibonacci) {
+      analyzeFibonacciStrategy(price, timestamp);
+    }
+  };
+
+  const analyze24HourTrend = (price: number, timestamp: number) => {
+    // Análise de 24 horas com velas de 1 minuto (1440 velas)
+    const chart = (window as any).priceChartInstance;
+    if (!chart || chart.data.datasets[0].data.length < 1440) return;
+    
+    const data = chart.data.datasets[0].data;
+    const last24Hours = data.slice(-1440); // Últimas 1440 velas (24h de 1min)
+    
+    // Calcular tendência de 24 horas
+    const firstPrice = last24Hours[0]?.c || last24Hours[0]?.y || 0;
+    const lastPrice = last24Hours[last24Hours.length - 1]?.c || last24Hours[last24Hours.length - 1]?.y || 0;
+    const trend24h = ((lastPrice - firstPrice) / firstPrice) * 100;
+    
+    // Analisar últimas 5 velas para confirmação
+    const last5Candles = data.slice(-5);
+    const confirmationTrend = analyzeConfirmationTrend(last5Candles);
+    
+    // Log da análise
+    if (Math.abs(trend24h) > 1) { // Só logar se tendência for significativa
+      const trendDirection = trend24h > 0 ? 'Alta' : 'Baixa';
+      const confirmation = confirmationTrend > 0 ? 'Confirmando Alta' : 'Confirmando Baixa';
+      
+      logAnalysis(
+        `📊 Análise 24h: ${trendDirection} ${Math.abs(trend24h).toFixed(2)}%`,
+        `${confirmation} - Últimas 5 velas: ${confirmationTrend > 0 ? 'Alta' : 'Baixa'}`
+      );
+    }
+  };
+
+  const analyzeConfirmationTrend = (candles: any[]) => {
+    if (candles.length < 5) return 0;
+    
+    let highCount = 0;
+    let lowCount = 0;
+    
+    for (let i = 1; i < candles.length; i++) {
+      const current = candles[i]?.c || candles[i]?.y || 0;
+      const previous = candles[i - 1]?.c || candles[i - 1]?.y || 0;
+      
+      if (current > previous) highCount++;
+      else if (current < previous) lowCount++;
+    }
+    
+    return highCount - lowCount; // Positivo = tendência de alta, Negativo = tendência de baixa
+  };
+
+  const analyzeTrendStrategy = (price: number, timestamp: number) => {
+    // Análise de tendência com EMAs
+    const chart = (window as any).priceChartInstance;
+    if (!chart || chart.data.datasets[0].data.length < settings.emaSlow) return;
+    
+    const data = chart.data.datasets[0].data;
+    const emaFast = calculateEMA(data, settings.emaFast);
+    const emaSlow = calculateEMA(data, settings.emaSlow);
+    
+    if (emaFast > emaSlow) {
+      logAnalysis('📈 Tendência de Alta detectada', 'EMA rápida acima da lenta');
+    } else if (emaFast < emaSlow) {
+      logAnalysis('📉 Tendência de Baixa detectada', 'EMA rápida abaixo da lenta');
+    }
+  };
+
+  const analyzeRSIStrategy = (price: number, timestamp: number) => {
+    // Análise RSI
+    const chart = (window as any).priceChartInstance;
+    if (!chart || chart.data.datasets[0].data.length < settings.rsiPeriods) return;
+    
+    const data = chart.data.datasets[0].data;
+    const rsi = calculateRSI(data, settings.rsiPeriods);
+    
+    if (rsi > 70) {
+      logAnalysis('🔴 RSI Sobrecomprado', `RSI: ${rsi.toFixed(2)} - Possível reversão`);
+    } else if (rsi < 30) {
+      logAnalysis('🟢 RSI Sobrevendido', `RSI: ${rsi.toFixed(2)} - Possível reversão`);
+    }
+  };
+
+  const analyzeMHIStrategy = (price: number, timestamp: number) => {
+    // Análise MHI (Martingale Hi-Lo)
+    const chart = (window as any).priceChartInstance;
+    if (!chart || chart.data.datasets[0].data.length < settings.mhiPeriods) return;
+    
+    const data = chart.data.datasets[0].data;
+    const mhi = calculateMHI(data, settings.mhiPeriods);
+    
+    if (mhi > 0.6) {
+      logAnalysis('🟢 MHI Favorável', `MHI: ${mhi.toFixed(2)} - Alta probabilidade`);
+    } else if (mhi < 0.4) {
+      logAnalysis('🔴 MHI Desfavorável', `MHI: ${mhi.toFixed(2)} - Baixa probabilidade`);
+    }
+  };
+
+  const analyzeBollingerStrategy = (price: number, timestamp: number) => {
+    // Análise Bollinger Bands
+    const chart = (window as any).priceChartInstance;
+    if (!chart || chart.data.datasets[0].data.length < ((settings as any).bollingerPeriod || 20)) return;
+    
+    const data = chart.data.datasets[0].data;
+    const bb = calculateBollingerBands(data, (settings as any).bollingerPeriod || 20, (settings as any).bollingerStdDev || 2);
+    
+    if (price > bb.upper) {
+      logAnalysis('🔴 Preço acima da banda superior', 'Possível reversão para baixo');
+    } else if (price < bb.lower) {
+      logAnalysis('🟢 Preço abaixo da banda inferior', 'Possível reversão para cima');
+    }
+  };
+
+  const analyzeFibonacciStrategy = (price: number, timestamp: number) => {
+    // Análise Fibonacci
+    const chart = (window as any).priceChartInstance;
+    if (!chart || chart.data.datasets[0].data.length < 20) return;
+    
+    const data = chart.data.datasets[0].data;
+    const fib = calculateFibonacci(data);
+    
+    if (price >= fib.retracement_618) {
+      logAnalysis('🟢 Fibonacci 61.8%', 'Nível de retração favorável');
+    } else if (price <= fib.retracement_382) {
+      logAnalysis('🔴 Fibonacci 38.2%', 'Nível de retração crítico');
+    }
+  };
+
+  // ===== FUNÇÕES DE CÁLCULO =====
+  const calculateEMA = (data: any[], period: number) => {
+    if (data.length < period) return 0;
+    
+    const prices = data.slice(-period).map(d => d.c || d.y || 0);
+    const multiplier = 2 / (period + 1);
+    let ema = prices[0];
+    
+    for (let i = 1; i < prices.length; i++) {
+      ema = (prices[i] * multiplier) + (ema * (1 - multiplier));
+    }
+    
+    return ema;
+  };
+
+  const calculateRSI = (data: any[], period: number) => {
+    if (data.length < period + 1) return 50;
+    
+    const prices = data.slice(-period - 1).map(d => d.c || d.y || 0);
+    let gains = 0;
+    let losses = 0;
+    
+    for (let i = 1; i < prices.length; i++) {
+      const change = prices[i] - prices[i - 1];
+      if (change > 0) gains += change;
+      else losses += Math.abs(change);
+    }
+    
+    const avgGain = gains / period;
+    const avgLoss = losses / period;
+    
+    if (avgLoss === 0) return 100;
+    
+    const rs = avgGain / avgLoss;
+    return 100 - (100 / (1 + rs));
+  };
+
+  const calculateMHI = (data: any[], period: number) => {
+    if (data.length < period) return 0.5;
+    
+    const prices = data.slice(-period).map(d => d.c || d.y || 0);
+    let highs = 0;
+    let lows = 0;
+    
+    for (let i = 1; i < prices.length; i++) {
+      if (prices[i] > prices[i - 1]) highs++;
+      else if (prices[i] < prices[i - 1]) lows++;
+    }
+    
+    return highs / (highs + lows);
+  };
+
+  const calculateBollingerBands = (data: any[], period: number, stdDev: number) => {
+    if (data.length < period) return { upper: 0, middle: 0, lower: 0 };
+    
+    const prices = data.slice(-period).map(d => d.c || d.y || 0);
+    const sma = prices.reduce((sum, price) => sum + price, 0) / period;
+    
+    const variance = prices.reduce((sum, price) => sum + Math.pow(price - sma, 2), 0) / period;
+    const std = Math.sqrt(variance);
+    
+    return {
+      upper: sma + (std * stdDev),
+      middle: sma,
+      lower: sma - (std * stdDev)
+    };
+  };
+
+  const calculateFibonacci = (data: any[]) => {
+    if (data.length < 20) return { retracement_382: 0, retracement_618: 0 };
+    
+    const prices = data.slice(-20).map(d => d.c || d.y || 0);
+    const high = Math.max(...prices);
+    const low = Math.min(...prices);
+    const range = high - low;
+    
+    return {
+      retracement_382: high - (range * 0.382),
+      retracement_618: high - (range * 0.618)
+    };
+  };
+
+  const logAnalysis = (title: string, description: string) => {
+    const logsElement = document.getElementById('logs');
+    if (!logsElement) return;
+    
+    const logEntry = document.createElement('div');
+    logEntry.style.padding = '4px 0';
+    logEntry.style.color = '#cbd5e1';
+    logEntry.style.fontSize = '0.8rem';
+    logEntry.style.borderLeft = '3px solid #3b82f6';
+    logEntry.style.paddingLeft = '8px';
+    logEntry.style.marginBottom = '4px';
+    logEntry.innerHTML = `<strong>${title}</strong><br><small>${description}</small>`;
+    
+    logsElement.appendChild(logEntry);
+    
+    // Manter apenas últimas 15 entradas
+    while (logsElement.children.length > 15) {
+      logsElement.removeChild(logsElement.firstChild!);
+    }
+  };
+
   // ===== FUNÇÃO DE PREVIEW DO MERCADO =====
   const startMarketPreview = () => {
     console.log('📊 Iniciando preview do mercado...');
@@ -738,7 +995,6 @@ export default function BotInterface() {
         
         if (data.msg_type === 'tick') {
           const tick = data.tick;
-          console.log('📈 Tick recebido:', tick);
           
           // Atualizar gráfico
           const candle = processTickToCandle(tick.quote, tick.epoch * 1000);
@@ -749,22 +1005,8 @@ export default function BotInterface() {
           // Atualizar preço atual
           updateCurrentPriceLine(tick.quote, tick.epoch * 1000);
           
-          // Log do preço
-          const logsElement = document.getElementById('logs');
-          if (logsElement) {
-            const logEntry = document.createElement('div');
-            logEntry.style.padding = '4px 0';
-            logEntry.style.color = '#cbd5e1';
-            logEntry.style.fontSize = '0.8rem';
-            logEntry.innerHTML = `📊 ${symbol}: $${tick.quote.toFixed(4)} - ${new Date().toLocaleTimeString()}`;
-            
-            logsElement.appendChild(logEntry);
-            
-            // Manter apenas últimas 10 entradas
-            while (logsElement.children.length > 10) {
-              logsElement.removeChild(logsElement.firstChild!);
-            }
-          }
+          // Analisar estratégias e gerar sinais
+          analyzeStrategies(tick.quote, tick.epoch * 1000);
         }
         
         if (data.msg_type === 'authorize') {
