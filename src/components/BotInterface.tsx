@@ -1303,6 +1303,9 @@ export default function BotInterface() {
 
     console.log('🤖 Inicializando bot original...');
     
+    // Verificar se o bot já está rodando
+    const isBotRunning = (window as any).botRunning;
+    
     // Limpar container antes de inserir novo conteúdo
     botContainerRef.current.innerHTML = '';
 
@@ -1387,11 +1390,11 @@ export default function BotInterface() {
             <button 
               onclick="startBot()" 
               ${!isLicenseValid ? 'disabled' : ''}
-              style="background: ${isLicenseValid ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#6b7280'}; color: white; border: none; padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: ${isLicenseValid ? 'pointer' : 'not-allowed'}; box-shadow: 0 2px 6px ${isLicenseValid ? 'rgba(16, 185, 129, 0.3)' : 'rgba(107, 114, 128, 0.3)'}; transition: transform 0.2s; opacity: ${isLicenseValid ? '1' : '0.5'}; width: 100%; min-height: 40px;" 
+              style="background: ${isLicenseValid ? (isBotRunning ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)') : '#6b7280'}; color: white; border: none; padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: ${isLicenseValid ? 'pointer' : 'not-allowed'}; box-shadow: 0 2px 6px ${isLicenseValid ? (isBotRunning ? 'rgba(245, 158, 11, 0.3)' : 'rgba(16, 185, 129, 0.3)') : 'rgba(107, 114, 128, 0.3)'}; transition: transform 0.2s; opacity: ${isLicenseValid ? '1' : '0.5'}; width: 100%; min-height: 40px;" 
               onmouseover="if(this.style.cursor==='pointer') this.style.transform='scale(1.02)'" 
               onmouseout="if(this.style.cursor==='pointer') this.style.transform='scale(1)'"
             >
-              🚀 Iniciar
+              ${isBotRunning ? '🔄 Rodando' : '🚀 Iniciar'}
             </button>
             <button 
               onclick="stopBot()" 
@@ -1431,10 +1434,10 @@ export default function BotInterface() {
         <!-- Status e Logs -->
         <div class="status-section" style="background: #1e293b; border-radius: 8px; padding: 12px; margin: 8px 0; border: 1px solid #334155;">
           <div class="status-header" style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
-            <div class="status-indicator" id="status-indicator" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></div>
+            <div class="status-indicator" id="status-indicator" style="width: 10px; height: 10px; border-radius: 50%; background: ${isBotRunning ? '#10b981' : '#ef4444'};"></div>
             <h3 style="margin: 0; font-size: 0.9rem; font-weight: 600; color: #f1f5f9;">Status</h3>
           </div>
-          <div id="status" style="color: #94a3b8; font-size: 0.8rem; min-height: 16px; line-height: 1.3;">⏸️ Bot Parado</div>
+          <div id="status" style="color: #94a3b8; font-size: 0.8rem; min-height: 16px; line-height: 1.3;">${isBotRunning ? '🟢 Bot Operando - Aguardando sinais...' : '⏸️ Bot Parado'}</div>
         </div>
 
         <!-- Logs de Operações -->
@@ -1923,22 +1926,14 @@ export default function BotInterface() {
       const isBotRunning = (window as any).botRunning;
       const hasContent = botContainerRef.current?.innerHTML.trim() !== '';
       
-      if (isBotRunning) {
-        console.log('🤖 Bot já está rodando - mantendo funcionamento em background');
-        return;
-      }
-      
-      if (hasContent && !isBotRunning) {
-        console.log('📦 Container já tem conteúdo - não re-inicializando');
-        return;
-      }
-      
-      // Se o bot não está rodando mas o container está vazio, re-inicializar
-      if (!hasContent) {
-        console.log('📦 Container vazio - re-inicializando painel');
-      }
-      
+      // Sempre re-inicializar o painel visual quando voltar para aba trading
+      // O bot pode estar rodando em background, mas o painel precisa estar visível
       console.log('🔄 Re-inicializando painel do bot...');
+      
+      // Se o bot está rodando, manter funcionamento mas garantir que painel esteja visível
+      if (isBotRunning) {
+        console.log('🤖 Bot já está rodando - garantindo visibilidade do painel');
+      }
       
       // Forçar re-inicialização apenas se necessário
       setTimeout(() => {
