@@ -379,17 +379,26 @@ export default function BotInterface() {
   };
 
   const updateRealTimeChart = (price: number) => {
-    if (!priceChartRef.current) return;
+    if (!priceChartRef.current) {
+      console.log('❌ Gráfico não inicializado');
+      return;
+    }
 
     try {
       const now = new Date();
       const timeLabel = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
       
-      // Adicionar novo ponto
+      console.log(`📊 Atualizando gráfico: $${price.toFixed(4)} às ${timeLabel}`);
+      
+      // Adicionar novo ponto no formato correto para Chart.js
       const currentData = priceChartRef.current.data.datasets[0].data;
       const currentLabels = priceChartRef.current.data.labels;
 
-      currentData.push(price);
+      // Adicionar ponto no formato {x, y}
+      currentData.push({
+        x: currentData.length,
+        y: price
+      });
       currentLabels.push(timeLabel);
 
       // Manter apenas os últimos 50 pontos
@@ -398,13 +407,14 @@ export default function BotInterface() {
         currentLabels.shift();
       }
 
+      console.log(`📊 Dados do gráfico: ${currentData.length} pontos, último: $${price.toFixed(4)}`);
+
       // Forçar atualização do gráfico
       priceChartRef.current.update('none');
       
-      // Log para debug
-      console.log(`📊 Gráfico atualizado: ${price.toFixed(4)} às ${timeLabel}`);
+      console.log(`✅ Gráfico atualizado com sucesso!`);
     } catch (error) {
-      console.error('Erro ao atualizar gráfico:', error);
+      console.error('❌ Erro ao atualizar gráfico:', error);
     }
   };
 
