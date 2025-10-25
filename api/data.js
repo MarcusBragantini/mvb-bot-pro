@@ -518,6 +518,27 @@ module.exports = async function handler(req, res) {
         }
 
         try {
+          // Criar tabela user_trades se não existir
+          await connection.execute(`
+            CREATE TABLE IF NOT EXISTS user_trades (
+              id INT AUTO_INCREMENT PRIMARY KEY,
+              user_id INT NOT NULL,
+              symbol VARCHAR(50) NOT NULL,
+              trade_signal VARCHAR(10) NOT NULL,
+              trade_type VARCHAR(10) DEFAULT 'binary',
+              stake DECIMAL(10,2) NOT NULL,
+              result VARCHAR(10) NOT NULL,
+              profit DECIMAL(10,2) DEFAULT 0,
+              confidence INT DEFAULT 0,
+              status VARCHAR(20) DEFAULT 'completed',
+              account_type VARCHAR(10) DEFAULT 'demo',
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              INDEX idx_user_trades (user_id),
+              INDEX idx_created_at (created_at),
+              FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+          `);
+
           await connection.execute(`
             INSERT INTO user_trades (
               user_id, 
@@ -533,6 +554,7 @@ module.exports = async function handler(req, res) {
             ) VALUES (?, ?, ?, ?, ?, ?, ?, 'completed', ?, NOW())
           `, [user_id, symbol, trade_signal, stake, result, profit || 0, confidence || 0, account_type || 'demo']);
 
+          console.log(`✅ Trade salvo: user_id=${user_id}, symbol=${symbol}, signal=${trade_signal}, result=${result}, profit=${profit}`);
           return res.status(200).json({ 
             success: true,
             message: 'Trade salvo com sucesso'

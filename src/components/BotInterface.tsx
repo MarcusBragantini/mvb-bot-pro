@@ -1222,20 +1222,21 @@ export default function BotInterface() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: user.id,
-          trade: {
-            ...tradeResult,
-            symbol: settings.selectedSymbol,
-            account_type: settings.selectedTokenType,
-            stake: settings.stake,
-            martingale: settings.martingale,
-            stop_win: settings.stopWin,
-            stop_loss: settings.stopLoss
-          }
+          symbol: settings.selectedSymbol,
+          trade_signal: tradeResult.signal,
+          stake: settings.stake,
+          result: tradeResult.result,
+          profit: tradeResult.profit,
+          confidence: tradeResult.confidence,
+          account_type: settings.selectedTokenType
         })
       });
       
       if (response.ok) {
         console.log('✅ Trade salvo no banco de dados');
+      } else {
+        const errorData = await response.json();
+        console.error('❌ Erro ao salvar trade:', errorData);
       }
     } catch (error) {
       console.error('❌ Erro ao salvar trade:', error);
