@@ -114,6 +114,7 @@ export default function BotInterface() {
   const [chartData, setChartData] = useState<any[]>([]);
   const [realTimePrices, setRealTimePrices] = useState<number[]>([]);
   const [priceHistory, setPriceHistory] = useState<{timestamp: number, price: number}[]>([]);
+  const [isBotRunning, setIsBotRunning] = useState(false);
 
   // ===== REFS =====
   const botContainerRef = useRef<HTMLDivElement>(null);
@@ -150,7 +151,7 @@ export default function BotInterface() {
   const [botTokenLoaded, setBotTokenLoaded] = useState(false);
 
   // ===== FUNÇÕES UTILITÁRIAS =====
-  const isBotRunning = () => {
+  const checkBotRunning = () => {
     const statusElement = document.getElementById('status');
     if (statusElement && statusElement.textContent) {
       const statusText = statusElement.textContent.trim();
@@ -160,7 +161,7 @@ export default function BotInterface() {
   };
 
   const handleTabChange = (newTab: string) => {
-    if (activeTab === 'trading' && newTab !== 'trading' && isBotRunning()) {
+    if (activeTab === 'trading' && newTab !== 'trading' && checkBotRunning()) {
       toast({
         title: "⚠️ Bot em Execução!",
         description: "O bot continua rodando em segundo plano.",
@@ -264,15 +265,71 @@ export default function BotInterface() {
     if (!priceChartRef.current) return;
 
     const now = Date.now();
-    const newData = { timestamp: now, price: price };
+    const newData = { x: now, y: price };
 
     setPriceHistory(prev => {
-      const updated = [...prev, newData].slice(-100); // Manter últimas 100 entradas
+      const updated = [...prev, { timestamp: now, price }].slice(-100);
       return updated;
     });
 
-    priceChartRef.current.data.datasets[0].data = [...priceHistory, newData].map(d => ({ x: d.timestamp, y: d.price }));
+    priceChartRef.current.data.datasets[0].data = [...priceHistory, newData];
     priceChartRef.current.update('quiet');
+  };
+
+  // ===== BOTÕES DE INICIAR/PARAR =====
+  const handleStartBot = () => {
+    if (!isLicenseValid) {
+      toast({
+        title: "❌ Licença Necessária",
+        description: "Você precisa de uma licença válida para iniciar o bot.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!settings.derivTokenDemo && settings.selectedTokenType === 'demo') {
+      toast({
+        title: "❌ Token Demo Necessário",
+        description: "Configure o token da conta demo nas configurações.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!settings.derivTokenReal && settings.selectedTokenType === 'real') {
+      toast({
+        title: "❌ Token Real Necessário",
+        description: "Configure o token da conta real nas configurações.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsBotRunning(true);
+    
+    // Simular início do bot
+    toast({
+      title: "🚀 Bot Iniciado",
+      description: `Trading automático iniciado na conta ${settings.selectedTokenType}`,
+    });
+
+    // Simular atualização de preços em tempo real
+    const interval = setInterval(() => {
+      if (isBotRunning) {
+        const randomPrice = 1.2345 + (Math.random() - 0.5) * 0.01;
+        updateRealTimeChart(randomPrice);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  };
+
+  const handleStopBot = () => {
+    setIsBotRunning(false);
+    toast({
+      title: "⏹️ Bot Parado",
+      description: "Trading automático interrompido.",
+    });
   };
 
   // ===== CARREGAR ANALYTICS DO BANCO =====
@@ -806,13 +863,69 @@ export default function BotInterface() {
                 </CardContent>
               </Card>
 
-              {/* Gráfico em Tempo Real */}
+              {/* Botões de Controle */}
               <Card className="border-slate-600 bg-slate-750">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg text-white flex items-center gap-2">
                     <Activity className="h-5 w-5" />
+                    Controle do Bot
+                  </CardTitle>
+                  <CardDescription className="text-gray-400">
+                    Inicie ou pare o trading automático
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Button
+                      onClick={handleStartBot}
+                      disabled={!isLicenseValid || isBotRunning}
+                      className={`h-16 text-lg font-semibold ${
+                        isLicenseValid && !isBotRunning
+                          ? 'bg-green-600 hover:bg-green-700 text-white'
+                          : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      <Play className="h-5 w-5 mr-2" />
+                      {isBotRunning ? 'Executando...' : 'Iniciar Bot'}
+                    </Button>
+                    
+                    <Button
+                      onClick={handleStopBot}
+                      disabled={!isBotRunning}
+                      className={`h-16 text-lg font-semibold ${
+                        isBotRunning
+                          ? 'bg-red-600 hover:bg-red-700 text-white'
+                          : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      <Square className="h-5 w-5 mr-2" />
+                      Parar Bot
+                    </Button>
+                  </div>
+                  
+                  {isBotRunning && (
+                    <div className="mt-4 p-3 bg-green-900/20 border border-green-600 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <span className="text-green-400 text-sm">🟢 Bot em execução</span>
+                        <span className="text-green-300 text-sm">
+                          Conta: {settings.selectedTokenType === 'demo' ? 'Demo' : 'Real'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Gráfico em Tempo Real */}
+              <Card className="border-slate-600 bg-slate-750">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg text-white flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
                     Gráfico em Tempo Real
                   </CardTitle>
+                  <CardDescription className="text-gray-400">
+                    Preços atualizados em tempo real
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="h-64 sm:h-80 bg-slate-900 rounded-lg p-2">
@@ -821,7 +934,39 @@ export default function BotInterface() {
                 </CardContent>
               </Card>
 
-              {/* Bot Original */}
+              {/* Status do Trading */}
+              <Card className="border-slate-600 bg-slate-750">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg text-white flex items-center gap-2">
+                    <Activity className="h-5 w-5" />
+                    Status do Trading
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="text-center p-4 bg-slate-700 rounded-lg">
+                      <div className="text-2xl font-bold text-white">$0.00</div>
+                      <div className="text-sm text-gray-400">Lucro Atual</div>
+                    </div>
+                    <div className="text-center p-4 bg-slate-700 rounded-lg">
+                      <div className="text-2xl font-bold text-white">0</div>
+                      <div className="text-sm text-gray-400">Trades Hoje</div>
+                    </div>
+                    <div className="text-center p-4 bg-slate-700 rounded-lg">
+                      <div className="text-2xl font-bold text-white">0%</div>
+                      <div className="text-sm text-gray-400">Taxa de Acerto</div>
+                    </div>
+                    <div className="text-center p-4 bg-slate-700 rounded-lg">
+                      <div className="text-2xl font-bold text-white">
+                        {isBotRunning ? '🟢' : '🔴'}
+                      </div>
+                      <div className="text-sm text-gray-400">Status</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Bot Original (para compatibilidade) */}
               <div ref={botContainerRef} className="w-full" />
             </TabsContent>
 
@@ -997,7 +1142,7 @@ export default function BotInterface() {
                         id="stake"
                         type="number"
                         value={settings.stake}
-                        onChange={(e) => updateSetting('stake', parseFloat(e.target.value))}
+                        onChange={(e) => updateSetting('stake', parseFloat(e.target.value) || 1)}
                         className="bg-slate-700 border-slate-600 text-white"
                         min="0.35"
                         step="0.01"
@@ -1012,7 +1157,7 @@ export default function BotInterface() {
                         id="martingale"
                         type="number"
                         value={settings.martingale}
-                        onChange={(e) => updateSetting('martingale', parseFloat(e.target.value))}
+                        onChange={(e) => updateSetting('martingale', parseFloat(e.target.value) || 2)}
                         className="bg-slate-700 border-slate-600 text-white"
                         min="1"
                         step="0.1"
@@ -1027,7 +1172,7 @@ export default function BotInterface() {
                         id="duration"
                         type="number"
                         value={settings.duration}
-                        onChange={(e) => updateSetting('duration', parseInt(e.target.value))}
+                        onChange={(e) => updateSetting('duration', parseInt(e.target.value) || 15)}
                         className="bg-slate-700 border-slate-600 text-white"
                         min="1"
                       />
@@ -1041,7 +1186,7 @@ export default function BotInterface() {
                         id="stopWin"
                         type="number"
                         value={settings.stopWin}
-                        onChange={(e) => updateSetting('stopWin', parseFloat(e.target.value))}
+                        onChange={(e) => updateSetting('stopWin', parseFloat(e.target.value) || 3)}
                         className="bg-slate-700 border-slate-600 text-white"
                         min="0"
                         step="0.01"
@@ -1056,7 +1201,7 @@ export default function BotInterface() {
                         id="stopLoss"
                         type="number"
                         value={settings.stopLoss}
-                        onChange={(e) => updateSetting('stopLoss', parseFloat(e.target.value))}
+                        onChange={(e) => updateSetting('stopLoss', parseFloat(e.target.value) || -5)}
                         className="bg-slate-700 border-slate-600 text-white"
                         max="0"
                         step="0.01"
@@ -1071,7 +1216,7 @@ export default function BotInterface() {
                         id="confidence"
                         type="number"
                         value={settings.confidence}
-                        onChange={(e) => updateSetting('confidence', parseInt(e.target.value))}
+                        onChange={(e) => updateSetting('confidence', parseInt(e.target.value) || 70)}
                         className="bg-slate-700 border-slate-600 text-white"
                         min="1"
                         max="100"
@@ -1084,7 +1229,10 @@ export default function BotInterface() {
                       <Label htmlFor="strategy" className="text-sm font-medium text-gray-300">
                         Estratégia
                       </Label>
-                      <Select value={settings.strategy} onValueChange={(value) => updateSetting('strategy', value)}>
+                      <Select 
+                        value={settings.strategy} 
+                        onValueChange={(value) => updateSetting('strategy', value)}
+                      >
                         <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
                           <SelectValue placeholder="Selecione a estratégia" />
                         </SelectTrigger>
@@ -1105,7 +1253,7 @@ export default function BotInterface() {
                         id="autoCloseTime"
                         type="number"
                         value={settings.autoCloseTime}
-                        onChange={(e) => updateSetting('autoCloseTime', parseInt(e.target.value))}
+                        onChange={(e) => updateSetting('autoCloseTime', parseInt(e.target.value) || 30)}
                         className="bg-slate-700 border-slate-600 text-white"
                         min="0"
                       />
