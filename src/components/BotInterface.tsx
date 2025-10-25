@@ -152,7 +152,7 @@ export default function BotInterface() {
     duration: 15,
     stopWin: 3,
     stopLoss: -5,
-    confidence: 50,
+    confidence: 30,
     strategy: 'martingale',
     derivTokenDemo: '',
     derivTokenReal: '',
@@ -598,6 +598,15 @@ export default function BotInterface() {
     const emaAnalysis = analyzeEMA(prices);
     const rsiAnalysis = analyzeRSI(prices);
     const trendAnalysis = analyzeTrend(prices);
+    
+    console.log(`🔍 Análises individuais:`, {
+      mhi: mhiAnalysis,
+      ema: emaAnalysis,
+      rsi: rsiAnalysis,
+      trend: trendAnalysis,
+      strategy: settings.strategy,
+      confidence_threshold: settings.confidence
+    });
     
     // Calcular sinal final baseado na estratégia selecionada
     let finalSignal = 'HOLD';
@@ -2344,7 +2353,7 @@ export default function BotInterface() {
                         id="confidence"
                         type="number"
                         value={settings.confidence}
-                        onChange={(e) => updateSetting('confidence', parseInt(e.target.value) || 50)}
+                        onChange={(e) => updateSetting('confidence', parseInt(e.target.value) || 30)}
                         className="bg-slate-700 border-slate-600 text-white"
                         min="1"
                         max="100"
