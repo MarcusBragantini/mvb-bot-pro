@@ -178,22 +178,27 @@ export default function BotInterface() {
 
   // ===== SISTEMA DE GRAFICO EM TEMPO REAL CORRIGIDO =====
   const initializeRealTimeChart = () => {
+    console.log('🚀 Iniciando gráfico em tempo real...');
+    
     if (typeof window === 'undefined' || !(window as any).Chart) {
-      console.log('Chart.js não carregado');
+      console.log('❌ Chart.js não carregado');
       return;
     }
+    console.log('✅ Chart.js carregado');
 
     const canvas = document.getElementById('realTimeChart') as HTMLCanvasElement;
     if (!canvas) {
-      console.log('Canvas não encontrado');
+      console.log('❌ Canvas não encontrado');
       return;
     }
+    console.log('✅ Canvas encontrado:', canvas);
 
     const ctx = canvas.getContext('2d');
     if (!ctx) {
-      console.log('Contexto do canvas não disponível');
+      console.log('❌ Contexto do canvas não disponível');
       return;
     }
+    console.log('✅ Contexto do canvas disponível');
 
     // Destruir gráfico existente
     if (priceChartRef.current) {
@@ -208,6 +213,7 @@ export default function BotInterface() {
     }
 
     try {
+      console.log('📊 Criando gráfico...');
       // Criar gráfico simples sem escala realtime
       priceChartRef.current = new (window as any).Chart(ctx, {
         type: 'line',
@@ -285,7 +291,7 @@ export default function BotInterface() {
         }
       });
 
-      console.log('Gráfico inicializado com sucesso');
+      console.log('✅ Gráfico criado com sucesso!');
     } catch (error) {
       console.error('Erro ao inicializar gráfico:', error);
     }
