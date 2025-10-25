@@ -250,6 +250,7 @@ export default function BotInterface() {
           analyzeAndExecuteTrade(parseFloat(tick.quote));
         } else {
           console.log(`⏸️ Bot parado - Tick ignorado: $${tick.quote}`);
+          console.log(`💡 Para iniciar o bot, clique no botão "Iniciar Bot" na interface`);
         }
       }
     };
