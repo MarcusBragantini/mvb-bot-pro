@@ -365,11 +365,8 @@ export default function BotInterface() {
                 drawBorder: false
               },
               // Configurar escala Y para mostrar oscilações
-              min: 1.20,
-              max: 1.30,
               ticks: {
                 color: '#94a3b8',
-                stepSize: 0.001, // Passo menor para mostrar variações
                 callback: (value: any) => `$${parseFloat(value).toFixed(4)}`
               }
             }
@@ -430,25 +427,26 @@ export default function BotInterface() {
       // Forçar atualização do gráfico
       priceChartRef.current.update('none');
       
-      // Recalcular escala Y para mostrar oscilações
+      // Recalcular escala Y para mostrar oscilações (simplificado)
       const values = currentData.map((point: any) => point.y);
       if (values.length > 1) {
         const min = Math.min(...values);
         const max = Math.max(...values);
         const range = max - min;
         
-        // Garantir que há variação mínima para visualização
-        const minRange = 0.005; // Mínimo de 0.5% de variação
+        // Garantir variação mínima para visualização
+        const minRange = 0.01; // Mínimo de 1% de variação
         const actualRange = Math.max(range, minRange);
         
-        // Ajustar escala Y dinamicamente com margem
-        priceChartRef.current.options.scales.y.min = min - (actualRange * 0.2);
-        priceChartRef.current.options.scales.y.max = max + (actualRange * 0.2);
+        // Ajustar escala Y com margem simples
+        const margin = actualRange * 0.1;
+        priceChartRef.current.options.scales.y.min = min - margin;
+        priceChartRef.current.options.scales.y.max = max + margin;
         
-        // Forçar atualização da escala
+        // Atualizar gráfico
         priceChartRef.current.update('none');
         
-        console.log(`📈 Escala Y: ${(min - actualRange * 0.2).toFixed(4)} - ${(max + actualRange * 0.2).toFixed(4)}`);
+        console.log(`📈 Escala Y: ${(min - margin).toFixed(4)} - ${(max + margin).toFixed(4)}`);
       }
       
       console.log(`✅ Gráfico atualizado com sucesso!`);
