@@ -81,6 +81,8 @@ export default function BotInterface() {
   const [currentPrice, setCurrentPrice] = useState<number>(0);
   const [lastTradeDirection, setLastTradeDirection] = useState<'CALL' | 'PUT' | null>(null);
   const [isTradeActive, setIsTradeActive] = useState(false);
+  const [tradeStartTime, setTradeStartTime] = useState<number>(0);
+  const [isWaitingForResult, setIsWaitingForResult] = useState(false);
   
   // Debug: Log quando dailyPnL muda
   useEffect(() => {
@@ -91,6 +93,11 @@ export default function BotInterface() {
   useEffect(() => {
     console.info("🔄 isTradeActive mudou para:", isTradeActive);
   }, [isTradeActive]);
+  
+  // Debug: Log quando isWaitingForResult muda
+  useEffect(() => {
+    console.info("🔄 isWaitingForResult mudou para:", isWaitingForResult);
+  }, [isWaitingForResult]);
   
   // Debug: Log quando dailyStopped muda
   useEffect(() => {
@@ -180,6 +187,13 @@ export default function BotInterface() {
       setDailyStopped((s) => ({ ...s, stopWin: true }));
       setIsBotRunning(false);
       return { allowed: false, reason: "Stop Win já atingido" };
+    }
+    
+    // Aguardar resultado do trade anterior
+    if (isWaitingForResult) {
+      const waitTime = Date.now() - tradeStartTime;
+      console.info("⏳ Aguardando resultado do trade anterior...", `(Aguardando há: ${waitTime}ms)`);
+      return { allowed: false, reason: "Aguardando resultado do trade anterior" };
     }
     
     const recent = countRecentTrades();
@@ -389,7 +403,9 @@ export default function BotInterface() {
     
     // Marcar trade como concluído
     setIsTradeActive(false);
-    console.info("🏁 Trade concluído:", direction);
+    setIsWaitingForResult(false);
+    const tradeDuration = Date.now() - tradeStartTime;
+    console.info("🏁 Trade concluído:", direction, `(Duração: ${tradeDuration}ms)`);
     
     console.info("Trade executado:", trade);
     console.info("Cálculo detalhado:", {
@@ -501,6 +517,8 @@ export default function BotInterface() {
     try {
       // Marcar trade como ativo
       setIsTradeActive(true);
+      setIsWaitingForResult(true);
+      setTradeStartTime(Date.now());
       console.info("🚀 Iniciando trade ativo:", analysis.direction);
       
       // Armazenar direção do sinal para uso posterior
@@ -531,6 +549,7 @@ export default function BotInterface() {
     } catch (error) {
       console.error("Erro ao executar trade:", error);
       setIsTradeActive(false); // Reset em caso de erro
+      setIsWaitingForResult(false);
     }
   };
 
