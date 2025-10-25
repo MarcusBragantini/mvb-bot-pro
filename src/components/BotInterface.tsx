@@ -367,6 +367,19 @@ export default function BotInterface() {
               ticks: {
                 color: '#94a3b8',
                 callback: (value: any) => `$${parseFloat(value).toFixed(4)}`
+              },
+              // Configurar escala Y para mostrar oscilações
+              min: (context: any) => {
+                const values = context.chart.data.datasets[0].data.map((d: any) => d.y);
+                if (values.length === 0) return 1.20;
+                const min = Math.min(...values);
+                return min - 0.005; // Margem abaixo
+              },
+              max: (context: any) => {
+                const values = context.chart.data.datasets[0].data.map((d: any) => d.y);
+                if (values.length === 0) return 1.25;
+                const max = Math.max(...values);
+                return max + 0.005; // Margem acima
               }
             }
           },
@@ -414,8 +427,21 @@ export default function BotInterface() {
 
       console.log(`📊 Dados do gráfico: ${currentData.length} pontos, último: $${price.toFixed(4)}`);
 
-      // Forçar atualização do gráfico
+      // Forçar atualização do gráfico e recalcular escala
       priceChartRef.current.update('none');
+      
+      // Recalcular escala Y para mostrar oscilações
+      const values = currentData.map((point: any) => point.y);
+      if (values.length > 0) {
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const range = max - min;
+        
+        // Ajustar escala Y dinamicamente
+        priceChartRef.current.options.scales.y.min = min - (range * 0.1);
+        priceChartRef.current.options.scales.y.max = max + (range * 0.1);
+        priceChartRef.current.update('none');
+      }
       
       console.log(`✅ Gráfico atualizado com sucesso!`);
     } catch (error) {
@@ -963,10 +989,14 @@ export default function BotInterface() {
         // Inicializar gráfico com dados iniciais mesmo sem bot rodando
         if (!isBotRunning) {
           console.log('📊 Inicializando gráfico com dados iniciais...');
-          // Adicionar alguns pontos iniciais para visualização
-          for (let i = 0; i < 10; i++) {
-            const mockPrice = 1.2345 + (Math.random() - 0.5) * 0.01;
-            updateRealTimeChart(mockPrice);
+          // Adicionar pontos iniciais com variação realista
+          let basePrice = 1.2345;
+          for (let i = 0; i < 20; i++) {
+            // Simular movimento de preço mais realista
+            const variation = (Math.random() - 0.5) * 0.02; // Variação de ±0.01
+            basePrice += variation;
+            basePrice = Math.max(1.20, Math.min(1.25, basePrice)); // Manter em range
+            updateRealTimeChart(basePrice);
           }
         }
       }, 1000);
