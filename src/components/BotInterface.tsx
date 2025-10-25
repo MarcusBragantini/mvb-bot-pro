@@ -1110,7 +1110,7 @@ export default function BotInterface() {
   const executeTrade = (signal: 'CALL' | 'PUT', price: number, analysis: TechnicalAnalysis) => {
     const tradeId = `trade_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    console.log(`🚀 Executando trade: ${signal} a $${price.toFixed(4)}`);
+    console.log(`🚀 Executando trade REAL: ${signal} a $${price.toFixed(4)}`);
     console.log(`📊 Análise: ${analysis.reason}`);
     console.log(`🎯 Confiança: ${analysis.confidence.toFixed(1)}%`);
     
@@ -1118,98 +1118,168 @@ export default function BotInterface() {
     const confidenceMultiplier = Math.min(1.5, analysis.confidence / 100);
     const adjustedStake = settings.stake * confidenceMultiplier;
     
-    // Simular resultado do trade com base na análise técnica
-    setTimeout(() => {
-      // Calcular probabilidade de sucesso baseada na análise
-      let winProbability = 0.5; // Base 50%
-      
-      // Ajustar probabilidade baseada na confiança
-      winProbability += (analysis.confidence - 50) / 200; // Ajuste baseado na confiança
-      
-      // Ajustar baseado na estratégia
-      switch (settings.strategy) {
-        case 'mhi':
-          winProbability += 0.1; // MHI tem melhor performance
-          break;
-        case 'ema':
-          winProbability += 0.05; // EMA é mais conservadora
-          break;
-        case 'rsi':
-          winProbability += 0.08; // RSI é boa para reversões
-          break;
-        case 'martingale':
-          winProbability += 0.12; // Consenso de indicadores
-          break;
-      }
-      
-      // Aplicar volatilidade do mercado
-      const marketVolatility = Math.random() * 0.3 + 0.7; // 70-100%
-      winProbability *= marketVolatility;
-      
-      // Garantir que a probabilidade esteja entre 30% e 85%
-      winProbability = Math.max(0.3, Math.min(0.85, winProbability));
-      
-      const isWin = Math.random() < winProbability;
-      const result = isWin ? 'WIN' : 'LOSS';
-      
-      // Calcular lucro baseado na estratégia e confiança
-      let profitMultiplier = 0.8; // Base 80%
-      if (isWin) {
-        profitMultiplier += (analysis.confidence - 50) / 200; // Ajuste baseado na confiança
-        profitMultiplier = Math.min(1.2, profitMultiplier); // Máximo 120%
-      }
-      
-      const profit = isWin ? adjustedStake * profitMultiplier : -adjustedStake;
-      
-      // Criar resultado do trade
-      const tradeResult: TradeResult = {
-        id: tradeId,
-        signal,
-        entryPrice: price,
-        exitPrice: price + (Math.random() - 0.5) * 0.01, // Simular variação de preço
-        result,
-        profit,
-        confidence: analysis.confidence,
-        strategy: settings.strategy,
-        timestamp: new Date(),
-        analysis
-      };
-      
-      console.log(`💰 Trade ${result}: ${signal} - Lucro: $${profit.toFixed(2)}`);
-      console.log(`📈 Probabilidade calculada: ${(winProbability * 100).toFixed(1)}%`);
-      
-      // Atualizar interface com resultado detalhado
-      const tradeEmoji = isWin ? '🎉' : '😞';
-      const profitEmoji = profit > 0 ? '💰' : '💸';
-      
+    // Verificar se temos conexão com Deriv
+    const derivWS = (window as any).derivWS;
+    if (!derivWS || derivWS.readyState !== WebSocket.OPEN) {
+      console.error('❌ Conexão Deriv não disponível');
       toast({
-        title: `${tradeEmoji} Trade ${result}`,
-        description: `${signal} - ${profitEmoji} $${profit.toFixed(2)} | 🎯 ${analysis.confidence.toFixed(1)}% | 📊 ${settings.strategy.toUpperCase()}`,
-        variant: isWin ? "default" : "destructive",
-        duration: 7000
+        title: "❌ Erro de Conexão",
+        description: "Conexão com Deriv não disponível. Trade não executado.",
+        variant: "destructive"
       });
-      
-      // Notificação adicional para trades com alta confiança
-      if (analysis.confidence > 80) {
-        setTimeout(() => {
-          toast({
-            title: "🔥 Trade de Alta Confiança!",
-            description: `Confiança: ${analysis.confidence.toFixed(1)}% - ${analysis.reason}`,
-            duration: 4000
-          });
-        }, 1000);
+      return;
+    }
+    
+    // Executar trade REAL na Deriv API
+    const buyRequest = {
+      buy: tradeId,
+      price: adjustedStake,
+      parameters: {
+        contract_type: signal === 'CALL' ? 'CALL' : 'PUT',
+        symbol: settings.selectedSymbol,
+        amount: adjustedStake,
+        duration: settings.duration,
+        duration_unit: 's',
+        basis: 'stake'
       }
+    };
+    
+    console.log('📤 Enviando trade para Deriv API:', buyRequest);
+    
+    derivWS.send(JSON.stringify(buyRequest));
+    
+    // Aguardar resposta da Deriv
+    const originalOnMessage = derivWS.onmessage;
+    derivWS.onmessage = (event: MessageEvent) => {
+      const data = JSON.parse(event.data);
       
-      // Salvar trade no banco de dados
-      saveTradeToDatabase(tradeResult);
-      
-      // Atualizar estatísticas em tempo real
-      updateTradingStats(tradeResult);
-      
-      // Atualizar gestão de risco
-      updateRiskManagement(tradeResult);
-      
-    }, settings.duration * 1000); // Usar duração configurada
+      // Processar resposta do trade
+      if (data.buy) {
+        const buyResponse = data.buy;
+        
+        if (buyResponse.error) {
+          console.error('❌ Erro no trade Deriv:', buyResponse.error);
+          toast({
+            title: "❌ Erro no Trade",
+            description: `Erro: ${buyResponse.error.message}`,
+            variant: "destructive"
+          });
+          
+          // Restaurar handler original
+          derivWS.onmessage = originalOnMessage;
+          return;
+        }
+        
+        if (buyResponse.contract_id) {
+          console.log('✅ Trade executado na Deriv:', buyResponse.contract_id);
+          
+          // Aguardar resultado do trade
+          setTimeout(() => {
+            // Verificar resultado REAL do trade na Deriv
+            const contractId = buyResponse.contract_id;
+            
+            // Solicitar informações do contrato
+            const contractRequest = {
+              contract: contractId
+            };
+            
+            console.log('🔍 Verificando resultado do trade:', contractId);
+            derivWS.send(JSON.stringify(contractRequest));
+            
+            // Handler temporário para verificar resultado
+            const checkResultHandler = (event: MessageEvent) => {
+              const data = JSON.parse(event.data);
+              
+              if (data.contract) {
+                const contract = data.contract;
+                console.log('📊 Resultado do contrato:', contract);
+                
+                // Determinar resultado baseado no status do contrato
+                let result: 'WIN' | 'LOSS' = 'LOSS';
+                let profit = -adjustedStake;
+                
+                if (contract.status === 'sold' && contract.sell_price) {
+                  const sellPrice = parseFloat(contract.sell_price);
+                  const buyPrice = parseFloat(contract.buy_price);
+                  const profitAmount = sellPrice - buyPrice;
+                  
+                  if (profitAmount > 0) {
+                    result = 'WIN';
+                    profit = profitAmount;
+                  } else {
+                    result = 'LOSS';
+                    profit = profitAmount;
+                  }
+                } else if (contract.status === 'won') {
+                  result = 'WIN';
+                  profit = adjustedStake * 0.8; // Aproximação
+                } else if (contract.status === 'lost') {
+                  result = 'LOSS';
+                  profit = -adjustedStake;
+                }
+                
+                // Criar resultado do trade
+                const tradeResult: TradeResult = {
+                  id: tradeId,
+                  signal,
+                  entryPrice: price,
+                  exitPrice: price + (Math.random() - 0.5) * 0.01,
+                  result,
+                  profit,
+                  confidence: analysis.confidence,
+                  strategy: settings.strategy,
+                  timestamp: new Date(),
+                  analysis
+                };
+                
+                console.log(`💰 Trade ${result}: ${signal} - Lucro: $${profit.toFixed(2)}`);
+                
+                // Atualizar interface com resultado
+                const tradeEmoji = result === 'WIN' ? '🎉' : '😞';
+                const profitEmoji = profit > 0 ? '💰' : '💸';
+                
+                toast({
+                  title: `${tradeEmoji} Trade ${result}`,
+                  description: `${signal} - ${profitEmoji} $${profit.toFixed(2)} | 🎯 ${analysis.confidence.toFixed(1)}% | 📊 ${settings.strategy.toUpperCase()}`,
+                  variant: result === 'WIN' ? "default" : "destructive",
+                  duration: 7000
+                });
+                
+                // Salvar trade no banco de dados
+                saveTradeToDatabase(tradeResult);
+                
+                // Atualizar estatísticas em tempo real
+                updateTradingStats(tradeResult);
+                
+                // Atualizar gestão de risco
+                updateRiskManagement(tradeResult);
+                
+                // Restaurar handler original
+                derivWS.onmessage = originalOnMessage;
+                
+                // Remover handler temporário
+                derivWS.removeEventListener('message', checkResultHandler);
+              }
+            };
+            
+            // Adicionar handler temporário
+            derivWS.addEventListener('message', checkResultHandler);
+            
+            // Timeout de segurança
+            setTimeout(() => {
+              derivWS.removeEventListener('message', checkResultHandler);
+              derivWS.onmessage = originalOnMessage;
+            }, (settings.duration + 5) * 1000);
+            
+          }, settings.duration * 1000);
+        }
+      } else {
+        // Processar outros tipos de mensagem
+        if (originalOnMessage) {
+          originalOnMessage(event);
+        }
+      }
+    };
   };
 
   // ===== SALVAR TRADE NO BANCO DE DADOS =====
