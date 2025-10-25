@@ -83,6 +83,7 @@ export default function BotInterface() {
   const [isTradeActive, setIsTradeActive] = useState(false);
   const [tradeStartTime, setTradeStartTime] = useState<number>(0);
   const [isWaitingForResult, setIsWaitingForResult] = useState(false);
+  const [activeContractId, setActiveContractId] = useState<string | null>(null);
   
   // Debug: Log quando dailyPnL muda
   useEffect(() => {
@@ -103,6 +104,17 @@ export default function BotInterface() {
   useEffect(() => {
     console.info("🔄 dailyStopped mudou para:", dailyStopped);
   }, [dailyStopped]);
+
+  // Verificar se deve vender contrato (scalping)
+  useEffect(() => {
+    if (!isWaitingForResult || !activeContractId) return;
+
+    const interval = setInterval(() => {
+      checkScalpingExit();
+    }, 1000); // Verificar a cada segundo
+
+    return () => clearInterval(interval);
+  }, [isWaitingForResult, activeContractId, tradeStartTime, settings.durationSec]);
 
   const derivWSRef = useRef<WebSocket | null>(null);
   const processingBuyRef = useRef(false);
@@ -311,6 +323,16 @@ export default function BotInterface() {
         handleTradeResult(data);
       }
       
+      if (data.msg_type === 'sell') {
+        console.info("Contrato vendido:", data.sell);
+        if (data.sell.error) {
+          console.error("Erro na venda:", data.sell.error);
+        } else {
+          console.info("✅ Venda executada com sucesso:", data.sell);
+          setActiveContractId(null);
+        }
+      }
+      
     } catch (error) {
       console.error("Erro ao processar mensagem Deriv:", error);
     }
@@ -400,6 +422,10 @@ export default function BotInterface() {
     
     // Atualizar PnL
     updateDailyPnL(trade.profit);
+    
+    // Armazenar contract_id para venda automática
+    setActiveContractId(data.buy.contract_id);
+    console.info("📋 Contract ID armazenado:", data.buy.contract_id);
     
     // Marcar trade como concluído
     setIsTradeActive(false);
@@ -550,6 +576,50 @@ export default function BotInterface() {
       console.error("Erro ao executar trade:", error);
       setIsTradeActive(false); // Reset em caso de erro
       setIsWaitingForResult(false);
+    }
+  };
+
+  // Função para vender contrato automaticamente
+  const sellContract = (contractId: string, reason: string) => {
+    const ws = derivWSRef.current;
+    if (!ws) {
+      console.error("WebSocket não conectado para venda");
+      return;
+    }
+
+    const sellRequest = {
+      sell: contractId,
+      price: 0 // Vender ao preço de mercado
+    };
+
+    console.info("💰 Vendendo contrato:", { contractId, reason, sellRequest });
+    ws.send(JSON.stringify(sellRequest));
+  };
+
+  // Função para verificar se deve vender (scalping)
+  const checkScalpingExit = () => {
+    if (!activeContractId || !isWaitingForResult) return;
+
+    const currentTime = Date.now();
+    const tradeDuration = currentTime - tradeStartTime;
+    const maxTradeTime = (settings.durationSec ?? 60) * 1000; // Converter para ms
+
+    // Vender se atingiu tempo máximo
+    if (tradeDuration >= maxTradeTime) {
+      console.info("⏰ Tempo máximo atingido, vendendo contrato...");
+      sellContract(activeContractId, "Tempo máximo atingido");
+      setActiveContractId(null);
+      return;
+    }
+
+    // Vender se atingiu take profit ou stop loss
+    // (Esta lógica pode ser expandida com dados de preço em tempo real)
+    const quickCloseTime = 30 * 1000; // 30 segundos para quick close
+    if (tradeDuration >= quickCloseTime) {
+      console.info("⚡ Quick close atingido, vendendo contrato...");
+      sellContract(activeContractId, "Quick close");
+      setActiveContractId(null);
+      return;
     }
   };
 
