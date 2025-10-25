@@ -291,102 +291,108 @@ export default function BotInterface() {
 
   // === UI / controles simples ===
   return (
-    <div style={{ padding: 18, fontFamily: "Inter, Roboto, sans-serif" }}>
-      <h2>Bot Interface — Scalper (Risk Managed)</h2>
-      <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
-        <div style={{ minWidth: 260, padding: 12, borderRadius: 8, background: "#fff", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
-          <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span>Scalp Mode</span>
-            <input type="checkbox" checked={scalpMode} onChange={(e) => setScalpMode(e.target.checked)} />
+    <div style={{ padding: 18, fontFamily: "Inter, Roboto, sans-serif", background: "#0f172a", minHeight: "100vh", color: "#e2e8f0" }}>
+      <h2 style={{ color: "#60a5fa", fontSize: 28, marginBottom: 20 }}>🤖 Bot Interface — Scalper (Risk Managed)</h2>
+      <div style={{ display: "flex", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
+        <div style={{ minWidth: 260, padding: 16, borderRadius: 12, background: "#1e293b", boxShadow: "0 4px 12px rgba(0,0,0,0.3)", border: "1px solid #334155" }}>
+          <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center", color: "#cbd5e1", cursor: "pointer" }}>
+            <span style={{ fontWeight: 500 }}>Modo Scalping</span>
+            <input type="checkbox" checked={scalpMode} onChange={(e) => setScalpMode(e.target.checked)} style={{ cursor: "pointer", width: 18, height: 18 }} />
           </label>
 
-          <div style={{ marginTop: 8 }}>
-            <label>Stake base (USD)</label>
+          <div style={{ marginTop: 12 }}>
+            <label style={{ display: "block", color: "#94a3b8", fontSize: 13, marginBottom: 6 }}>💰 Stake base (USD)</label>
             <input
               type="number"
               value={settings.stake}
               step={0.1}
               onChange={(e) => setSettings((s) => ({ ...s, stake: parseFloat(e.target.value || "0") }))}
-              style={{ width: "100%", marginTop: 6 }}
+              style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #475569", background: "#0f172a", color: "#e2e8f0", fontSize: 14 }}
             />
           </div>
 
-          <div style={{ marginTop: 8 }}>
-            <label>Risco por trade (% do capital)</label>
+          <div style={{ marginTop: 12 }}>
+            <label style={{ display: "block", color: "#94a3b8", fontSize: 13, marginBottom: 6 }}>📊 Risco por trade (% do capital)</label>
             <input
               type="number"
               value={settings.maxRiskPerTradePercent}
               step={0.1}
               onChange={(e) => setSettings((s) => ({ ...s, maxRiskPerTradePercent: parseFloat(e.target.value || "0") }))}
-              style={{ width: "100%", marginTop: 6 }}
+              style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #475569", background: "#0f172a", color: "#e2e8f0", fontSize: 14 }}
             />
           </div>
 
-          <div style={{ marginTop: 8 }}>
-            <label>Duração (segundos)</label>
+          <div style={{ marginTop: 12 }}>
+            <label style={{ display: "block", color: "#94a3b8", fontSize: 13, marginBottom: 6 }}>⏱️ Duração (segundos)</label>
             <input
               type="number"
               value={settings.durationSec}
               onChange={(e) => setSettings((s) => ({ ...s, durationSec: parseInt(e.target.value || "60") }))}
-              style={{ width: "100%", marginTop: 6 }}
+              style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #475569", background: "#0f172a", color: "#e2e8f0", fontSize: 14 }}
             />
           </div>
 
-          <div style={{ marginTop: 8 }}>
-            <label>Confiança mínima (%)</label>
+          <div style={{ marginTop: 12 }}>
+            <label style={{ display: "block", color: "#94a3b8", fontSize: 13, marginBottom: 6 }}>🎯 Confiança mínima (%)</label>
             <input
               type="number"
               value={settings.minConfidence}
               onChange={(e) => setSettings((s) => ({ ...s, minConfidence: parseInt(e.target.value || "60") }))}
-              style={{ width: "100%", marginTop: 6 }}
+              style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #475569", background: "#0f172a", color: "#e2e8f0", fontSize: 14 }}
             />
           </div>
 
-          <div style={{ marginTop: 8 }}>
-            <label>Max trades/minuto</label>
+          <div style={{ marginTop: 12 }}>
+            <label style={{ display: "block", color: "#94a3b8", fontSize: 13, marginBottom: 6 }}>⚡ Max trades/minuto</label>
             <input
               type="number"
               value={settings.maxTradesPerMinute}
               onChange={(e) => setSettings((s) => ({ ...s, maxTradesPerMinute: parseInt(e.target.value || "6") }))}
-              style={{ width: "100%", marginTop: 6 }}
+              style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #475569", background: "#0f172a", color: "#e2e8f0", fontSize: 14 }}
             />
           </div>
 
-          <div style={{ marginTop: 8 }}>
-            <label>Stop Win diário ($)</label>
+          <div style={{ marginTop: 12 }}>
+            <label style={{ display: "block", color: "#94a3b8", fontSize: 13, marginBottom: 6 }}>✅ Stop Win diário ($)</label>
             <input
               type="number"
               value={settings.stopWinDaily}
               onChange={(e) => setSettings((s) => ({ ...s, stopWinDaily: parseFloat(e.target.value || "0") }))}
-              style={{ width: "100%", marginTop: 6 }}
+              style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #475569", background: "#0f172a", color: "#e2e8f0", fontSize: 14 }}
             />
           </div>
 
-          <div style={{ marginTop: 8 }}>
-            <label>Stop Loss diário ($)</label>
+          <div style={{ marginTop: 12 }}>
+            <label style={{ display: "block", color: "#94a3b8", fontSize: 13, marginBottom: 6 }}>🛑 Stop Loss diário ($)</label>
             <input
               type="number"
               value={settings.stopLossDaily}
               onChange={(e) => setSettings((s) => ({ ...s, stopLossDaily: parseFloat(e.target.value || "0") }))}
-              style={{ width: "100%", marginTop: 6 }}
+              style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #475569", background: "#0f172a", color: "#e2e8f0", fontSize: 14 }}
             />
           </div>
 
-          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+          <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
             <button
               onClick={() => {
                 if (!derivWSRef.current) connectDeriv("wss://your-deriv-ws-url");
                 setIsBotRunning(true);
               }}
+              style={{ flex: 1, padding: "10px 16px", borderRadius: 8, border: "none", background: "#10b981", color: "#fff", fontWeight: 600, cursor: "pointer", fontSize: 14, transition: "all 0.2s" }}
+              onMouseOver={(e) => e.currentTarget.style.background = "#059669"}
+              onMouseOut={(e) => e.currentTarget.style.background = "#10b981"}
             >
-              Iniciar Bot
+              ▶️ Iniciar Bot
             </button>
             <button
               onClick={() => {
                 setIsBotRunning(false);
               }}
+              style={{ flex: 1, padding: "10px 16px", borderRadius: 8, border: "none", background: "#ef4444", color: "#fff", fontWeight: 600, cursor: "pointer", fontSize: 14, transition: "all 0.2s" }}
+              onMouseOver={(e) => e.currentTarget.style.background = "#dc2626"}
+              onMouseOut={(e) => e.currentTarget.style.background = "#ef4444"}
             >
-              Parar Bot
+              ⏸️ Parar Bot
             </button>
             <button
               onClick={() => {
@@ -396,57 +402,93 @@ export default function BotInterface() {
                 setTradeHistory([]);
                 setTradesTimestamps([]);
               }}
+              style={{ flex: 1, padding: "10px 16px", borderRadius: 8, border: "1px solid #475569", background: "#334155", color: "#e2e8f0", fontWeight: 600, cursor: "pointer", fontSize: 14, transition: "all 0.2s" }}
+              onMouseOver={(e) => e.currentTarget.style.background = "#475569"}
+              onMouseOut={(e) => e.currentTarget.style.background = "#334155"}
             >
-              Reset Diário
+              🔄 Reset Diário
             </button>
           </div>
         </div>
 
-        <div style={{ flex: 1, padding: 12, borderRadius: 8, background: "#fff", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <div>Saldo: ${accountBalance.toFixed(2)}</div>
-              <div>PnL diário: ${dailyPnL.toFixed(2)}</div>
-              <div>Trades/min: {countRecentTrades()}</div>
+        <div style={{ flex: 1, minWidth: 300, padding: 16, borderRadius: 12, background: "#1e293b", boxShadow: "0 4px 12px rgba(0,0,0,0.3)", border: "1px solid #334155" }}>
+          <h3 style={{ color: "#60a5fa", marginBottom: 16 }}>📊 Status e Informações</h3>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 150 }}>
+              <div style={{ marginBottom: 8, padding: "8px 12px", background: "#0f172a", borderRadius: 6, border: "1px solid #334155" }}>
+                <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 4 }}>💵 Saldo</div>
+                <div style={{ color: "#10b981", fontSize: 20, fontWeight: 600 }}>${accountBalance.toFixed(2)}</div>
+              </div>
+              <div style={{ marginBottom: 8, padding: "8px 12px", background: "#0f172a", borderRadius: 6, border: "1px solid #334155" }}>
+                <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 4 }}>📈 PnL diário</div>
+                <div style={{ color: dailyPnL >= 0 ? "#10b981" : "#ef4444", fontSize: 20, fontWeight: 600 }}>${dailyPnL.toFixed(2)}</div>
+              </div>
+              <div style={{ padding: "8px 12px", background: "#0f172a", borderRadius: 6, border: "1px solid #334155" }}>
+                <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 4 }}>⚡ Trades/min</div>
+                <div style={{ color: "#60a5fa", fontSize: 20, fontWeight: 600 }}>{countRecentTrades()}</div>
+              </div>
             </div>
 
-            <div style={{ textAlign: "right" }}>
-              <div>Status: {isBotRunning ? "Rodando" : "Parado"}</div>
-              <div>Modo: {scalpMode ? "Scalp" : "Normal"}</div>
-              <div>
-                {dailyStopped.stopWin && <span style={{ color: "green" }}>Stop Win atingido</span>}
-                {dailyStopped.stopLoss && <span style={{ color: "red" }}>Stop Loss atingido</span>}
+            <div style={{ flex: 1, minWidth: 150 }}>
+              <div style={{ marginBottom: 8, padding: "8px 12px", background: "#0f172a", borderRadius: 6, border: "1px solid #334155" }}>
+                <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 4 }}>🤖 Status</div>
+                <div style={{ color: isBotRunning ? "#10b981" : "#ef4444", fontSize: 16, fontWeight: 600 }}>
+                  {isBotRunning ? "🟢 Rodando" : "🔴 Parado"}
+                </div>
+              </div>
+              <div style={{ marginBottom: 8, padding: "8px 12px", background: "#0f172a", borderRadius: 6, border: "1px solid #334155" }}>
+                <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 4 }}>⚙️ Modo</div>
+                <div style={{ color: "#60a5fa", fontSize: 16, fontWeight: 600 }}>
+                  {scalpMode ? "⚡ Scalp" : "📊 Normal"}
+                </div>
+              </div>
+              <div style={{ padding: "8px 12px", background: "#0f172a", borderRadius: 6, border: "1px solid #334155" }}>
+                {dailyStopped.stopWin && <div style={{ color: "#10b981", fontSize: 14, fontWeight: 600 }}>✅ Stop Win atingido</div>}
+                {dailyStopped.stopLoss && <div style={{ color: "#ef4444", fontSize: 14, fontWeight: 600 }}>🛑 Stop Loss atingido</div>}
+                {!dailyStopped.stopWin && !dailyStopped.stopLoss && <div style={{ color: "#94a3b8", fontSize: 14 }}>✓ Sem limites atingidos</div>}
               </div>
             </div>
           </div>
 
-          <hr style={{ margin: "12px 0" }} />
+          <hr style={{ margin: "16px 0", border: "none", borderTop: "1px solid #334155" }} />
 
           <div>
-            <h4>Histórico (recente)</h4>
-            <div style={{ maxHeight: 300, overflow: "auto" }}>
+            <h4 style={{ color: "#60a5fa", marginBottom: 12 }}>📜 Histórico (recente)</h4>
+            <div style={{ maxHeight: 300, overflow: "auto", background: "#0f172a", borderRadius: 8, border: "1px solid #334155" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
-                  <tr>
-                    <th style={{ textAlign: "left" }}>ID</th>
-                    <th>Ativo</th>
-                    <th>Dir</th>
-                    <th>Stake</th>
-                    <th>Profit</th>
-                    <th>Entrada</th>
+                  <tr style={{ background: "#1e293b", borderBottom: "2px solid #334155" }}>
+                    <th style={{ textAlign: "left", padding: "10px 12px", color: "#94a3b8", fontSize: 13, fontWeight: 600 }}>ID</th>
+                    <th style={{ textAlign: "left", padding: "10px 12px", color: "#94a3b8", fontSize: 13, fontWeight: 600 }}>Ativo</th>
+                    <th style={{ textAlign: "center", padding: "10px 12px", color: "#94a3b8", fontSize: 13, fontWeight: 600 }}>Dir</th>
+                    <th style={{ textAlign: "right", padding: "10px 12px", color: "#94a3b8", fontSize: 13, fontWeight: 600 }}>Stake</th>
+                    <th style={{ textAlign: "right", padding: "10px 12px", color: "#94a3b8", fontSize: 13, fontWeight: 600 }}>Profit</th>
+                    <th style={{ textAlign: "right", padding: "10px 12px", color: "#94a3b8", fontSize: 13, fontWeight: 600 }}>Entrada</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {tradeHistory.map((t) => (
-                    <tr key={t.id}>
-                      <td style={{ padding: 6 }}>{t.id.slice(-8)}</td>
-                      <td style={{ padding: 6 }}>{t.symbol}</td>
-                      <td style={{ padding: 6 }}>{t.direction}</td>
-                      <td style={{ padding: 6 }}>${t.stake.toFixed(2)}</td>
-                      <td style={{ padding: 6 }}>{t.profit >= 0 ? `+${t.profit.toFixed(2)}` : t.profit.toFixed(2)}</td>
-                      <td style={{ padding: 6 }}>{new Date(t.entryTime).toLocaleTimeString()}</td>
+                  {tradeHistory.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} style={{ padding: 20, textAlign: "center", color: "#64748b" }}>
+                        Nenhum trade registrado ainda
+                      </td>
                     </tr>
-                  ))}
+                  ) : (
+                    tradeHistory.map((t, idx) => (
+                      <tr key={t.id} style={{ borderBottom: "1px solid #334155", background: idx % 2 === 0 ? "#0f172a" : "#1e293b" }}>
+                        <td style={{ padding: "10px 12px", color: "#cbd5e1", fontSize: 13 }}>{t.id.slice(-8)}</td>
+                        <td style={{ padding: "10px 12px", color: "#cbd5e1", fontSize: 13 }}>{t.symbol}</td>
+                        <td style={{ padding: "10px 12px", textAlign: "center", color: t.direction === "CALL" ? "#10b981" : "#ef4444", fontSize: 13, fontWeight: 600 }}>
+                          {t.direction === "CALL" ? "📈" : "📉"} {t.direction}
+                        </td>
+                        <td style={{ padding: "10px 12px", textAlign: "right", color: "#cbd5e1", fontSize: 13 }}>${t.stake.toFixed(2)}</td>
+                        <td style={{ padding: "10px 12px", textAlign: "right", color: t.profit >= 0 ? "#10b981" : "#ef4444", fontSize: 13, fontWeight: 600 }}>
+                          {t.profit >= 0 ? `+$${t.profit.toFixed(2)}` : `-$${Math.abs(t.profit).toFixed(2)}`}
+                        </td>
+                        <td style={{ padding: "10px 12px", textAlign: "right", color: "#94a3b8", fontSize: 12 }}>{new Date(t.entryTime).toLocaleTimeString()}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -454,11 +496,13 @@ export default function BotInterface() {
         </div>
       </div>
 
-      <div style={{ marginTop: 12 }}>
-        <strong>Observações importantes:</strong>
-        <ul>
-          <li>Este componente é um ponto de partida — adapte a integração com a API do broker, autorização e dados de saldo.</li>
-          <li>Teste em <em>paper mode</em> (settings.paperMode = true) antes de operar em real.</li>
+      <div style={{ marginTop: 20, padding: 16, borderRadius: 12, background: "#1e293b", border: "1px solid #334155" }}>
+        <h4 style={{ color: "#f59e0b", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+          ⚠️ Observações Importantes
+        </h4>
+        <ul style={{ color: "#cbd5e1", lineHeight: 1.8, paddingLeft: 20 }}>
+          <li style={{ marginBottom: 8 }}>Este componente é um ponto de partida — adapte a integração com a API do broker, autorização e dados de saldo.</li>
+          <li style={{ marginBottom: 8 }}>Teste em <em style={{ color: "#60a5fa" }}>paper mode</em> (settings.paperMode = true) antes de operar em real.</li>
           <li>Revise logs e salve histórico de trades no backend para auditoria.</li>
         </ul>
       </div>
