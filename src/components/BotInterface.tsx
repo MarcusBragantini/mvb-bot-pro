@@ -1131,20 +1131,22 @@ export default function BotInterface() {
     }
     
     // Executar trade REAL na Deriv API
-    const buyRequest = {
-      buy: tradeId,
-      price: adjustedStake,
-      contract_type: signal === 'CALL' ? 'CALL' : 'PUT',
-      symbol: settings.selectedSymbol,
+    // A API Deriv usa 'buy' com um ID de proposta, não parâmetros diretos
+    // Primeiro precisamos obter uma proposta (proposal) e depois comprar
+    const proposalRequest = {
+      proposal: 1,
       amount: adjustedStake,
+      basis: 'stake',
+      contract_type: signal === 'CALL' ? 'CALL' : 'PUT',
+      currency: 'USD',
       duration: settings.duration,
       duration_unit: 's',
-      basis: 'stake'
+      symbol: settings.selectedSymbol
     };
     
-    console.log('📤 Enviando trade para Deriv API:', buyRequest);
+    console.log('📤 Solicitando proposta para Deriv API:', proposalRequest);
     
-    derivWS.send(JSON.stringify(buyRequest));
+    derivWS.send(JSON.stringify(proposalRequest));
     
     // Aguardar resposta da Deriv
     const originalOnMessage = derivWS.onmessage;
@@ -1152,6 +1154,23 @@ export default function BotInterface() {
       const data = JSON.parse(event.data);
       
       console.log('📥 Resposta da Deriv API:', data);
+      
+      // Processar resposta da proposta
+      if (data.proposal) {
+        const proposal = data.proposal;
+        console.log('📊 Proposta recebida:', proposal);
+        
+        if (proposal.id) {
+          // Agora executar o buy com o ID da proposta
+          const buyRequest = {
+            buy: proposal.id,
+            price: adjustedStake
+          };
+          
+          console.log('📤 Executando buy com proposta:', buyRequest);
+          derivWS.send(JSON.stringify(buyRequest));
+        }
+      }
       
       // Processar resposta do trade
       if (data.buy) {
