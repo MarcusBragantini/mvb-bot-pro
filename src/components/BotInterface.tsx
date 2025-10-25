@@ -47,6 +47,11 @@ type Settings = {
 export default function BotInterface() {
   // === states ===
   const [isBotRunning, setIsBotRunning] = useState(false);
+  
+  // Debug: Log quando isBotRunning muda
+  useEffect(() => {
+    console.info("🔄 isBotRunning mudou para:", isBotRunning);
+  }, [isBotRunning]);
   const [scalpMode, setScalpMode] = useState(true);
   const [settings, setSettings] = useState<Settings>({
     stake: 1.0,
@@ -66,9 +71,19 @@ export default function BotInterface() {
 
   const [accountBalance, setAccountBalance] = useState<number>(1000); // fallback - integrar com API
   const [dailyPnL, setDailyPnL] = useState<number>(0);
+  
+  // Debug: Log quando dailyPnL muda
+  useEffect(() => {
+    console.info("🔄 dailyPnL mudou para:", dailyPnL);
+  }, [dailyPnL]);
   const [tradeHistory, setTradeHistory] = useState<TradeRecord[]>([]);
   const [tradesTimestamps, setTradesTimestamps] = useState<number[]>([]);
   const [dailyStopped, setDailyStopped] = useState<{ stopWin?: boolean; stopLoss?: boolean }>({});
+  
+  // Debug: Log quando dailyStopped muda
+  useEffect(() => {
+    console.info("🔄 dailyStopped mudou para:", dailyStopped);
+  }, [dailyStopped]);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'authenticated'>('disconnected');
@@ -113,12 +128,22 @@ export default function BotInterface() {
       });
       
       // checar stop win / stop loss
+      console.info("Verificando stops:", {
+        nextPnL: next,
+        stopWinDaily: settings.stopWinDaily,
+        stopLossDaily: settings.stopLossDaily,
+        stopWinCondition: settings.stopWinDaily !== undefined && next > settings.stopWinDaily,
+        stopLossCondition: settings.stopLossDaily !== undefined && next < -Math.abs(settings.stopLossDaily)
+      });
+      
       if (settings.stopWinDaily !== undefined && next > settings.stopWinDaily) {
+        console.info("🚨 STOP WIN ATINGIDO! Parando bot...");
         setDailyStopped((s) => ({ ...s, stopWin: true }));
         setIsBotRunning(false);
         console.info("Stop Win diário atingido. Bot pausado.");
       }
       if (settings.stopLossDaily !== undefined && next < -Math.abs(settings.stopLossDaily)) {
+        console.info("🚨 STOP LOSS ATINGIDO! Parando bot...");
         setDailyStopped((s) => ({ ...s, stopLoss: true }));
         setIsBotRunning(false);
         console.info("Stop Loss diário atingido. Bot pausado.");
@@ -129,6 +154,13 @@ export default function BotInterface() {
 
   // Checa se o bot pode executar mais trades (stop global + trades/minuto)
   const checkExecutionAllowed = () => {
+    console.info("Verificando execução permitida:", {
+      dailyStopped,
+      stopWin: dailyStopped.stopWin,
+      stopLoss: dailyStopped.stopLoss,
+      isBotRunning
+    });
+    
     if (dailyStopped.stopWin || dailyStopped.stopLoss) return { allowed: false, reason: "Stop diário atingido" };
     const recent = countRecentTrades();
     const limit = scalpMode ? (settings.maxTradesPerMinute ?? 6) : (settings.maxTradesPerMinute ?? 3);
