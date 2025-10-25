@@ -149,6 +149,16 @@ export default function BotInterface() {
 
   // ===== REFS =====
   const botContainerRef = useRef<HTMLDivElement>(null);
+  
+  // ===== CONTROLE DE OPERAÇÕES =====
+  interface TradeQueueItem {
+    signal: 'CALL' | 'PUT';
+    price: number;
+    analysis: TechnicalAnalysis;
+  }
+  
+  const [isTradeInProgress, setIsTradeInProgress] = useState(false);
+  const [tradeQueue, setTradeQueue] = useState<TradeQueueItem[]>([]);
   const isInitialized = useRef(false);
   const priceChartRef = useRef<any>(null);
   const performanceChartRef = useRef<any>(null);
@@ -993,7 +1003,15 @@ export default function BotInterface() {
     
     // Executar trade apenas se sinal for válido, confiança suficiente e gestão de risco OK
     if (analysis.signal !== 'HOLD' && analysis.confidence >= settings.confidence) {
-      executeTrade(analysis.signal, currentPrice, analysis);
+      // Adicionar à fila de operações se não houver operação em andamento
+      if (!isTradeInProgress) {
+        console.log(`📋 Adicionando trade à fila: ${analysis.signal} a $${currentPrice.toFixed(4)}`);
+        setTradeQueue(prev => [...prev, {signal: analysis.signal as 'CALL' | 'PUT', price: currentPrice, analysis}]);
+        processTradeQueue();
+      } else {
+        console.log(`⏳ Operação em andamento, trade adicionado à fila: ${analysis.signal}`);
+        setTradeQueue(prev => [...prev, {signal: analysis.signal as 'CALL' | 'PUT', price: currentPrice, analysis}]);
+      }
     }
   };
 
@@ -1107,6 +1125,21 @@ export default function BotInterface() {
     }
   };
 
+  // ===== PROCESSAMENTO DE FILA DE OPERAÇÕES =====
+  const processTradeQueue = () => {
+    if (isTradeInProgress || tradeQueue.length === 0) {
+      return;
+    }
+    
+    const nextTrade = tradeQueue[0];
+    if (nextTrade) {
+      console.log(`🔄 Processando próximo trade da fila: ${nextTrade.signal}`);
+      setIsTradeInProgress(true);
+      setTradeQueue(prev => prev.slice(1)); // Remove o primeiro item da fila
+      executeTrade(nextTrade.signal, nextTrade.price, nextTrade.analysis);
+    }
+  };
+
   const executeTrade = (signal: 'CALL' | 'PUT', price: number, analysis: TechnicalAnalysis) => {
     const tradeId = `trade_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
@@ -1190,6 +1223,12 @@ export default function BotInterface() {
           
           // Restaurar handler original
           derivWS.onmessage = originalOnMessage;
+          
+          // Marcar operação como concluída e processar próxima da fila
+          setIsTradeInProgress(false);
+          setTimeout(() => {
+            processTradeQueue();
+          }, 1000);
           return;
         }
         
@@ -1285,6 +1324,12 @@ export default function BotInterface() {
                 
                 // Remover handler temporário
                 derivWS.removeEventListener('message', checkResultHandler);
+                
+                // Marcar operação como concluída e processar próxima da fila
+                setIsTradeInProgress(false);
+                setTimeout(() => {
+                  processTradeQueue();
+                }, 1000); // Aguardar 1 segundo antes da próxima operação
               }
             };
             
@@ -2008,6 +2053,13 @@ export default function BotInterface() {
     chartCache.set(priceKey, analysis);
   };
 
+  // ===== PROCESSAR FILA DE OPERAÇÕES =====
+  useEffect(() => {
+    if (tradeQueue.length > 0 && !isTradeInProgress) {
+      processTradeQueue();
+    }
+  }, [tradeQueue, isTradeInProgress]);
+
   // ===== CLEANUP =====
   useEffect(() => {
     return () => {
@@ -2276,6 +2328,24 @@ export default function BotInterface() {
                         {isBotRunning ? '🟢' : '🔴'}
                       </div>
                       <div className="text-sm text-gray-400">Status</div>
+                    </div>
+                    <div className="text-center p-4 bg-slate-700 rounded-lg">
+                      <div className="text-2xl font-bold text-white">
+                        {isTradeInProgress ? '⏳' : '✅'}
+                      </div>
+                      <div className="text-sm text-gray-400">Operação</div>
+                      <div className="text-xs text-gray-500">
+                        {isTradeInProgress ? 'Em andamento' : 'Livre'}
+                      </div>
+                    </div>
+                    <div className="text-center p-4 bg-slate-700 rounded-lg">
+                      <div className="text-2xl font-bold text-white">
+                        {tradeQueue.length}
+                      </div>
+                      <div className="text-sm text-gray-400">Fila</div>
+                      <div className="text-xs text-gray-500">
+                        {tradeQueue.length > 0 ? 'Aguardando' : 'Vazia'}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
