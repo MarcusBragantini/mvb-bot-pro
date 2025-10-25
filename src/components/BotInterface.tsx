@@ -364,22 +364,13 @@ export default function BotInterface() {
                 color: '#334155',
                 drawBorder: false
               },
+              // Configurar escala Y para mostrar oscilações
+              min: 1.20,
+              max: 1.30,
               ticks: {
                 color: '#94a3b8',
+                stepSize: 0.001, // Passo menor para mostrar variações
                 callback: (value: any) => `$${parseFloat(value).toFixed(4)}`
-              },
-              // Configurar escala Y para mostrar oscilações
-              min: (context: any) => {
-                const values = context.chart.data.datasets[0].data.map((d: any) => d.y);
-                if (values.length === 0) return 1.20;
-                const min = Math.min(...values);
-                return min - 0.005; // Margem abaixo
-              },
-              max: (context: any) => {
-                const values = context.chart.data.datasets[0].data.map((d: any) => d.y);
-                if (values.length === 0) return 1.25;
-                const max = Math.max(...values);
-                return max + 0.005; // Margem acima
               }
             }
           },
@@ -419,28 +410,36 @@ export default function BotInterface() {
       });
       currentLabels.push(timeLabel);
 
-      // Manter apenas os últimos 100 pontos (aumentar limite)
-      if (currentData.length > 100) {
+      // Manter apenas os últimos 50 pontos para melhor performance
+      if (currentData.length > 50) {
         currentData.shift();
         currentLabels.shift();
       }
 
       console.log(`📊 Dados do gráfico: ${currentData.length} pontos, último: $${price.toFixed(4)}`);
 
-      // Forçar atualização do gráfico e recalcular escala
+      // Forçar atualização do gráfico
       priceChartRef.current.update('none');
       
       // Recalcular escala Y para mostrar oscilações
       const values = currentData.map((point: any) => point.y);
-      if (values.length > 0) {
+      if (values.length > 1) {
         const min = Math.min(...values);
         const max = Math.max(...values);
         const range = max - min;
         
-        // Ajustar escala Y dinamicamente
-        priceChartRef.current.options.scales.y.min = min - (range * 0.1);
-        priceChartRef.current.options.scales.y.max = max + (range * 0.1);
+        // Garantir que há variação mínima para visualização
+        const minRange = 0.005; // Mínimo de 0.5% de variação
+        const actualRange = Math.max(range, minRange);
+        
+        // Ajustar escala Y dinamicamente com margem
+        priceChartRef.current.options.scales.y.min = min - (actualRange * 0.2);
+        priceChartRef.current.options.scales.y.max = max + (actualRange * 0.2);
+        
+        // Forçar atualização da escala
         priceChartRef.current.update('none');
+        
+        console.log(`📈 Escala Y: ${(min - actualRange * 0.2).toFixed(4)} - ${(max + actualRange * 0.2).toFixed(4)}`);
       }
       
       console.log(`✅ Gráfico atualizado com sucesso!`);
@@ -1617,28 +1616,84 @@ export default function BotInterface() {
     }
   }, [isLicenseValid]);
 
+  // ===== SIMULAÇÃO DE DADOS EM TEMPO REAL =====
+  const [simulationInterval, setSimulationInterval] = useState<NodeJS.Timeout | null>(null);
+  
+  const startPriceSimulation = () => {
+    if (simulationInterval) {
+      clearInterval(simulationInterval);
+    }
+    
+    let basePrice = 1.2345;
+    let trend = 1; // 1 para alta, -1 para baixa
+    let volatility = 0.001; // Volatilidade base
+    
+    const interval = setInterval(() => {
+      // Simular movimento de preço mais realista
+      const randomFactor = (Math.random() - 0.5) * 2; // -1 a 1
+      const trendChange = Math.random() < 0.1 ? (Math.random() - 0.5) * 0.5 : 0; // 10% chance de mudança de tendência
+      
+      // Atualizar tendência ocasionalmente
+      if (Math.abs(trendChange) > 0.2) {
+        trend = trendChange > 0 ? 1 : -1;
+        volatility = Math.random() * 0.002 + 0.0005; // Volatilidade variável
+      }
+      
+      // Calcular variação do preço
+      const priceChange = (randomFactor * volatility) + (trend * volatility * 0.3);
+      basePrice += priceChange;
+      
+      // Manter preço em range realista
+      basePrice = Math.max(1.20, Math.min(1.30, basePrice));
+      
+      // Atualizar gráfico
+      updateRealTimeChart(basePrice);
+      
+      // Análise técnica se bot estiver rodando
+      if (isBotRunning) {
+        analyzeAndExecuteTrade(basePrice);
+      }
+      
+    }, 1000); // Atualizar a cada segundo
+    
+    setSimulationInterval(interval);
+    console.log('🚀 Simulação de preços iniciada');
+  };
+  
+  const stopPriceSimulation = () => {
+    if (simulationInterval) {
+      clearInterval(simulationInterval);
+      setSimulationInterval(null);
+      console.log('⏹️ Simulação de preços parada');
+    }
+  };
+
   // ===== INICIALIZAR GRÁFICO =====
   useEffect(() => {
     if (activeTab === 'trading') {
       // Aguardar um pouco para garantir que o DOM está pronto
       const timer = setTimeout(() => {
         initializeRealTimeChart();
-        // Inicializar gráfico com dados iniciais mesmo sem bot rodando
-        if (!isBotRunning) {
-          console.log('📊 Inicializando gráfico com dados iniciais...');
-          // Adicionar pontos iniciais com variação realista
-          let basePrice = 1.2345;
-          for (let i = 0; i < 20; i++) {
-            // Simular movimento de preço mais realista
-            const variation = (Math.random() - 0.5) * 0.02; // Variação de ±0.01
-            basePrice += variation;
-            basePrice = Math.max(1.20, Math.min(1.25, basePrice)); // Manter em range
-            updateRealTimeChart(basePrice);
-          }
+        
+        // Iniciar simulação de dados
+        startPriceSimulation();
+        
+        // Inicializar gráfico com dados iniciais
+        console.log('📊 Inicializando gráfico com dados iniciais...');
+        let basePrice = 1.2345;
+        for (let i = 0; i < 30; i++) {
+          // Simular movimento de preço mais realista
+          const variation = (Math.random() - 0.5) * 0.01;
+          basePrice += variation;
+          basePrice = Math.max(1.20, Math.min(1.30, basePrice));
+          updateRealTimeChart(basePrice);
         }
       }, 1000);
 
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+        stopPriceSimulation();
+      };
     }
   }, [activeTab]);
 
@@ -1889,17 +1944,44 @@ export default function BotInterface() {
               {/* Gráfico em Tempo Real */}
               <Card className="border-slate-600 bg-slate-750">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg text-white flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" />
-                    Gráfico em Tempo Real
-                  </CardTitle>
-                  <CardDescription className="text-gray-400">
-                    Preços atualizados em tempo real
-                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg text-white flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5" />
+                        Gráfico em Tempo Real
+                      </CardTitle>
+                      <CardDescription className="text-gray-400">
+                        Preços atualizados em tempo real
+                      </CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={startPriceSimulation}
+                        size="sm"
+                        variant="outline"
+                        className="bg-green-600 hover:bg-green-700 text-white border-green-500"
+                      >
+                        <Play className="h-4 w-4 mr-1" />
+                        Iniciar Simulação
+                      </Button>
+                      <Button
+                        onClick={stopPriceSimulation}
+                        size="sm"
+                        variant="outline"
+                        className="bg-red-600 hover:bg-red-700 text-white border-red-500"
+                      >
+                        <Square className="h-4 w-4 mr-1" />
+                        Parar
+                      </Button>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="h-64 sm:h-80 bg-slate-900 rounded-lg p-4">
                     <canvas id="realTimeChart"></canvas>
+                  </div>
+                  <div className="mt-2 text-xs text-gray-500 text-center">
+                    💡 A simulação gera dados realistas para demonstração das estratégias
                   </div>
                 </CardContent>
               </Card>
