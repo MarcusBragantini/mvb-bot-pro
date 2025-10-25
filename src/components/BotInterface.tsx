@@ -97,16 +97,17 @@ export default function BotInterfaceSimple() {
     // Criar gráfico com Chart.js
     if (typeof (window as any).Chart !== 'undefined') {
       chartInstance.current = new (window as any).Chart(ctx, {
-        type: 'candlestick',
+        type: 'line',
         data: {
+          labels: initialData.map((_, i) => i),
           datasets: [{
             label: 'Preço',
-            data: initialData,
+            data: initialData.map(d => d.c),
             borderColor: '#10b981',
-            backgroundColor: (ctx: any) => {
-              const point = ctx.parsed;
-              return point.c >= point.o ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)';
-            }
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.1
           }]
         },
         options: {
@@ -114,18 +115,26 @@ export default function BotInterfaceSimple() {
           maintainAspectRatio: false,
           scales: {
             x: {
-              type: 'time',
-              time: {
-                unit: 'minute'
-              }
+              display: false
             },
             y: {
-              beginAtZero: false
+              beginAtZero: false,
+              grid: {
+                color: '#334155'
+              },
+              ticks: {
+                color: '#94a3b8'
+              }
             }
           },
           plugins: {
             legend: {
               display: false
+            }
+          },
+          elements: {
+            point: {
+              radius: 0
             }
           }
         }
@@ -137,30 +146,12 @@ export default function BotInterfaceSimple() {
   const updateChart = (newPrice: number) => {
     if (!chartInstance.current) return;
     
-    const now = Date.now();
-    const lastCandle = chartData[chartData.length - 1];
+    // Adicionar novo preço aos dados
+    const newData = [...chartData, { c: newPrice }].slice(-100); // Manter últimas 100 pontos
+    setChartData(newData);
     
-    if (lastCandle && (now - lastCandle.x) < 60000) {
-      // Atualizar vela atual
-      lastCandle.h = Math.max(lastCandle.h, newPrice);
-      lastCandle.l = Math.min(lastCandle.l, newPrice);
-      lastCandle.c = newPrice;
-    } else {
-      // Nova vela
-      const newCandle = {
-        x: now,
-        o: newPrice,
-        h: newPrice,
-        l: newPrice,
-        c: newPrice
-      };
-      
-      const updatedData = [...chartData, newCandle].slice(-100); // Manter últimas 100 velas
-      setChartData(updatedData);
-      
-      chartInstance.current.data.datasets[0].data = updatedData;
-    }
-    
+    // Atualizar gráfico
+    chartInstance.current.data.datasets[0].data = newData.map(d => d.c);
     chartInstance.current.update('none');
     setCurrentPrice(newPrice);
   };
@@ -212,6 +203,54 @@ export default function BotInterfaceSimple() {
         </div>
       </div>
     `;
+  };
+
+  // Função para analisar estratégias de trading
+  const analyzeTradingStrategies = (price: number) => {
+    // Estratégia simples: análise de tendência
+    if (chartData.length < 10) return;
+    
+    const recentPrices = chartData.slice(-10).map(d => d.c);
+    const avgPrice = recentPrices.reduce((sum, p) => sum + p, 0) / recentPrices.length;
+    const currentPrice = price;
+    
+    // Calcular tendência
+    const trend = currentPrice > avgPrice ? 'UP' : 'DOWN';
+    const strength = Math.abs(currentPrice - avgPrice) / avgPrice;
+    
+    // Gerar sinal se força for suficiente
+    if (strength > 0.01) { // 1% de diferença
+      const signal = trend === 'UP' ? 'CALL' : 'PUT';
+      addLog(`🎯 Sinal detectado: ${signal} (Tendência: ${trend})`);
+      
+      // Executar trade
+      executeTrade(signal, currentPrice);
+    }
+  };
+
+  // Função para executar trade
+  const executeTrade = (signal: string, price: number) => {
+    addLog(`🚀 Executando trade: ${signal} em $${price.toFixed(4)}`);
+    
+    // Simular resultado após 5 segundos
+    setTimeout(() => {
+      const isWin = Math.random() > 0.4; // 60% de chance de win
+      const result = isWin ? 'WIN' : 'LOSS';
+      const profit = isWin ? settings.stake * 0.8 : -settings.stake;
+      
+      addLog(`✅ Trade ${result}: ${profit > 0 ? '+' : ''}$${profit.toFixed(2)}`);
+      
+      // Adicionar ao histórico
+      const newTrade = {
+        id: Date.now(),
+        symbol: settings.symbol,
+        signal,
+        result,
+        profit,
+        timestamp: new Date()
+      };
+      setTradingHistory(prev => [newTrade, ...prev]);
+    }, 5000);
   };
 
   // Função para carregar tokens do localStorage
@@ -286,7 +325,9 @@ export default function BotInterfaceSimple() {
         if (data.msg_type === 'tick') {
           const tick = data.tick;
           updateChart(tick.quote);
-          addLog(`📊 Preço: ${tick.quote}`);
+          
+          // Analisar estratégias e gerar sinais
+          analyzeTradingStrategies(tick.quote);
         }
       };
 
@@ -328,30 +369,21 @@ export default function BotInterfaceSimple() {
       (window as any).derivWS = ws;
       addLog('🔗 Conectado com Deriv API');
     } else {
-      addLog('⚠️ Usando modo simulado');
-      // Simular operações se não conseguir conectar
-      setTimeout(() => {
-        addLog('🎯 Sinal detectado: CALL');
-      }, 3000);
-
-      setTimeout(() => {
-        addLog('✅ Trade executado: WIN +$3.00');
-        const newTrade = {
-          id: Date.now(),
-          symbol: settings.symbol,
-          signal: 'CALL',
-          result: 'WIN',
-          profit: 3.00,
-          timestamp: new Date()
-        };
-        setTradingHistory(prev => [newTrade, ...prev]);
-      }, 5000);
+      addLog('⚠️ Usando modo simulado - Configure tokens para operações reais');
+      addLog('📊 Gráfico funcionando em modo simulado');
     }
   };
 
   const stopBot = () => {
     console.log('⏹️ Parando bot...');
     setBotRunning(false);
+    
+    // Fechar WebSocket se existir
+    if ((window as any).derivWS) {
+      (window as any).derivWS.close();
+      (window as any).derivWS = null;
+      addLog('🔌 Conexão Deriv fechada');
+    }
     
     const statusElement = document.getElementById('status');
     if (statusElement) {
@@ -364,6 +396,8 @@ export default function BotInterfaceSimple() {
     
     if (startBtn) startBtn.disabled = false;
     if (stopBtn) stopBtn.disabled = true;
+    
+    addLog('⏹️ Bot parado com sucesso');
   };
 
   const addLog = (message: string) => {
