@@ -1160,7 +1160,10 @@ export default function BotInterface() {
         const proposal = data.proposal;
         console.log('📊 Proposta recebida:', proposal);
         
-        if (proposal.id) {
+        if (proposal.id && !(window as any).processingBuy) {
+          // Marcar que estamos processando um buy para evitar duplicatas
+          (window as any).processingBuy = true;
+          
           // Agora executar o buy com o ID da proposta
           const buyRequest = {
             buy: proposal.id,
@@ -1192,6 +1195,9 @@ export default function BotInterface() {
         
         if (buyResponse.contract_id) {
           console.log('✅ Trade executado na Deriv:', buyResponse.contract_id);
+          
+          // Resetar flag de processamento
+          (window as any).processingBuy = false;
           
           // Aguardar resultado do trade
           setTimeout(() => {
