@@ -253,6 +253,36 @@ export default function BotInterfaceSimple() {
     }, 5000);
   };
 
+  // Função para modo simulado
+  const startSimulatedMode = () => {
+    addLog('🎮 Iniciando modo simulado...');
+    
+    // Gerar dados simulados para o gráfico
+    let basePrice = 1.0000;
+    const generateSimulatedPrice = () => {
+      const change = (Math.random() - 0.5) * 0.01; // ±0.5%
+      basePrice += change;
+      return basePrice;
+    };
+    
+    // Atualizar gráfico com dados simulados a cada 2 segundos
+    const interval = setInterval(() => {
+      if (!botRunning) {
+        clearInterval(interval);
+        return;
+      }
+      
+      const newPrice = generateSimulatedPrice();
+      updateChart(newPrice);
+      
+      // Analisar estratégias com dados simulados
+      analyzeTradingStrategies(newPrice);
+    }, 2000);
+    
+    // Armazenar interval para poder parar
+    (window as any).simulatedInterval = interval;
+  };
+
   // Função para carregar tokens do localStorage
   const loadTokensFromStorage = () => {
     try {
@@ -347,6 +377,7 @@ export default function BotInterfaceSimple() {
   // Funções do bot
   const startBot = async () => {
     console.log('🚀 Iniciando bot...');
+    console.log('🔍 Estado atual:', { botRunning, isLicenseValid, activeTab });
     setBotRunning(true);
     
     const statusElement = document.getElementById('status');
@@ -371,6 +402,9 @@ export default function BotInterfaceSimple() {
     } else {
       addLog('⚠️ Usando modo simulado - Configure tokens para operações reais');
       addLog('📊 Gráfico funcionando em modo simulado');
+      
+      // Iniciar modo simulado com dados fake
+      startSimulatedMode();
     }
   };
 
@@ -383,6 +417,13 @@ export default function BotInterfaceSimple() {
       (window as any).derivWS.close();
       (window as any).derivWS = null;
       addLog('🔌 Conexão Deriv fechada');
+    }
+    
+    // Parar modo simulado se existir
+    if ((window as any).simulatedInterval) {
+      clearInterval((window as any).simulatedInterval);
+      (window as any).simulatedInterval = null;
+      addLog('🎮 Modo simulado parado');
     }
     
     const statusElement = document.getElementById('status');
