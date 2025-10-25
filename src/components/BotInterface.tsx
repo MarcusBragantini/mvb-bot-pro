@@ -121,6 +121,7 @@ export default function BotInterface() {
   const isInitialized = useRef(false);
   const priceChartRef = useRef<any>(null);
   const performanceChartRef = useRef<any>(null);
+  const chartIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // ===== ESTADOS DAS CONFIGURAÇÕES =====
   const [settings, setSettings] = useState<TradingSettings>({
@@ -175,105 +176,149 @@ export default function BotInterface() {
     }
   };
 
-  // ===== SISTEMA DE GRAFICO EM TEMPO REAL =====
+  // ===== SISTEMA DE GRAFICO EM TEMPO REAL CORRIGIDO =====
   const initializeRealTimeChart = () => {
-    if (typeof window === 'undefined' || !(window as any).Chart) return;
+    if (typeof window === 'undefined' || !(window as any).Chart) {
+      console.log('Chart.js não carregado');
+      return;
+    }
 
     const canvas = document.getElementById('realTimeChart') as HTMLCanvasElement;
-    if (!canvas) return;
+    if (!canvas) {
+      console.log('Canvas não encontrado');
+      return;
+    }
 
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) {
+      console.log('Contexto do canvas não disponível');
+      return;
+    }
 
     // Destruir gráfico existente
     if (priceChartRef.current) {
       priceChartRef.current.destroy();
+      priceChartRef.current = null;
     }
 
-    priceChartRef.current = new (window as any).Chart(ctx, {
-      type: 'line',
-      data: {
-        datasets: [{
-          label: 'Preço em Tempo Real',
-          data: [],
-          borderColor: '#3b82f6',
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          borderWidth: 2,
-          pointRadius: 0,
-          fill: true,
-          tension: 0.4
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: {
-          duration: 0
+    // Limpar intervalo anterior
+    if (chartIntervalRef.current) {
+      clearInterval(chartIntervalRef.current);
+      chartIntervalRef.current = null;
+    }
+
+    try {
+      // Criar gráfico simples sem escala realtime
+      priceChartRef.current = new (window as any).Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Preço em Tempo Real',
+            data: [],
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            borderWidth: 2,
+            pointRadius: 2,
+            pointBackgroundColor: '#3b82f6',
+            fill: true,
+            tension: 0.4
+          }]
         },
-        plugins: {
-          legend: {
-            display: false
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: {
+            duration: 0
           },
-          tooltip: {
-            mode: 'index',
-            intersect: false,
-            backgroundColor: 'rgba(15, 23, 42, 0.9)',
-            titleColor: '#f1f5f9',
-            bodyColor: '#cbd5e1',
-            borderColor: '#334155',
-            borderWidth: 1
-          }
-        },
-        scales: {
-          x: {
-            type: 'realtime',
-            realtime: {
-              duration: 60000,
-              refresh: 1000,
-              delay: 200,
-              onRefresh: (chart: any) => {
-                // Dados serão adicionados via updateRealTimeChart
+          plugins: {
+            legend: {
+              display: true,
+              labels: {
+                color: '#cbd5e1',
+                font: {
+                  size: 12
+                }
               }
             },
-            grid: {
-              color: '#334155'
-            },
-            ticks: {
-              color: '#94a3b8',
-              maxTicksLimit: 8
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              backgroundColor: 'rgba(15, 23, 42, 0.9)',
+              titleColor: '#f1f5f9',
+              bodyColor: '#cbd5e1',
+              borderColor: '#334155',
+              borderWidth: 1
             }
           },
-          y: {
-            grid: {
-              color: '#334155'
+          scales: {
+            x: {
+              type: 'category',
+              grid: {
+                color: '#334155',
+                drawBorder: false
+              },
+              ticks: {
+                color: '#94a3b8',
+                maxTicksLimit: 10,
+                callback: function(value: any, index: number) {
+                  // Mostrar apenas alguns labels para não poluir
+                  return index % 5 === 0 ? `T${index}` : '';
+                }
+              }
             },
-            ticks: {
-              color: '#94a3b8',
-              callback: (value: any) => `$${parseFloat(value).toFixed(4)}`
+            y: {
+              grid: {
+                color: '#334155',
+                drawBorder: false
+              },
+              ticks: {
+                color: '#94a3b8',
+                callback: (value: any) => `$${parseFloat(value).toFixed(4)}`
+              }
             }
+          },
+          interaction: {
+            intersect: false,
+            mode: 'index'
           }
-        },
-        interaction: {
-          intersect: false,
-          mode: 'index'
         }
-      }
-    });
+      });
+
+      console.log('Gráfico inicializado com sucesso');
+    } catch (error) {
+      console.error('Erro ao inicializar gráfico:', error);
+    }
   };
 
   const updateRealTimeChart = (price: number) => {
     if (!priceChartRef.current) return;
 
-    const now = Date.now();
-    const newData = { x: now, y: price };
+    try {
+      const now = new Date();
+      const timeLabel = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+      
+      // Adicionar novo ponto
+      const currentData = priceChartRef.current.data.datasets[0].data;
+      const currentLabels = priceChartRef.current.data.labels;
 
-    setPriceHistory(prev => {
-      const updated = [...prev, { timestamp: now, price }].slice(-100);
-      return updated;
-    });
+      currentData.push(price);
+      currentLabels.push(timeLabel);
 
-    priceChartRef.current.data.datasets[0].data = [...priceHistory, newData];
-    priceChartRef.current.update('quiet');
+      // Manter apenas os últimos 50 pontos
+      if (currentData.length > 50) {
+        currentData.shift();
+        currentLabels.shift();
+      }
+
+      // Forçar atualização do gráfico
+      priceChartRef.current.update('none');
+      
+      // Log para debug
+      console.log(`📊 Gráfico atualizado: ${price.toFixed(4)} às ${timeLabel}`);
+    } catch (error) {
+      console.error('Erro ao atualizar gráfico:', error);
+    }
   };
 
   // ===== BOTÕES DE INICIAR/PARAR =====
@@ -307,29 +352,70 @@ export default function BotInterface() {
 
     setIsBotRunning(true);
     
-    // Simular início do bot
+    // Inicializar gráfico se não estiver inicializado
+    if (!priceChartRef.current) {
+      initializeRealTimeChart();
+    }
+
+    // Simular trading automático
     toast({
       title: "🚀 Bot Iniciado",
       description: `Trading automático iniciado na conta ${settings.selectedTokenType}`,
     });
 
     // Simular atualização de preços em tempo real
-    const interval = setInterval(() => {
-      if (isBotRunning) {
-        const randomPrice = 1.2345 + (Math.random() - 0.5) * 0.01;
-        updateRealTimeChart(randomPrice);
+    let simulatedPrice = 1.2345;
+    chartIntervalRef.current = setInterval(() => {
+      if (isBotRunning && priceChartRef.current) {
+        // Simular variação de preço
+        simulatedPrice += (Math.random() - 0.5) * 0.01;
+        simulatedPrice = Math.max(1.23, Math.min(1.24, simulatedPrice)); // Manter em range
+        
+        updateRealTimeChart(simulatedPrice);
       }
     }, 1000);
 
-    return () => clearInterval(interval);
+    // Enviar notificação Telegram se configurado
+    if (telegramSettings.notificationsEnabled) {
+      sendTelegramNotification(`
+🤖 <b>Zeus Bot Iniciado</b>
+
+✅ Trading automático iniciado
+💼 Conta: ${settings.selectedTokenType.toUpperCase()}
+💰 Stake: $${settings.stake}
+🎯 Estratégia: ${settings.strategy}
+
+⏰ ${new Date().toLocaleString()}
+      `.trim());
+    }
   };
 
   const handleStopBot = () => {
     setIsBotRunning(false);
+    
+    // Parar intervalo de atualização
+    if (chartIntervalRef.current) {
+      clearInterval(chartIntervalRef.current);
+      chartIntervalRef.current = null;
+    }
+
     toast({
       title: "⏹️ Bot Parado",
       description: "Trading automático interrompido.",
     });
+
+    // Enviar notificação Telegram se configurado
+    if (telegramSettings.notificationsEnabled) {
+      sendTelegramNotification(`
+🤖 <b>Zeus Bot Parado</b>
+
+⏹️ Trading automático interrompido
+💼 Conta: ${settings.selectedTokenType.toUpperCase()}
+📊 Sessão finalizada
+
+⏰ ${new Date().toLocaleString()}
+      `.trim());
+    }
   };
 
   // ===== CARREGAR ANALYTICS DO BANCO =====
@@ -412,65 +498,65 @@ export default function BotInterface() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    // Preparar dados
-    let cumulativeProfit = 0;
-    const profitData = trades.map((trade: any) => {
-      cumulativeProfit += parseFloat(trade.profit) || 0;
-      return {
-        x: new Date(trade.created_at),
-        y: cumulativeProfit
-      };
-    });
-    
-    performanceChartRef.current = new (window as any).Chart(ctx, {
-      type: 'line',
-      data: {
-        datasets: [{
-          label: 'Evolução do Lucro',
-          data: profitData,
-          borderColor: '#10b981',
-          backgroundColor: 'rgba(16, 185, 129, 0.1)',
-          borderWidth: 3,
-          fill: true,
-          tension: 0.4
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            labels: {
-              color: '#cbd5e1',
-              font: { size: 12 }
-            }
-          }
+    try {
+      // Preparar dados
+      let cumulativeProfit = 0;
+      const profitData = trades.map((trade: any) => {
+        cumulativeProfit += parseFloat(trade.profit) || 0;
+        return {
+          x: new Date(trade.created_at).toLocaleDateString(),
+          y: cumulativeProfit
+        };
+      });
+      
+      performanceChartRef.current = new (window as any).Chart(ctx, {
+        type: 'line',
+        data: {
+          datasets: [{
+            label: 'Evolução do Lucro',
+            data: profitData,
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4
+          }]
         },
-        scales: {
-          x: {
-            type: 'time',
-            time: {
-              unit: 'hour'
-            },
-            grid: {
-              color: '#334155'
-            },
-            ticks: {
-              color: '#94a3b8'
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: {
+                color: '#cbd5e1',
+                font: { size: 12 }
+              }
             }
           },
-          y: {
-            grid: {
-              color: '#334155'
+          scales: {
+            x: {
+              grid: {
+                color: '#334155'
+              },
+              ticks: {
+                color: '#94a3b8'
+              }
             },
-            ticks: {
-              color: '#94a3b8',
-              callback: (value: any) => '$' + value
+            y: {
+              grid: {
+                color: '#334155'
+              },
+              ticks: {
+                color: '#94a3b8',
+                callback: (value: any) => '$' + value
+              }
             }
           }
         }
-      }
-    });
+      });
+    } catch (error) {
+      console.error('Erro ao criar gráfico de performance:', error);
+    }
   };
 
   // ===== FUNÇÕES DE CONFIGURAÇÃO =====
@@ -725,9 +811,32 @@ export default function BotInterface() {
   // ===== INICIALIZAR GRÁFICO =====
   useEffect(() => {
     if (activeTab === 'trading') {
-      setTimeout(initializeRealTimeChart, 1000);
+      // Aguardar um pouco para garantir que o DOM está pronto
+      const timer = setTimeout(() => {
+        initializeRealTimeChart();
+      }, 1000);
+
+      return () => clearTimeout(timer);
     }
   }, [activeTab]);
+
+  // ===== CLEANUP =====
+  useEffect(() => {
+    return () => {
+      // Limpar intervalos ao desmontar
+      if (chartIntervalRef.current) {
+        clearInterval(chartIntervalRef.current);
+      }
+      
+      // Destruir gráficos
+      if (priceChartRef.current) {
+        priceChartRef.current.destroy();
+      }
+      if (performanceChartRef.current) {
+        performanceChartRef.current.destroy();
+      }
+    };
+  }, []);
 
   // ===== RENDER =====
   if (loading) {
@@ -928,7 +1037,7 @@ export default function BotInterface() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-64 sm:h-80 bg-slate-900 rounded-lg p-2">
+                  <div className="h-64 sm:h-80 bg-slate-900 rounded-lg p-4">
                     <canvas id="realTimeChart"></canvas>
                   </div>
                 </CardContent>
@@ -1372,7 +1481,7 @@ export default function BotInterface() {
 
 // Função para inicializar o bot original (mantida para compatibilidade)
 function initializeOriginalBot() {
+  console.log('Inicializando bot original...');
   // Esta função seria responsável por inicializar o bot de trading original
   // Mantida para compatibilidade com o código existente
-  console.log('Inicializando bot original...');
 }
