@@ -427,27 +427,8 @@ export default function BotInterface() {
       // Forçar atualização do gráfico
       priceChartRef.current.update('none');
       
-      // Recalcular escala Y para mostrar oscilações (simplificado)
-      const values = currentData.map((point: any) => point.y);
-      if (values.length > 1) {
-        const min = Math.min(...values);
-        const max = Math.max(...values);
-        const range = max - min;
-        
-        // Garantir variação mínima para visualização
-        const minRange = 0.01; // Mínimo de 1% de variação
-        const actualRange = Math.max(range, minRange);
-        
-        // Ajustar escala Y com margem simples
-        const margin = actualRange * 0.1;
-        priceChartRef.current.options.scales.y.min = min - margin;
-        priceChartRef.current.options.scales.y.max = max + margin;
-        
-        // Atualizar gráfico
-        priceChartRef.current.update('none');
-        
-        console.log(`📈 Escala Y: ${(min - margin).toFixed(4)} - ${(max + margin).toFixed(4)}`);
-      }
+      // Apenas atualizar o gráfico sem recalcular escala constantemente
+      // A escala Y será ajustada automaticamente pelo Chart.js
       
       console.log(`✅ Gráfico atualizado com sucesso!`);
     } catch (error) {
@@ -1623,57 +1604,8 @@ export default function BotInterface() {
     }
   }, [isLicenseValid]);
 
-  // ===== SIMULAÇÃO DE DADOS EM TEMPO REAL =====
-  const [simulationInterval, setSimulationInterval] = useState<NodeJS.Timeout | null>(null);
-  
-  const startPriceSimulation = () => {
-    if (simulationInterval) {
-      clearInterval(simulationInterval);
-    }
-    
-    let basePrice = 1.2345;
-    let trend = 1; // 1 para alta, -1 para baixa
-    let volatility = 0.001; // Volatilidade base
-    
-    const interval = setInterval(() => {
-      // Simular movimento de preço mais realista
-      const randomFactor = (Math.random() - 0.5) * 2; // -1 a 1
-      const trendChange = Math.random() < 0.1 ? (Math.random() - 0.5) * 0.5 : 0; // 10% chance de mudança de tendência
-      
-      // Atualizar tendência ocasionalmente
-      if (Math.abs(trendChange) > 0.2) {
-        trend = trendChange > 0 ? 1 : -1;
-        volatility = Math.random() * 0.002 + 0.0005; // Volatilidade variável
-      }
-      
-      // Calcular variação do preço
-      const priceChange = (randomFactor * volatility) + (trend * volatility * 0.3);
-      basePrice += priceChange;
-      
-      // Manter preço em range realista
-      basePrice = Math.max(1.20, Math.min(1.30, basePrice));
-      
-      // Atualizar gráfico
-      updateRealTimeChart(basePrice);
-      
-      // Análise técnica se bot estiver rodando
-      if (isBotRunning) {
-        analyzeAndExecuteTrade(basePrice);
-      }
-      
-    }, 1000); // Atualizar a cada segundo
-    
-    setSimulationInterval(interval);
-    console.log('🚀 Simulação de preços iniciada');
-  };
-  
-  const stopPriceSimulation = () => {
-    if (simulationInterval) {
-      clearInterval(simulationInterval);
-      setSimulationInterval(null);
-      console.log('⏹️ Simulação de preços parada');
-    }
-  };
+  // ===== DADOS REAIS DA API DERIV =====
+  // Os dados reais vêm da função connectToDerivAPI() que já está implementada
 
   // ===== LIMPAR GRÁFICO COMPLETAMENTE =====
   const clearChart = () => {
@@ -1691,25 +1623,11 @@ export default function BotInterface() {
       // Aguardar um pouco para garantir que o DOM está pronto
       const timer = setTimeout(() => {
         initializeRealTimeChart();
-        
-        // Iniciar simulação de dados
-        startPriceSimulation();
-        
-        // Inicializar gráfico com dados iniciais
-        console.log('📊 Inicializando gráfico com dados iniciais...');
-        let basePrice = 1.2345;
-        for (let i = 0; i < 15; i++) {
-          // Simular movimento de preço mais realista
-          const variation = (Math.random() - 0.5) * 0.01;
-          basePrice += variation;
-          basePrice = Math.max(1.20, Math.min(1.30, basePrice));
-          updateRealTimeChart(basePrice);
-        }
+        console.log('📊 Gráfico inicializado - aguardando dados reais da API Deriv');
       }, 1000);
 
       return () => {
         clearTimeout(timer);
-        stopPriceSimulation();
       };
     }
   }, [activeTab]);
@@ -1973,31 +1891,13 @@ export default function BotInterface() {
                     </div>
                     <div className="flex gap-2">
                       <Button
-                        onClick={startPriceSimulation}
-                        size="sm"
-                        variant="outline"
-                        className="bg-green-600 hover:bg-green-700 text-white border-green-500"
-                      >
-                        <Play className="h-4 w-4 mr-1" />
-                        Iniciar
-                      </Button>
-                      <Button
-                        onClick={stopPriceSimulation}
-                        size="sm"
-                        variant="outline"
-                        className="bg-red-600 hover:bg-red-700 text-white border-red-500"
-                      >
-                        <Square className="h-4 w-4 mr-1" />
-                        Parar
-                      </Button>
-                      <Button
                         onClick={clearChart}
                         size="sm"
                         variant="outline"
                         className="bg-orange-600 hover:bg-orange-700 text-white border-orange-500"
                       >
                         <RotateCcw className="h-4 w-4 mr-1" />
-                        Limpar
+                        Limpar Gráfico
                       </Button>
                     </div>
                   </div>
@@ -2007,7 +1907,7 @@ export default function BotInterface() {
                     <canvas id="realTimeChart"></canvas>
                   </div>
                   <div className="mt-2 text-xs text-gray-500 text-center">
-                    💡 A simulação gera dados realistas para demonstração das estratégias
+                    📊 Dados reais da API Deriv - {settings.selectedSymbol || 'Nenhum símbolo selecionado'}
                   </div>
                 </CardContent>
               </Card>
