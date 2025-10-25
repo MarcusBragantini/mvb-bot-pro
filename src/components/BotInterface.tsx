@@ -59,6 +59,7 @@ interface TradingSettings {
   derivTokenDemo: string;
   derivTokenReal: string;
   selectedTokenType: 'demo' | 'real';
+  selectedSymbol: string; // NOVO: Símbolo selecionado
   mhiPeriods: number;
   emaFast: number;
   emaSlow: number;
@@ -66,6 +67,27 @@ interface TradingSettings {
   autoCloseTime: number;
   autoCloseProfit: number;
 }
+
+// ===== ATIVOS DISPONÍVEIS =====
+const AVAILABLE_SYMBOLS = [
+  { value: 'R_10', label: '🎲 Volatility 10', category: 'Volatility' },
+  { value: 'R_25', label: '🎲 Volatility 25', category: 'Volatility' },
+  { value: 'R_50', label: '🎲 Volatility 50', category: 'Volatility' },
+  { value: 'R_75', label: '🎲 Volatility 75', category: 'Volatility' },
+  { value: 'R_100', label: '🎲 Volatility 100', category: 'Volatility' },
+  { value: 'CRASH300N', label: '📉 Crash 300', category: 'Crash' },
+  { value: 'CRASH500N', label: '📉 Crash 500', category: 'Crash' },
+  { value: 'CRASH1000N', label: '📉 Crash 1000', category: 'Crash' },
+  { value: 'BOOM300N', label: '📈 Boom 300', category: 'Boom' },
+  { value: 'BOOM500N', label: '📈 Boom 500', category: 'Boom' },
+  { value: 'BOOM1000N', label: '📈 Boom 1000', category: 'Boom' },
+  { value: 'stpRNG', label: '🪜 Step Index', category: 'Step' },
+  { value: 'JD10', label: '🎯 Jump 10', category: 'Jump' },
+  { value: 'JD25', label: '🎯 Jump 25', category: 'Jump' },
+  { value: 'JD50', label: '🎯 Jump 50', category: 'Jump' },
+  { value: 'JD75', label: '🎯 Jump 75', category: 'Jump' },
+  { value: 'JD100', label: '🎯 Jump 100', category: 'Jump' }
+];
 
 // ===== SISTEMA DE LICENÇAS =====
 const LICENSE_KEYS: Record<string, LicenseInfo> = {
@@ -135,6 +157,7 @@ export default function BotInterface() {
     derivTokenDemo: '',
     derivTokenReal: '',
     selectedTokenType: 'demo',
+    selectedSymbol: 'R_10', // NOVO: Símbolo selecionado
     mhiPeriods: 20,
     emaFast: 8,
     emaSlow: 18,
@@ -174,6 +197,65 @@ export default function BotInterface() {
     if (newTab === 'analytics' && user?.id) {
       loadAnalyticsFromDatabase();
     }
+  };
+
+  // ===== CONEXÃO COM DERIV API =====
+  const connectToDerivAPI = () => {
+    console.log('🔌 Conectando à Deriv API...');
+    
+    const token = settings.selectedTokenType === 'demo' ? settings.derivTokenDemo : settings.derivTokenReal;
+    if (!token) {
+      console.error('❌ Token não configurado');
+      toast({
+        title: "❌ Token Necessário",
+        description: "Configure o token da conta nas configurações.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const ws = new WebSocket('wss://ws.derivws.com/websockets/v3?app_id=1089');
+    
+    ws.onopen = () => {
+      console.log('✅ Conectado à Deriv API');
+      
+      // Autorizar com token
+      ws.send(JSON.stringify({
+        authorize: token
+      }));
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      
+      if (data.authorize) {
+        console.log('✅ Autorizado na Deriv API');
+        
+        // Subscrever a ticks do símbolo selecionado
+        ws.send(JSON.stringify({
+          ticks: settings.selectedSymbol
+        }));
+      }
+      
+      if (data.tick) {
+        const tick = data.tick;
+        console.log(`📊 ${settings.selectedSymbol}: $${tick.quote}`);
+        
+        // Atualizar gráfico com dados reais
+        updateRealTimeChart(parseFloat(tick.quote));
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('❌ Erro na conexão Deriv:', error);
+    };
+
+    ws.onclose = () => {
+      console.log('🔌 Conexão Deriv fechada');
+    };
+
+    // Salvar referência para fechar depois
+    (window as any).derivWS = ws;
   };
 
   // ===== SISTEMA DE GRAFICO EM TEMPO REAL CORRIGIDO =====
@@ -218,13 +300,10 @@ export default function BotInterface() {
       priceChartRef.current = new (window as any).Chart(ctx, {
         type: 'line',
         data: {
-          labels: Array.from({ length: 20 }, (_, i) => `T${i}`),
+          labels: [],
           datasets: [{
-            label: 'Preço em Tempo Real',
-            data: Array.from({ length: 20 }, (_, i) => ({
-              x: i,
-              y: 1.2345 + (Math.random() - 0.5) * 0.01
-            })),
+            label: `Preço ${settings.selectedSymbol}`,
+            data: [],
             borderColor: '#3b82f6',
             backgroundColor: 'rgba(59, 130, 246, 0.1)',
             borderWidth: 2,
@@ -371,17 +450,8 @@ export default function BotInterface() {
       description: `Trading automático iniciado na conta ${settings.selectedTokenType}`,
     });
 
-    // Simular atualização de preços em tempo real
-    let simulatedPrice = 1.2345;
-    chartIntervalRef.current = setInterval(() => {
-      if (isBotRunning && priceChartRef.current) {
-        // Simular variação de preço
-        simulatedPrice += (Math.random() - 0.5) * 0.01;
-        simulatedPrice = Math.max(1.23, Math.min(1.24, simulatedPrice)); // Manter em range
-        
-        updateRealTimeChart(simulatedPrice);
-      }
-    }, 1000);
+    // Conectar à Deriv API para dados reais
+    connectToDerivAPI();
 
     // Enviar notificação Telegram se configurado
     if (telegramSettings.notificationsEnabled) {
@@ -400,6 +470,12 @@ export default function BotInterface() {
 
   const handleStopBot = () => {
     setIsBotRunning(false);
+    
+    // Fechar conexão Deriv
+    if ((window as any).derivWS) {
+      (window as any).derivWS.close();
+      (window as any).derivWS = null;
+    }
     
     // Parar intervalo de atualização
     if (chartIntervalRef.current) {
@@ -1264,6 +1340,31 @@ export default function BotInterface() {
                         min="0.35"
                         step="0.01"
                       />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="symbol" className="text-sm font-medium text-gray-300">
+                        Ativo/Símbolo
+                      </Label>
+                      <Select
+                        value={settings.selectedSymbol}
+                        onValueChange={(value) => updateSetting('selectedSymbol', value)}
+                      >
+                        <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                          <SelectValue placeholder="Selecione o ativo" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-slate-700 border-slate-600">
+                          {AVAILABLE_SYMBOLS.map((symbol) => (
+                            <SelectItem 
+                              key={symbol.value} 
+                              value={symbol.value}
+                              className="text-white hover:bg-slate-600"
+                            >
+                              {symbol.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div className="space-y-2">
