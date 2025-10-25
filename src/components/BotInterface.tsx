@@ -577,6 +577,12 @@ export default function BotInterface() {
 
   // ===== ANÁLISE TÉCNICA COMPLETA =====
   const performTechnicalAnalysis = (currentPrice: number): TechnicalAnalysis => {
+    console.log(`🔧 Configurações atuais:`, {
+      strategy: settings.strategy,
+      confidence: settings.confidence,
+      mhiPeriods: settings.mhiPeriods
+    });
+    
     if (!priceChartRef.current || priceChartRef.current.data.datasets[0].data.length < 10) {
       return {
         signal: 'HOLD',
@@ -605,7 +611,8 @@ export default function BotInterface() {
       rsi: rsiAnalysis,
       trend: trendAnalysis,
       strategy: settings.strategy,
-      confidence_threshold: settings.confidence
+      confidence_threshold: settings.confidence,
+      dados_disponíveis: prices.length
     });
     
     // Calcular sinal final baseado na estratégia selecionada
@@ -1377,7 +1384,13 @@ export default function BotInterface() {
       const settingsKey = user?.id ? `mvb_bot_settings_${user.id}` : 'mvb_bot_settings_temp';
       const savedSettings = localStorage.getItem(settingsKey);
       if (savedSettings) {
-        setSettings(JSON.parse(savedSettings));
+        const parsedSettings = JSON.parse(savedSettings);
+        // Forçar confiança para 30 se estiver em 60
+        if (parsedSettings.confidence === 60) {
+          parsedSettings.confidence = 30;
+          localStorage.setItem(settingsKey, JSON.stringify(parsedSettings));
+        }
+        setSettings(parsedSettings);
       }
     } catch (error) {
       console.error('Erro ao carregar configurações:', error);
