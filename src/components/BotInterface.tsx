@@ -138,11 +138,11 @@ export default function BotInterface() {
         nextPnL: next,
         stopWinDaily: settings.stopWinDaily,
         stopLossDaily: settings.stopLossDaily,
-        stopWinCondition: settings.stopWinDaily !== undefined && next > settings.stopWinDaily,
+        stopWinCondition: settings.stopWinDaily !== undefined && next >= settings.stopWinDaily,
         stopLossCondition: settings.stopLossDaily !== undefined && next < -Math.abs(settings.stopLossDaily)
       });
       
-      if (settings.stopWinDaily !== undefined && next > settings.stopWinDaily) {
+      if (settings.stopWinDaily !== undefined && next >= settings.stopWinDaily) {
         console.info("🚨 STOP WIN ATINGIDO! Parando bot...");
         setDailyStopped((s) => ({ ...s, stopWin: true }));
         setIsBotRunning(false);
@@ -165,11 +165,23 @@ export default function BotInterface() {
       stopWin: dailyStopped.stopWin,
       stopLoss: dailyStopped.stopLoss,
       isBotRunning,
-      isTradeActive
+      isTradeActive,
+      dailyPnL,
+      stopWinDaily: settings.stopWinDaily,
+      stopLossDaily: settings.stopLossDaily
     });
     
     if (dailyStopped.stopWin || dailyStopped.stopLoss) return { allowed: false, reason: "Stop diário atingido" };
     if (isTradeActive) return { allowed: false, reason: "Trade ativo em andamento" };
+    
+    // Verificação adicional de PnL
+    if (settings.stopWinDaily !== undefined && dailyPnL >= settings.stopWinDaily) {
+      console.info("🚨 PnL já atingiu Stop Win! Parando bot...");
+      setDailyStopped((s) => ({ ...s, stopWin: true }));
+      setIsBotRunning(false);
+      return { allowed: false, reason: "Stop Win já atingido" };
+    }
+    
     const recent = countRecentTrades();
     const limit = scalpMode ? (settings.maxTradesPerMinute ?? 6) : (settings.maxTradesPerMinute ?? 3);
     if (recent >= limit) return { allowed: false, reason: `Limite de trades por minuto atingido (${limit})` };
