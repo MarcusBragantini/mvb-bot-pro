@@ -201,20 +201,29 @@ export default function BotInterface() {
           
           // Carregar símbolos disponíveis
           loadAvailableSymbols();
+          
+          // Subscrever a preços em tempo real
+          setTimeout(() => {
+            subscribeToPrices();
+          }, 1000);
         }
         setIsConnecting(false);
       }
       
       if (data.msg_type === 'active_symbols') {
-        const symbols = data.active_symbols.map((s: any) => ({
-          symbol: s.symbol,
-          display_name: s.display_name
-        }));
-        setAvailableSymbols(symbols);
+        if (data.active_symbols && Array.isArray(data.active_symbols)) {
+          const symbols = data.active_symbols.map((s: any) => ({
+            symbol: s.symbol,
+            display_name: s.display_name
+          }));
+          setAvailableSymbols(symbols);
+        }
       }
       
       if (data.msg_type === 'tick') {
-        setCurrentPrice(parseFloat(data.tick.quote));
+        if (data.tick && data.tick.quote) {
+          setCurrentPrice(parseFloat(data.tick.quote));
+        }
       }
       
       if (data.msg_type === 'buy') {
@@ -239,6 +248,19 @@ export default function BotInterface() {
     ws.send(JSON.stringify(request));
   };
 
+  // Subscrever a preços em tempo real
+  const subscribeToPrices = () => {
+    const ws = derivWSRef.current;
+    if (!ws || !settings.selectedSymbol) return;
+
+    const request = {
+      ticks: settings.selectedSymbol,
+      subscribe: 1
+    };
+
+    ws.send(JSON.stringify(request));
+  };
+
   // Handler para resultados de trades
   const handleTradeResult = (data: any) => {
     if (data.error) {
@@ -246,13 +268,19 @@ export default function BotInterface() {
       return;
     }
 
+    // Validar se os dados necessários existem
+    if (!data.buy || !data.buy.contract_id) {
+      console.warn("Dados de trade incompletos:", data);
+      return;
+    }
+
     const trade: TradeRecord = {
       id: data.buy.contract_id,
       symbol: settings.selectedSymbol || 'R_10',
       direction: data.buy.contract_type === 'CALL' ? 'CALL' : 'PUT',
-      stake: parseFloat(data.buy.buy_price),
+      stake: parseFloat(data.buy.buy_price || 0),
       payout: parseFloat(data.buy.payout || 0),
-      profit: parseFloat(data.buy.sell_price || 0) - parseFloat(data.buy.buy_price),
+      profit: parseFloat(data.buy.sell_price || 0) - parseFloat(data.buy.buy_price || 0),
       entryTime: new Date().toISOString(),
     };
 
@@ -429,6 +457,13 @@ export default function BotInterface() {
       if (interval) window.clearInterval(interval);
     };
   }, [isBotRunning, scalpMode, isAuthenticated, settings]);
+
+  // === Subscrever a preços quando símbolo mudar ===
+  useEffect(() => {
+    if (isAuthenticated && settings.selectedSymbol) {
+      subscribeToPrices();
+    }
+  }, [settings.selectedSymbol, isAuthenticated]);
 
   // === UI / controles simples ===
   return (
