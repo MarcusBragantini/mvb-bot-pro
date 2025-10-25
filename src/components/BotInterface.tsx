@@ -410,10 +410,19 @@ export default function BotInterface() {
       });
       currentLabels.push(timeLabel);
 
-      // Manter apenas os últimos 50 pontos para melhor performance
-      if (currentData.length > 50) {
-        currentData.shift();
-        currentLabels.shift();
+      // Manter apenas os últimos 30 pontos para melhor performance e evitar sobreposição
+      const maxPoints = 30;
+      if (currentData.length > maxPoints) {
+        // Remover pontos antigos
+        currentData.splice(0, currentData.length - maxPoints);
+        currentLabels.splice(0, currentLabels.length - maxPoints);
+        
+        // Reindexar os pontos X para evitar problemas de escala
+        currentData.forEach((point: any, index: number) => {
+          point.x = index;
+        });
+        
+        console.log(`🔄 Gráfico limpo: ${currentData.length} pontos mantidos`);
       }
 
       console.log(`📊 Dados do gráfico: ${currentData.length} pontos, último: $${price.toFixed(4)}`);
@@ -1668,6 +1677,16 @@ export default function BotInterface() {
     }
   };
 
+  // ===== LIMPAR GRÁFICO COMPLETAMENTE =====
+  const clearChart = () => {
+    if (priceChartRef.current) {
+      priceChartRef.current.data.datasets[0].data = [];
+      priceChartRef.current.data.labels = [];
+      priceChartRef.current.update('none');
+      console.log('🧹 Gráfico limpo completamente');
+    }
+  };
+
   // ===== INICIALIZAR GRÁFICO =====
   useEffect(() => {
     if (activeTab === 'trading') {
@@ -1681,7 +1700,7 @@ export default function BotInterface() {
         // Inicializar gráfico com dados iniciais
         console.log('📊 Inicializando gráfico com dados iniciais...');
         let basePrice = 1.2345;
-        for (let i = 0; i < 30; i++) {
+        for (let i = 0; i < 15; i++) {
           // Simular movimento de preço mais realista
           const variation = (Math.random() - 0.5) * 0.01;
           basePrice += variation;
@@ -1962,7 +1981,7 @@ export default function BotInterface() {
                         className="bg-green-600 hover:bg-green-700 text-white border-green-500"
                       >
                         <Play className="h-4 w-4 mr-1" />
-                        Iniciar Simulação
+                        Iniciar
                       </Button>
                       <Button
                         onClick={stopPriceSimulation}
@@ -1972,6 +1991,15 @@ export default function BotInterface() {
                       >
                         <Square className="h-4 w-4 mr-1" />
                         Parar
+                      </Button>
+                      <Button
+                        onClick={clearChart}
+                        size="sm"
+                        variant="outline"
+                        className="bg-orange-600 hover:bg-orange-700 text-white border-orange-500"
+                      >
+                        <RotateCcw className="h-4 w-4 mr-1" />
+                        Limpar
                       </Button>
                     </div>
                   </div>
