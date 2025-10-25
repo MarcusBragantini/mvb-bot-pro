@@ -1134,14 +1134,12 @@ export default function BotInterface() {
     const buyRequest = {
       buy: tradeId,
       price: adjustedStake,
-      parameters: {
-        contract_type: signal === 'CALL' ? 'CALL' : 'PUT',
-        symbol: settings.selectedSymbol,
-        amount: adjustedStake,
-        duration: settings.duration,
-        duration_unit: 's',
-        basis: 'stake'
-      }
+      contract_type: signal === 'CALL' ? 'CALL' : 'PUT',
+      symbol: settings.selectedSymbol,
+      amount: adjustedStake,
+      duration: settings.duration,
+      duration_unit: 's',
+      basis: 'stake'
     };
     
     console.log('📤 Enviando trade para Deriv API:', buyRequest);
@@ -1153,9 +1151,12 @@ export default function BotInterface() {
     derivWS.onmessage = (event: MessageEvent) => {
       const data = JSON.parse(event.data);
       
+      console.log('📥 Resposta da Deriv API:', data);
+      
       // Processar resposta do trade
       if (data.buy) {
         const buyResponse = data.buy;
+        console.log('📊 Resposta do buy:', buyResponse);
         
         if (buyResponse.error) {
           console.error('❌ Erro no trade Deriv:', buyResponse.error);
