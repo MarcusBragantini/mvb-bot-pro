@@ -214,12 +214,52 @@ export default function BotInterfaceSimple() {
     `;
   };
 
+  // Função para carregar tokens do localStorage
+  const loadTokensFromStorage = () => {
+    try {
+      const savedSettings = localStorage.getItem('bot_settings');
+      if (savedSettings) {
+        const parsedSettings = JSON.parse(savedSettings);
+        setSettings(prev => ({
+          ...prev,
+          derivTokenDemo: parsedSettings.derivTokenDemo || '',
+          derivTokenReal: parsedSettings.derivTokenReal || '',
+          selectedTokenType: parsedSettings.selectedTokenType || 'demo'
+        }));
+        console.log('🔑 Tokens carregados do localStorage');
+      }
+    } catch (error) {
+      console.error('Erro ao carregar tokens:', error);
+    }
+  };
+
   // Função para conectar com Deriv
   const connectToDeriv = async () => {
     try {
-      const token = settings.selectedTokenType === 'demo' ? settings.derivTokenDemo : settings.derivTokenReal;
+      // Tentar carregar tokens diretamente do localStorage
+      let token = '';
+      let selectedType = 'demo';
+      
+      try {
+        const savedSettings = localStorage.getItem('bot_settings');
+        if (savedSettings) {
+          const parsedSettings = JSON.parse(savedSettings);
+          selectedType = parsedSettings.selectedTokenType || 'demo';
+          token = selectedType === 'demo' ? parsedSettings.derivTokenDemo : parsedSettings.derivTokenReal;
+        }
+      } catch (error) {
+        console.error('Erro ao ler localStorage:', error);
+      }
+      
+      console.log('🔍 Verificando token:', {
+        selectedType,
+        tokenLength: token ? token.length : 0,
+        hasToken: !!token
+      });
+      
       if (!token) {
-        addLog('❌ Token não configurado');
+        addLog('❌ Token não configurado - Configure na aba Configurações');
+        addLog('💡 Dica: Vá em Configurações → Cole seu token → Salvar');
         return null;
       }
 
@@ -339,6 +379,11 @@ export default function BotInterfaceSimple() {
       logsElement.scrollTop = 0;
     }
   };
+
+  // Carregar configurações do localStorage ao montar o componente
+  useEffect(() => {
+    loadTokensFromStorage();
+  }, []);
 
   // Exportar funções para window
   useEffect(() => {
@@ -644,10 +689,22 @@ export default function BotInterfaceSimple() {
 
                 <Button 
                   onClick={() => {
+                    // Salvar configurações no localStorage
+                    const settingsToSave = {
+                      ...settings,
+                      derivTokenDemo: settings.derivTokenDemo,
+                      derivTokenReal: settings.derivTokenReal,
+                      selectedTokenType: settings.selectedTokenType
+                    };
+                    
+                    localStorage.setItem('bot_settings', JSON.stringify(settingsToSave));
+                    
                     toast({
                       title: "✅ Configurações salvas",
                       description: "Suas configurações foram salvas com sucesso!",
                     });
+                    
+                    console.log('💾 Configurações salvas:', settingsToSave);
                   }}
                   className="w-full"
                 >
