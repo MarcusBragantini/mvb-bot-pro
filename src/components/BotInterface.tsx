@@ -74,6 +74,7 @@ export default function BotInterface() {
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'authenticated'>('disconnected');
   const [availableSymbols, setAvailableSymbols] = useState<Array<{symbol: string, display_name: string}>>([]);
   const [currentPrice, setCurrentPrice] = useState<number>(0);
+  const [lastTradeDirection, setLastTradeDirection] = useState<'CALL' | 'PUT' | null>(null);
 
   const derivWSRef = useRef<WebSocket | null>(null);
   const processingBuyRef = useRef(false);
@@ -313,9 +314,8 @@ export default function BotInterface() {
     const payout = parseFloat(data.buy.payout || 0);
     const profit = payout - stake;
 
-    // Usar a direção do sinal original (que foi enviado na proposta)
-    // Se contract_type não estiver disponível, usar PUT como padrão
-    const direction = data.buy.contract_type === 'CALL' ? 'CALL' : 'PUT';
+    // Usar a direção do sinal original armazenada
+    const direction = lastTradeDirection || (data.buy.contract_type === 'CALL' ? 'CALL' : 'PUT');
 
     const trade: TradeRecord = {
       id: data.buy.contract_id,
@@ -340,10 +340,18 @@ export default function BotInterface() {
       payout: payout,
       profit: profit,
       direction: trade.direction,
+      lastTradeDirection: lastTradeDirection,
       contract_type: data.buy.contract_type,
       isWinning: profit > 0,
       rawData: data.buy
     });
+    
+    // Verificar se o resultado está correto
+    if (profit > 0) {
+      console.info("✅ Trade VENCEDOR:", { direction, profit });
+    } else {
+      console.info("❌ Trade PERDEDOR:", { direction, profit });
+    }
   };
 
   // Cria um listener temporário para proposals que compra automaticamente a proposta quando recebida
@@ -433,6 +441,9 @@ export default function BotInterface() {
     if (!ws) return console.warn("WebSocket Deriv não conectado");
 
     try {
+      // Armazenar direção do sinal para uso posterior
+      setLastTradeDirection(analysis.direction);
+      
       // Primeiro, obter uma proposta (proposal) para o símbolo
       const proposalRequest = {
         proposal: 1,
