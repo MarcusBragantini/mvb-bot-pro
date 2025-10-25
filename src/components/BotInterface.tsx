@@ -243,6 +243,11 @@ export default function BotInterface() {
         
         // Atualizar gráfico com dados reais
         updateRealTimeChart(parseFloat(tick.quote));
+        
+        // Analisar e executar trades se bot estiver rodando
+        if (isBotRunning) {
+          analyzeAndExecuteTrade(parseFloat(tick.quote));
+        }
       }
     };
 
@@ -401,8 +406,8 @@ export default function BotInterface() {
       });
       currentLabels.push(timeLabel);
 
-      // Manter apenas os últimos 50 pontos
-      if (currentData.length > 50) {
+      // Manter apenas os últimos 100 pontos (aumentar limite)
+      if (currentData.length > 100) {
         currentData.shift();
         currentLabels.shift();
       }
@@ -416,6 +421,53 @@ export default function BotInterface() {
     } catch (error) {
       console.error('❌ Erro ao atualizar gráfico:', error);
     }
+  };
+
+  // ===== ANÁLISE E EXECUÇÃO DE TRADES =====
+  const analyzeAndExecuteTrade = (currentPrice: number) => {
+    // Verificar se já temos dados suficientes para análise
+    if (!priceChartRef.current || priceChartRef.current.data.datasets[0].data.length < 10) {
+      return;
+    }
+
+    const prices = priceChartRef.current.data.datasets[0].data.map((point: any) => point.y);
+    const lastPrices = prices.slice(-10); // Últimos 10 preços
+    
+    // Análise simples de tendência
+    const avgPrice = lastPrices.reduce((a, b) => a + b, 0) / lastPrices.length;
+    const trend = currentPrice > avgPrice ? 'UP' : 'DOWN';
+    
+    // Análise de volatilidade
+    const volatility = Math.max(...lastPrices) - Math.min(...lastPrices);
+    const isVolatile = volatility > 0.001; // Threshold de volatilidade
+    
+    console.log(`🔍 Análise: Preço=${currentPrice.toFixed(4)}, Tendência=${trend}, Volatilidade=${volatility.toFixed(4)}`);
+    
+    // Executar trade se condições forem atendidas
+    if (isVolatile && Math.random() > 0.7) { // 30% de chance de trade
+      const signal = trend === 'UP' ? 'CALL' : 'PUT';
+      executeTrade(signal, currentPrice);
+    }
+  };
+
+  const executeTrade = (signal: 'CALL' | 'PUT', price: number) => {
+    console.log(`🚀 Executando trade: ${signal} a $${price.toFixed(4)}`);
+    
+    // Simular resultado do trade (em produção seria via Deriv API)
+    setTimeout(() => {
+      const isWin = Math.random() > 0.4; // 60% de win rate
+      const result = isWin ? 'WIN' : 'LOSS';
+      const profit = isWin ? settings.stake * 0.8 : -settings.stake;
+      
+      console.log(`💰 Trade ${result}: ${signal} - Lucro: $${profit.toFixed(2)}`);
+      
+      // Atualizar interface com resultado
+      toast({
+        title: `💰 Trade ${result}`,
+        description: `${signal} - Lucro: $${profit.toFixed(2)}`,
+        variant: isWin ? "default" : "destructive"
+      });
+    }, 2000); // Simular duração de 2 segundos
   };
 
   // ===== BOTÕES DE INICIAR/PARAR =====
@@ -908,6 +960,15 @@ export default function BotInterface() {
       // Aguardar um pouco para garantir que o DOM está pronto
       const timer = setTimeout(() => {
         initializeRealTimeChart();
+        // Inicializar gráfico com dados iniciais mesmo sem bot rodando
+        if (!isBotRunning) {
+          console.log('📊 Inicializando gráfico com dados iniciais...');
+          // Adicionar alguns pontos iniciais para visualização
+          for (let i = 0; i < 10; i++) {
+            const mockPrice = 1.2345 + (Math.random() - 0.5) * 0.01;
+            updateRealTimeChart(mockPrice);
+          }
+        }
       }, 1000);
 
       return () => clearTimeout(timer);
