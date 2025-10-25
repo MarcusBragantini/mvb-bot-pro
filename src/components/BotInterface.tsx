@@ -71,25 +71,31 @@ export default function BotInterface() {
 
   const [accountBalance, setAccountBalance] = useState<number>(1000); // fallback - integrar com API
   const [dailyPnL, setDailyPnL] = useState<number>(0);
-  
-  // Debug: Log quando dailyPnL muda
-  useEffect(() => {
-    console.info("🔄 dailyPnL mudou para:", dailyPnL);
-  }, [dailyPnL]);
   const [tradeHistory, setTradeHistory] = useState<TradeRecord[]>([]);
   const [tradesTimestamps, setTradesTimestamps] = useState<number[]>([]);
   const [dailyStopped, setDailyStopped] = useState<{ stopWin?: boolean; stopLoss?: boolean }>({});
-  
-  // Debug: Log quando dailyStopped muda
-  useEffect(() => {
-    console.info("🔄 dailyStopped mudou para:", dailyStopped);
-  }, [dailyStopped]);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'authenticated'>('disconnected');
   const [availableSymbols, setAvailableSymbols] = useState<Array<{symbol: string, display_name: string}>>([]);
   const [currentPrice, setCurrentPrice] = useState<number>(0);
   const [lastTradeDirection, setLastTradeDirection] = useState<'CALL' | 'PUT' | null>(null);
+  const [isTradeActive, setIsTradeActive] = useState(false);
+  
+  // Debug: Log quando dailyPnL muda
+  useEffect(() => {
+    console.info("🔄 dailyPnL mudou para:", dailyPnL);
+  }, [dailyPnL]);
+  
+  // Debug: Log quando isTradeActive muda
+  useEffect(() => {
+    console.info("🔄 isTradeActive mudou para:", isTradeActive);
+  }, [isTradeActive]);
+  
+  // Debug: Log quando dailyStopped muda
+  useEffect(() => {
+    console.info("🔄 dailyStopped mudou para:", dailyStopped);
+  }, [dailyStopped]);
 
   const derivWSRef = useRef<WebSocket | null>(null);
   const processingBuyRef = useRef(false);
@@ -152,16 +158,18 @@ export default function BotInterface() {
     });
   };
 
-  // Checa se o bot pode executar mais trades (stop global + trades/minuto)
+  // Checa se o bot pode executar mais trades (stop global + trades/minuto + trade ativo)
   const checkExecutionAllowed = () => {
     console.info("Verificando execução permitida:", {
       dailyStopped,
       stopWin: dailyStopped.stopWin,
       stopLoss: dailyStopped.stopLoss,
-      isBotRunning
+      isBotRunning,
+      isTradeActive
     });
     
     if (dailyStopped.stopWin || dailyStopped.stopLoss) return { allowed: false, reason: "Stop diário atingido" };
+    if (isTradeActive) return { allowed: false, reason: "Trade ativo em andamento" };
     const recent = countRecentTrades();
     const limit = scalpMode ? (settings.maxTradesPerMinute ?? 6) : (settings.maxTradesPerMinute ?? 3);
     if (recent >= limit) return { allowed: false, reason: `Limite de trades por minuto atingido (${limit})` };
@@ -367,6 +375,10 @@ export default function BotInterface() {
     // Atualizar PnL
     updateDailyPnL(trade.profit);
     
+    // Marcar trade como concluído
+    setIsTradeActive(false);
+    console.info("🏁 Trade concluído:", direction);
+    
     console.info("Trade executado:", trade);
     console.info("Cálculo detalhado:", {
       stake: stake,
@@ -475,6 +487,10 @@ export default function BotInterface() {
     if (!ws) return console.warn("WebSocket Deriv não conectado");
 
     try {
+      // Marcar trade como ativo
+      setIsTradeActive(true);
+      console.info("🚀 Iniciando trade ativo:", analysis.direction);
+      
       // Armazenar direção do sinal para uso posterior
       setLastTradeDirection(analysis.direction);
       lastTradeDirectionRef.current = analysis.direction;
@@ -502,6 +518,7 @@ export default function BotInterface() {
       
     } catch (error) {
       console.error("Erro ao executar trade:", error);
+      setIsTradeActive(false); // Reset em caso de erro
     }
   };
 
