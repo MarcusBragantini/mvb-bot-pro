@@ -101,6 +101,15 @@ export default function BotInterface() {
   const updateDailyPnL = (profit: number) => {
     setDailyPnL((prev) => {
       const next = parseFloat((prev + profit).toFixed(2));
+      
+      console.info("Atualizando PnL:", {
+        profitAtual: profit,
+        pnLAnterior: prev,
+        pnLNovo: next,
+        stopWin: settings.stopWinDaily,
+        stopLoss: settings.stopLossDaily
+      });
+      
       // checar stop win / stop loss
       if (settings.stopWinDaily !== undefined && next >= settings.stopWinDaily) {
         setDailyStopped((s) => ({ ...s, stopWin: true }));
@@ -300,13 +309,17 @@ export default function BotInterface() {
       return;
     }
 
+    const stake = parseFloat(data.buy.buy_price || 0);
+    const payout = parseFloat(data.buy.payout || 0);
+    const profit = payout - stake;
+
     const trade: TradeRecord = {
       id: data.buy.contract_id,
       symbol: settings.selectedSymbol || 'R_10',
       direction: data.buy.contract_type === 'CALL' ? 'CALL' : 'PUT',
-      stake: parseFloat(data.buy.buy_price || 0),
-      payout: parseFloat(data.buy.payout || 0),
-      profit: parseFloat(data.buy.sell_price || 0) - parseFloat(data.buy.buy_price || 0),
+      stake: stake,
+      payout: payout,
+      profit: profit,
       entryTime: new Date().toISOString(),
     };
 
@@ -318,6 +331,13 @@ export default function BotInterface() {
     updateDailyPnL(trade.profit);
     
     console.info("Trade executado:", trade);
+    console.info("Cálculo detalhado:", {
+      stake: stake,
+      payout: payout,
+      profit: profit,
+      direction: trade.direction,
+      contract_type: data.buy.contract_type
+    });
   };
 
   // Cria um listener temporário para proposals que compra automaticamente a proposta quando recebida
