@@ -17,7 +17,7 @@ import React, { useEffect, useRef, useState } from "react";
  */
 
 type TradeRecord = {
-  id: string;
+  id: string | number;
   symbol: string;
   direction: "CALL" | "PUT";
   stake: number;
@@ -765,7 +765,7 @@ export default function BotInterface() {
                   ) : (
                     tradeHistory.map((t, idx) => (
                       <tr key={t.id} style={{ borderBottom: "1px solid #334155", background: idx % 2 === 0 ? "#0f172a" : "#1e293b" }}>
-                        <td style={{ padding: "10px 12px", color: "#cbd5e1", fontSize: 13 }}>{t.id.slice(-8)}</td>
+                        <td style={{ padding: "10px 12px", color: "#cbd5e1", fontSize: 13 }}>{String(t.id).slice(-8)}</td>
                         <td style={{ padding: "10px 12px", color: "#cbd5e1", fontSize: 13 }}>{t.symbol}</td>
                         <td style={{ padding: "10px 12px", textAlign: "center", color: t.direction === "CALL" ? "#10b981" : "#ef4444", fontSize: 13, fontWeight: 600 }}>
                           {t.direction === "CALL" ? "📈" : "📉"} {t.direction}
