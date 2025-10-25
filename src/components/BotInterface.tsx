@@ -340,6 +340,8 @@ export default function BotInterface() {
         } else {
           console.info("✅ Venda executada com sucesso:", data.sell);
           setActiveContractId(null);
+          setIsWaitingForResult(false); // Limpar aqui quando venda for confirmada
+          console.info("🔄 isWaitingForResult limpo após venda");
         }
       }
       
@@ -436,12 +438,20 @@ export default function BotInterface() {
     // Armazenar contract_id para venda automática
     setActiveContractId(data.buy.contract_id);
     console.info("📋 Contract ID armazenado:", data.buy.contract_id);
+    console.info("📋 Dados do contrato:", {
+      contract_id: data.buy.contract_id,
+      buy_price: data.buy.buy_price,
+      payout: data.buy.payout,
+      contract_type: data.buy.contract_type
+    });
     
     // Marcar trade como concluído
     setIsTradeActive(false);
-    setIsWaitingForResult(false);
+    // NÃO limpar isWaitingForResult aqui - deixar para o scalping funcionar
+    // setIsWaitingForResult(false);
     const tradeDuration = Date.now() - tradeStartTime;
     console.info("🏁 Trade concluído:", direction, `(Duração: ${tradeDuration}ms)`);
+    console.info("🔄 Mantendo isWaitingForResult = true para scalping");
     
     console.info("Trade executado:", trade);
     console.info("Cálculo detalhado:", {
@@ -608,12 +618,30 @@ export default function BotInterface() {
 
   // Função para verificar se deve vender (scalping)
   const checkScalpingExit = () => {
-    if (!activeContractId || !isWaitingForResult) return;
+    console.info("🔍 Verificando scalping exit:", {
+      activeContractId,
+      isWaitingForResult,
+      tradeStartTime,
+      currentTime: Date.now()
+    });
+
+    if (!activeContractId || !isWaitingForResult) {
+      console.info("❌ Não pode vender:", { activeContractId, isWaitingForResult });
+      return;
+    }
 
     const currentTime = Date.now();
     const tradeDuration = currentTime - tradeStartTime;
     const maxTradeTime = (settings.maxTradeTime ?? 60) * 1000; // Converter para ms
     const quickCloseTime = (settings.quickCloseTime ?? 30) * 1000; // Converter para ms
+
+    console.info("⏱️ Tempos de scalping:", {
+      tradeDuration: `${tradeDuration}ms`,
+      quickCloseTime: `${quickCloseTime}ms (${settings.quickCloseTime}s)`,
+      maxTradeTime: `${maxTradeTime}ms (${settings.maxTradeTime}s)`,
+      quickCloseReached: tradeDuration >= quickCloseTime,
+      maxTimeReached: tradeDuration >= maxTradeTime
+    });
 
     // Vender se atingiu tempo máximo
     if (tradeDuration >= maxTradeTime) {
