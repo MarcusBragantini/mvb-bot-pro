@@ -218,10 +218,13 @@ export default function BotInterface() {
       priceChartRef.current = new (window as any).Chart(ctx, {
         type: 'line',
         data: {
-          labels: [],
+          labels: Array.from({ length: 20 }, (_, i) => `T${i}`),
           datasets: [{
             label: 'Preço em Tempo Real',
-            data: [],
+            data: Array.from({ length: 20 }, (_, i) => ({
+              x: i,
+              y: 1.2345 + (Math.random() - 0.5) * 0.01
+            })),
             borderColor: '#3b82f6',
             backgroundColor: 'rgba(59, 130, 246, 0.1)',
             borderWidth: 2,
@@ -259,7 +262,7 @@ export default function BotInterface() {
           },
           scales: {
             x: {
-              type: 'category',
+              type: 'linear',
               grid: {
                 color: '#334155',
                 drawBorder: false
@@ -267,9 +270,8 @@ export default function BotInterface() {
               ticks: {
                 color: '#94a3b8',
                 maxTicksLimit: 10,
-                callback: function(value: any, index: number) {
-                  // Mostrar apenas alguns labels para não poluir
-                  return index % 5 === 0 ? `T${index}` : '';
+                callback: function(value: any) {
+                  return `T${Math.floor(value)}`;
                 }
               }
             },
