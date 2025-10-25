@@ -78,6 +78,7 @@ export default function BotInterface() {
 
   const derivWSRef = useRef<WebSocket | null>(null);
   const processingBuyRef = useRef(false);
+  const lastTradeDirectionRef = useRef<'CALL' | 'PUT' | null>(null);
 
   // === utility functions ===
 
@@ -315,7 +316,7 @@ export default function BotInterface() {
     const profit = payout - stake;
 
     // Usar a direção do sinal original armazenada
-    const direction = lastTradeDirection || (data.buy.contract_type === 'CALL' ? 'CALL' : 'PUT');
+    const direction = lastTradeDirectionRef.current || lastTradeDirection || (data.buy.contract_type === 'CALL' ? 'CALL' : 'PUT');
 
     const trade: TradeRecord = {
       id: data.buy.contract_id,
@@ -341,6 +342,7 @@ export default function BotInterface() {
       profit: profit,
       direction: trade.direction,
       lastTradeDirection: lastTradeDirection,
+      lastTradeDirectionRef: lastTradeDirectionRef.current,
       contract_type: data.buy.contract_type,
       isWinning: profit > 0,
       rawData: data.buy
@@ -443,6 +445,9 @@ export default function BotInterface() {
     try {
       // Armazenar direção do sinal para uso posterior
       setLastTradeDirection(analysis.direction);
+      lastTradeDirectionRef.current = analysis.direction;
+      
+      console.info("Direção armazenada:", analysis.direction);
       
       // Primeiro, obter uma proposta (proposal) para o símbolo
       const proposalRequest = {
