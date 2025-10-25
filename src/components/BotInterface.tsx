@@ -235,19 +235,19 @@ export default function BotInterface() {
       
       if (data.tick) {
         const tick = data.tick;
-        console.log(`📊 ${settings.selectedSymbol}: $${tick.quote}`);
         
         // Atualizar gráfico com dados reais
         updateRealTimeChart(parseFloat(tick.quote));
         
-        // Analisar e executar trades se bot estiver rodando
-        console.log(`🔍 Estado do bot: isBotRunning = ${isBotRunning}`);
-        if (isBotRunning) {
+        // Verificar estado atual do bot (não usar closure)
+        const currentBotState = (window as any).botRunningState || false;
+        console.log(`🔍 Estado do bot: ${currentBotState}`);
+        
+        if (currentBotState) {
           console.log(`🤖 Bot rodando - Analisando tick: $${tick.quote}`);
           analyzeAndExecuteTrade(parseFloat(tick.quote));
         } else {
           console.log(`⏸️ Bot parado - Tick ignorado: $${tick.quote}`);
-          console.log(`💡 Para iniciar o bot, clique no botão "Iniciar Bot" na interface`);
         }
       }
     };
@@ -395,8 +395,6 @@ export default function BotInterface() {
       const now = new Date();
       const timeLabel = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
       
-      console.log(`📊 Atualizando gráfico: $${price.toFixed(4)} às ${timeLabel}`);
-      
       // Adicionar novo ponto no formato correto para Chart.js
       const currentData = priceChartRef.current.data.datasets[0].data;
       const currentLabels = priceChartRef.current.data.labels;
@@ -419,19 +417,10 @@ export default function BotInterface() {
         currentData.forEach((point: any, index: number) => {
           point.x = index;
         });
-        
-        console.log(`🔄 Gráfico limpo: ${currentData.length} pontos mantidos`);
       }
-
-      console.log(`📊 Dados do gráfico: ${currentData.length} pontos, último: $${price.toFixed(4)}`);
 
       // Forçar atualização do gráfico
       priceChartRef.current.update('none');
-      
-      // Apenas atualizar o gráfico sem recalcular escala constantemente
-      // A escala Y será ajustada automaticamente pelo Chart.js
-      
-      console.log(`✅ Gráfico atualizado com sucesso!`);
     } catch (error) {
       console.error('❌ Erro ao atualizar gráfico:', error);
     }
@@ -1154,6 +1143,7 @@ export default function BotInterface() {
     }
 
     setIsBotRunning(true);
+    (window as any).botRunningState = true;
     console.log(`🚀 Bot iniciado - isBotRunning definido como: true`);
     
     // Inicializar gráfico se não estiver inicializado
@@ -1187,6 +1177,7 @@ export default function BotInterface() {
 
   const handleStopBot = () => {
     setIsBotRunning(false);
+    (window as any).botRunningState = false;
     
     // Fechar conexão Deriv
     if ((window as any).derivWS) {
