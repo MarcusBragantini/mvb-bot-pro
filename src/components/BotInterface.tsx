@@ -152,7 +152,7 @@ export default function BotInterface() {
     duration: 15,
     stopWin: 3,
     stopLoss: -5,
-    confidence: 70,
+    confidence: 50,
     strategy: 'martingale',
     derivTokenDemo: '',
     derivTokenReal: '',
@@ -246,7 +246,10 @@ export default function BotInterface() {
         
         // Analisar e executar trades se bot estiver rodando
         if (isBotRunning) {
+          console.log(`🤖 Bot rodando - Analisando tick: $${tick.quote}`);
           analyzeAndExecuteTrade(parseFloat(tick.quote));
+        } else {
+          console.log(`⏸️ Bot parado - Tick ignorado: $${tick.quote}`);
         }
       }
     };
@@ -587,7 +590,7 @@ export default function BotInterface() {
 
   // ===== ANÁLISE TÉCNICA COMPLETA =====
   const performTechnicalAnalysis = (currentPrice: number): TechnicalAnalysis => {
-    if (!priceChartRef.current || priceChartRef.current.data.datasets[0].data.length < 30) {
+    if (!priceChartRef.current || priceChartRef.current.data.datasets[0].data.length < 10) {
       return {
         signal: 'HOLD',
         confidence: 0,
@@ -741,6 +744,8 @@ export default function BotInterface() {
 
   // ===== ANÁLISE E EXECUÇÃO DE TRADES MELHORADA =====
   const analyzeAndExecuteTrade = (currentPrice: number) => {
+    console.log(`🔍 Iniciando análise técnica para preço: $${currentPrice.toFixed(4)}`);
+    
     const analysis = performTechnicalAnalysis(currentPrice);
     
     // Atualizar indicadores visuais
@@ -751,7 +756,8 @@ export default function BotInterface() {
       sinal: analysis.signal,
       confiança: analysis.confidence.toFixed(1),
       razão: analysis.reason,
-      indicadores: analysis.indicators
+      indicadores: analysis.indicators,
+      dados_disponíveis: priceChartRef.current?.data.datasets[0].data.length || 0
     });
     
     // Verificar gestão de risco antes de executar trade
@@ -2348,7 +2354,7 @@ export default function BotInterface() {
                         id="confidence"
                         type="number"
                         value={settings.confidence}
-                        onChange={(e) => updateSetting('confidence', parseInt(e.target.value) || 70)}
+                        onChange={(e) => updateSetting('confidence', parseInt(e.target.value) || 50)}
                         className="bg-slate-700 border-slate-600 text-white"
                         min="1"
                         max="100"
