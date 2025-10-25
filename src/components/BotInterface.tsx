@@ -1725,36 +1725,83 @@ export default function BotInterface() {
   // ===== FUNÇÕES DE CONFIGURAÇÃO =====
   const loadSettings = async () => {
     try {
+      let loadedSettings = null;
+      
       if (user?.id) {
         const response = await fetch(`/api/data?action=settings&user_id=${user.id}`);
         if (response.ok) {
           const data = await response.json();
           if (data.settings) {
-            setSettings(prev => ({ ...prev, ...data.settings }));
-            return;
+            loadedSettings = data.settings;
           }
         }
       }
       
-      const settingsKey = user?.id ? `mvb_bot_settings_${user.id}` : 'mvb_bot_settings_temp';
-      const savedSettings = localStorage.getItem(settingsKey);
-      if (savedSettings) {
-        const parsedSettings = JSON.parse(savedSettings);
-        // Forçar migração de configurações antigas
+      if (!loadedSettings) {
+        const settingsKey = user?.id ? `mvb_bot_settings_${user.id}` : 'mvb_bot_settings_temp';
+        const savedSettings = localStorage.getItem(settingsKey);
+        if (savedSettings) {
+          loadedSettings = JSON.parse(savedSettings);
+        }
+      }
+      
+      if (loadedSettings) {
+        // Aplicar migração de configurações antigas independente da fonte
         let needsUpdate = false;
-        if (parsedSettings.confidence === 60) {
-          parsedSettings.confidence = 30;
+        
+        // Forçar valores corretos para garantir funcionamento
+        if (loadedSettings.confidence >= 50) {
+          loadedSettings.confidence = 30;
           needsUpdate = true;
         }
-        if (parsedSettings.mhiPeriods > 10) {
-          parsedSettings.mhiPeriods = 5;
+        if (loadedSettings.mhiPeriods > 10) {
+          loadedSettings.mhiPeriods = 5;
           needsUpdate = true;
         }
+        
+        // Garantir que os novos campos existam
+        if (!loadedSettings.minConfidence) {
+          loadedSettings.minConfidence = 30;
+          needsUpdate = true;
+        }
+        if (!loadedSettings.maxRiskPerTrade) {
+          loadedSettings.maxRiskPerTrade = 10;
+          needsUpdate = true;
+        }
+        if (loadedSettings.useStopLoss === undefined) {
+          loadedSettings.useStopLoss = true;
+          needsUpdate = true;
+        }
+        if (loadedSettings.useTakeProfit === undefined) {
+          loadedSettings.useTakeProfit = true;
+          needsUpdate = true;
+        }
+        if (!loadedSettings.tradingHours) {
+          loadedSettings.tradingHours = { start: '00:00', end: '23:59' };
+          needsUpdate = true;
+        }
+        
         if (needsUpdate) {
-          localStorage.setItem(settingsKey, JSON.stringify(parsedSettings));
-          console.log('🔄 Configurações migradas:', parsedSettings);
+          console.log('🔄 Aplicando migração de configurações:', loadedSettings);
+          // Salvar configurações migradas
+          const settingsKey = user?.id ? `mvb_bot_settings_${user.id}` : 'mvb_bot_settings_temp';
+          localStorage.setItem(settingsKey, JSON.stringify(loadedSettings));
+          
+          // Se veio do banco, salvar de volta
+          if (user?.id) {
+            try {
+              await fetch('/api/data?action=settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: user.id, settings: loadedSettings })
+              });
+            } catch (error) {
+              console.error('Erro ao salvar configurações migradas:', error);
+            }
+          }
         }
-        setSettings(parsedSettings);
+        
+        setSettings(loadedSettings);
       }
     } catch (error) {
       console.error('Erro ao carregar configurações:', error);
@@ -1785,6 +1832,46 @@ export default function BotInterface() {
         variant: "destructive",
       });
     }
+  };
+
+  const resetSettings = () => {
+    const defaultSettings: TradingSettings = {
+      stake: 1,
+      martingale: 2,
+      duration: 15,
+      stopWin: 3,
+      stopLoss: -5,
+      confidence: 30,
+      strategy: 'martingale',
+      derivTokenDemo: '',
+      derivTokenReal: '',
+      selectedTokenType: 'demo',
+      selectedSymbol: 'R_10',
+      mhiPeriods: 5,
+      emaFast: 8,
+      emaSlow: 18,
+      rsiPeriods: 10,
+      autoCloseTime: 30,
+      autoCloseProfit: 20,
+      minConfidence: 30,
+      maxRiskPerTrade: 10,
+      useStopLoss: true,
+      useTakeProfit: true,
+      tradingHours: { start: '00:00', end: '23:59' }
+    };
+    
+    setSettings(defaultSettings);
+    
+    // Limpar localStorage
+    const settingsKey = user?.id ? `mvb_bot_settings_${user.id}` : 'mvb_bot_settings_temp';
+    localStorage.removeItem(settingsKey);
+    
+    console.log('🔄 Configurações resetadas para valores padrão');
+    toast({
+      title: "🔄 Configurações Resetadas",
+      description: "Configurações foram resetadas para valores padrão otimizados.",
+      variant: "default"
+    });
   };
 
   const updateSetting = (key: keyof TradingSettings, value: any) => {
@@ -2902,7 +2989,11 @@ export default function BotInterface() {
                     </div>
                   </div>
 
-                  <div className="flex justify-end pt-4">
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button onClick={resetSettings} variant="outline" className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white">
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Resetar
+                    </Button>
                     <Button onClick={saveSettings} className="bg-blue-600 hover:bg-blue-700">
                       <CheckCircle className="h-4 w-4 mr-2" />
                       Salvar Configurações
