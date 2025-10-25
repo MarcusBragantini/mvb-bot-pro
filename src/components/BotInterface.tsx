@@ -42,6 +42,11 @@ type Settings = {
   derivAppId?: string; // App ID da Deriv
   accountType?: 'demo' | 'real'; // Tipo de conta
   selectedSymbol?: string; // Símbolo selecionado para trading
+  // Configurações de Scalping
+  quickCloseTime?: number; // Tempo para quick close em segundos
+  takeProfitPercent?: number; // % de lucro para vender
+  stopLossPercent?: number; // % de perda para vender
+  maxTradeTime?: number; // Tempo máximo do trade em segundos
 };
 
 export default function BotInterface() {
@@ -67,6 +72,11 @@ export default function BotInterface() {
     derivAppId: '1089', // App ID padrão da Deriv
     accountType: 'demo',
     selectedSymbol: 'R_10', // Símbolo padrão
+    // Configurações de Scalping
+    quickCloseTime: 30, // 30 segundos para quick close
+    takeProfitPercent: 5, // 5% de lucro
+    stopLossPercent: 3, // 3% de perda
+    maxTradeTime: 60, // 60 segundos máximo
   });
 
   const [accountBalance, setAccountBalance] = useState<number>(1000); // fallback - integrar com API
@@ -602,25 +612,32 @@ export default function BotInterface() {
 
     const currentTime = Date.now();
     const tradeDuration = currentTime - tradeStartTime;
-    const maxTradeTime = (settings.durationSec ?? 60) * 1000; // Converter para ms
+    const maxTradeTime = (settings.maxTradeTime ?? 60) * 1000; // Converter para ms
+    const quickCloseTime = (settings.quickCloseTime ?? 30) * 1000; // Converter para ms
 
     // Vender se atingiu tempo máximo
     if (tradeDuration >= maxTradeTime) {
-      console.info("⏰ Tempo máximo atingido, vendendo contrato...");
+      console.info("⏰ Tempo máximo atingido, vendendo contrato...", `(${settings.maxTradeTime}s)`);
       sellContract(activeContractId, "Tempo máximo atingido");
       setActiveContractId(null);
       return;
     }
 
-    // Vender se atingiu take profit ou stop loss
-    // (Esta lógica pode ser expandida com dados de preço em tempo real)
-    const quickCloseTime = 30 * 1000; // 30 segundos para quick close
+    // Vender se atingiu quick close
     if (tradeDuration >= quickCloseTime) {
-      console.info("⚡ Quick close atingido, vendendo contrato...");
+      console.info("⚡ Quick close atingido, vendendo contrato...", `(${settings.quickCloseTime}s)`);
       sellContract(activeContractId, "Quick close");
       setActiveContractId(null);
       return;
     }
+
+    // TODO: Implementar verificação de take profit e stop loss baseada em preço
+    // if (currentPrice >= takeProfitPrice) {
+    //   sellContract(activeContractId, "Take Profit");
+    // }
+    // if (currentPrice <= stopLossPrice) {
+    //   sellContract(activeContractId, "Stop Loss");
+    // }
   };
 
   // === Análise simples para gerar sinais ===
@@ -809,6 +826,54 @@ export default function BotInterface() {
               <option value="R_100">Rise/Fall 100</option>
               <option value="RDBULL">Bull/Bear</option>
             </select>
+          </div>
+
+          <hr style={{ margin: "16px 0", border: "none", borderTop: "1px solid #334155" }} />
+          
+          <h4 style={{ color: "#60a5fa", marginBottom: 12 }}>⚡ Configurações de Scalping</h4>
+          
+          <div style={{ marginTop: 12 }}>
+            <label style={{ display: "block", color: "#94a3b8", fontSize: 13, marginBottom: 6 }}>⏱️ Quick Close (segundos)</label>
+            <input
+              type="number"
+              value={settings.quickCloseTime || 30}
+              onChange={(e) => setSettings((s) => ({ ...s, quickCloseTime: parseInt(e.target.value) || 30 }))}
+              placeholder="30"
+              style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #475569", background: "#0f172a", color: "#e2e8f0", fontSize: 14 }}
+            />
+          </div>
+
+          <div style={{ marginTop: 12 }}>
+            <label style={{ display: "block", color: "#94a3b8", fontSize: 13, marginBottom: 6 }}>📈 Take Profit (%)</label>
+            <input
+              type="number"
+              value={settings.takeProfitPercent || 5}
+              onChange={(e) => setSettings((s) => ({ ...s, takeProfitPercent: parseInt(e.target.value) || 5 }))}
+              placeholder="5"
+              style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #475569", background: "#0f172a", color: "#e2e8f0", fontSize: 14 }}
+            />
+          </div>
+
+          <div style={{ marginTop: 12 }}>
+            <label style={{ display: "block", color: "#94a3b8", fontSize: 13, marginBottom: 6 }}>📉 Stop Loss (%)</label>
+            <input
+              type="number"
+              value={settings.stopLossPercent || 3}
+              onChange={(e) => setSettings((s) => ({ ...s, stopLossPercent: parseInt(e.target.value) || 3 }))}
+              placeholder="3"
+              style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #475569", background: "#0f172a", color: "#e2e8f0", fontSize: 14 }}
+            />
+          </div>
+
+          <div style={{ marginTop: 12 }}>
+            <label style={{ display: "block", color: "#94a3b8", fontSize: 13, marginBottom: 6 }}>⏰ Tempo Máximo (segundos)</label>
+            <input
+              type="number"
+              value={settings.maxTradeTime || 60}
+              onChange={(e) => setSettings((s) => ({ ...s, maxTradeTime: parseInt(e.target.value) || 60 }))}
+              placeholder="60"
+              style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #475569", background: "#0f172a", color: "#e2e8f0", fontSize: 14 }}
+            />
           </div>
 
           <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
