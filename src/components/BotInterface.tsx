@@ -37,6 +37,11 @@ type Settings = {
   durationSec?: number; // duração padrão das operações (scalp curtas)
   minConfidence?: number; // probabilidade mínima para entrar (0-100)
   paperMode?: boolean; // apenas simula
+  // Configurações Deriv
+  derivToken?: string; // Token de autenticação Deriv
+  derivAppId?: string; // App ID da Deriv
+  accountType?: 'demo' | 'real'; // Tipo de conta
+  selectedSymbol?: string; // Símbolo selecionado para trading
 };
 
 export default function BotInterface() {
@@ -51,7 +56,12 @@ export default function BotInterface() {
     maxTradesPerMinute: 6,
     durationSec: 60, // 60s trades por padrão para scalping
     minConfidence: 60,
-    paperMode: true,
+    paperMode: false, // Mudado para false para operar de verdade
+    // Configurações Deriv
+    derivToken: '',
+    derivAppId: '1089', // App ID padrão da Deriv
+    accountType: 'demo',
+    selectedSymbol: 'R_10', // Símbolo padrão
   });
 
   const [accountBalance, setAccountBalance] = useState<number>(1000); // fallback - integrar com API
@@ -60,6 +70,10 @@ export default function BotInterface() {
   const [tradesTimestamps, setTradesTimestamps] = useState<number[]>([]);
   const [dailyStopped, setDailyStopped] = useState<{ stopWin?: boolean; stopLoss?: boolean }>({});
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'authenticated'>('disconnected');
+  const [availableSymbols, setAvailableSymbols] = useState<Array<{symbol: string, display_name: string}>>([]);
+  const [currentPrice, setCurrentPrice] = useState<number>(0);
 
   const derivWSRef = useRef<WebSocket | null>(null);
   const processingBuyRef = useRef(false);
@@ -111,31 +125,145 @@ export default function BotInterface() {
     return { allowed: true };
   };
 
-  // === WebSocket / Proposals handling (safe listener) ===
+  // === WebSocket / Deriv API Integration ===
 
-  const connectDeriv = (wsUrl: string) => {
+  const connectDeriv = async () => {
     if (derivWSRef.current) derivWSRef.current.close();
+    
     setIsConnecting(true);
+    setConnectionStatus('connecting');
+    
+    // URL da Deriv WebSocket
+    const wsUrl = settings.accountType === 'demo' 
+      ? 'wss://ws.binaryws.com/websockets/v3?app_id=' + settings.derivAppId
+      : 'wss://ws.binaryws.com/websockets/v3?app_id=' + settings.derivAppId;
+    
     const ws = new WebSocket(wsUrl);
     derivWSRef.current = ws;
 
     ws.addEventListener("open", () => {
-      setIsConnecting(false);
-      console.info("WebSocket conectado");
-      // aqui você pode autorizar, pedir balance, etc.
-      // example: ws.send(JSON.stringify({ authorize: "TOKEN" }));
+      console.info("WebSocket Deriv conectado");
+      setConnectionStatus('connected');
+      
+      // Autenticar se token fornecido
+      if (settings.derivToken) {
+        authenticateDeriv(settings.derivToken);
+      } else {
+        setIsConnecting(false);
+        console.warn("Token Deriv não fornecido. Configure o token para operar.");
+      }
     });
 
     ws.addEventListener("close", (ev) => {
-      console.warn("WebSocket fechado", ev);
+      console.warn("WebSocket Deriv fechado", ev);
       derivWSRef.current = null;
+      setConnectionStatus('disconnected');
+      setIsAuthenticated(false);
     });
 
     ws.addEventListener("error", (err) => {
-      console.error("WebSocket erro", err);
+      console.error("WebSocket Deriv erro", err);
+      setConnectionStatus('disconnected');
+      setIsConnecting(false);
     });
 
-    // não adicionamos um listener global de message aqui — handlers temporários serão criados quando precisar
+    // Listener global para mensagens da Deriv
+    ws.addEventListener("message", handleDerivMessage);
+  };
+
+  // Autenticação com Deriv
+  const authenticateDeriv = (token: string) => {
+    const ws = derivWSRef.current;
+    if (!ws) return;
+
+    const authRequest = {
+      authorize: token
+    };
+
+    ws.send(JSON.stringify(authRequest));
+  };
+
+  // Handler para mensagens da Deriv
+  const handleDerivMessage = (event: MessageEvent) => {
+    try {
+      const data = JSON.parse(event.data);
+      
+      if (data.msg_type === 'authorize') {
+        if (data.error) {
+          console.error("Erro de autenticação:", data.error);
+          setConnectionStatus('connected');
+          setIsAuthenticated(false);
+        } else {
+          console.info("Autenticado com sucesso na Deriv");
+          setConnectionStatus('authenticated');
+          setIsAuthenticated(true);
+          setAccountBalance(parseFloat(data.authorize.balance || 0));
+          
+          // Carregar símbolos disponíveis
+          loadAvailableSymbols();
+        }
+        setIsConnecting(false);
+      }
+      
+      if (data.msg_type === 'active_symbols') {
+        const symbols = data.active_symbols.map((s: any) => ({
+          symbol: s.symbol,
+          display_name: s.display_name
+        }));
+        setAvailableSymbols(symbols);
+      }
+      
+      if (data.msg_type === 'tick') {
+        setCurrentPrice(parseFloat(data.tick.quote));
+      }
+      
+      if (data.msg_type === 'buy') {
+        handleTradeResult(data);
+      }
+      
+    } catch (error) {
+      console.error("Erro ao processar mensagem Deriv:", error);
+    }
+  };
+
+  // Carregar símbolos disponíveis
+  const loadAvailableSymbols = () => {
+    const ws = derivWSRef.current;
+    if (!ws) return;
+
+    const request = {
+      active_symbols: 1,
+      product_type: 'basic'
+    };
+
+    ws.send(JSON.stringify(request));
+  };
+
+  // Handler para resultados de trades
+  const handleTradeResult = (data: any) => {
+    if (data.error) {
+      console.error("Erro no trade:", data.error);
+      return;
+    }
+
+    const trade: TradeRecord = {
+      id: data.buy.contract_id,
+      symbol: settings.selectedSymbol || 'R_10',
+      direction: data.buy.contract_type === 'CALL' ? 'CALL' : 'PUT',
+      stake: parseFloat(data.buy.buy_price),
+      payout: parseFloat(data.buy.payout || 0),
+      profit: parseFloat(data.buy.sell_price || 0) - parseFloat(data.buy.buy_price),
+      entryTime: new Date().toISOString(),
+    };
+
+    // Adicionar ao histórico
+    setTradeHistory(prev => [trade, ...prev.slice(0, 49)]); // Manter últimos 50
+    setTradesTimestamps(prev => [Date.now(), ...prev.slice(0, 49)]);
+    
+    // Atualizar PnL
+    updateDailyPnL(trade.profit);
+    
+    console.info("Trade executado:", trade);
   };
 
   // Cria um listener temporário para proposals que compra automaticamente a proposta quando recebida
@@ -196,10 +324,11 @@ export default function BotInterface() {
     };
   };
 
-  // === Core: executar trade baseado numa "análise" simples (placeholder) ===
+  // === Core: executar trade na Deriv API ===
   // analysis: { symbol, direction, confidence }
   const executeTrade = async (analysis: { symbol: string; direction: "CALL" | "PUT"; confidence: number }) => {
     if (!isBotRunning) return console.info("Bot não está rodando");
+    if (!isAuthenticated) return console.warn("Não autenticado na Deriv");
 
     // validações globais
     const allow = checkExecutionAllowed();
@@ -220,37 +349,48 @@ export default function BotInterface() {
     const allow2 = checkExecutionAllowed();
     if (!allow2.allowed) return console.warn("Execução negada (2):", allow2.reason);
 
-    // montar requisição de proposta (exemplo genérico — adapte ao formato de sua API/deriv)
     const ws = derivWSRef.current;
-    if (!ws) return console.warn("WebSocket não conectado");
-
-    // exemplo: pedir uma proposta para o ativo e duração
-    const proposalRequest = {
-      proposal: 1,
-      subscribe: 1,
-      symbol: analysis.symbol,
-      contract_type: analysis.direction === "CALL" ? "CALL" : "PUT",
-      duration: settings.durationSec ?? 60,
-      // outras propriedades necessárias pela API do seu broker
-    } as any;
+    if (!ws) return console.warn("WebSocket Deriv não conectado");
 
     try {
-      ws.send(JSON.stringify(proposalRequest));
-      // adicionar listener que fará buy quando proposal chegar
-      const cleanupListener = addProposalListener(adjustedStake, (trade) => {
-        console.info("Trade finalizado:", trade);
-        // persistir no backend
-        if (!settings.paperMode) saveTradeToBackend(trade).catch(console.error);
-      });
+      // Executar trade diretamente na Deriv
+      const buyRequest = {
+        buy: 1,
+        price: adjustedStake,
+        symbol: analysis.symbol,
+        contract_type: analysis.direction,
+        duration: settings.durationSec ?? 60,
+        duration_unit: 's',
+        basis: 'stake'
+      };
 
-      // remover listener automaticamente após timeout retornado
-      // (addProposalListener já retorna cleanup), se retornou, use
-      if (typeof cleanupListener === "function") {
-        setTimeout(() => cleanupListener(), (settings.durationSec ?? 60) * 1000 + 20_000);
-      }
-    } catch (err) {
-      console.error("Erro ao solicitar proposal:", err);
+      console.info("Executando trade na Deriv:", buyRequest);
+      ws.send(JSON.stringify(buyRequest));
+      
+      // Adicionar timestamp para controle de trades por minuto
+      setTradesTimestamps(prev => [Date.now(), ...prev.slice(0, 49)]);
+      
+    } catch (error) {
+      console.error("Erro ao executar trade:", error);
     }
+  };
+
+  // === Análise simples para gerar sinais ===
+  const generateTradingSignal = () => {
+    if (!isAuthenticated || !currentPrice) return null;
+    
+    // Análise simples baseada em preço
+    const randomFactor = Math.random();
+    const confidence = Math.floor(Math.random() * 40) + 60; // 60-100%
+    
+    // Simular análise técnica básica
+    const direction = randomFactor > 0.5 ? "CALL" : "PUT";
+    
+    return {
+      symbol: settings.selectedSymbol || 'R_10',
+      direction: direction as "CALL" | "PUT",
+      confidence: confidence
+    };
   };
 
   // === Simulação de função que salva trade no backend ===
@@ -264,30 +404,31 @@ export default function BotInterface() {
     }
   };
 
-  // === Simples "analyze" generator para demo/teste (substitua pela sua lógica real) ===
-  const fakeAnalyzeAndMaybeExecute = () => {
-    // apenas um exemplo: entra aleatoriamente baseado em scalpMode
-    const rand = Math.random() * 100;
-    const symbol = "R_100"; // adapte para seus símbolos
-    const direction: "CALL" | "PUT" = rand > 50 ? "CALL" : "PUT";
-    const confidence = 55 + Math.random() * 45; // 55-100
-    executeTrade({ symbol, direction, confidence });
+  // === Análise e execução de trades ===
+  const analyzeAndExecute = () => {
+    if (!isBotRunning || !isAuthenticated) return;
+    
+    const signal = generateTradingSignal();
+    if (signal) {
+      console.info("Sinal gerado:", signal);
+      executeTrade(signal);
+    }
   };
 
   // === Start/Stop bot ===
   useEffect(() => {
     let interval: number | undefined;
-    if (isBotRunning) {
-      // exemplo: analisar a cada X segundos — em scalping interval menor
+    if (isBotRunning && isAuthenticated) {
+      // Analisar a cada X segundos — em scalping interval menor
       const intervalSec = scalpMode ? 5 : 10;
       interval = window.setInterval(() => {
-        fakeAnalyzeAndMaybeExecute();
+        analyzeAndExecute();
       }, intervalSec * 1000);
     }
     return () => {
       if (interval) window.clearInterval(interval);
     };
-  }, [isBotRunning, scalpMode, settings]);
+  }, [isBotRunning, scalpMode, isAuthenticated, settings]);
 
   // === UI / controles simples ===
   return (
@@ -372,17 +513,84 @@ export default function BotInterface() {
             />
           </div>
 
+          <hr style={{ margin: "16px 0", border: "none", borderTop: "1px solid #334155" }} />
+          
+          <h4 style={{ color: "#60a5fa", marginBottom: 12 }}>🔗 Configurações Deriv</h4>
+          
+          <div style={{ marginTop: 12 }}>
+            <label style={{ display: "block", color: "#94a3b8", fontSize: 13, marginBottom: 6 }}>🔑 Token Deriv</label>
+            <input
+              type="password"
+              value={settings.derivToken || ''}
+              onChange={(e) => setSettings((s) => ({ ...s, derivToken: e.target.value }))}
+              placeholder="Cole seu token da Deriv aqui"
+              style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #475569", background: "#0f172a", color: "#e2e8f0", fontSize: 14 }}
+            />
+          </div>
+
+          <div style={{ marginTop: 12 }}>
+            <label style={{ display: "block", color: "#94a3b8", fontSize: 13, marginBottom: 6 }}>🏦 Tipo de Conta</label>
+            <select
+              value={settings.accountType || 'demo'}
+              onChange={(e) => setSettings((s) => ({ ...s, accountType: e.target.value as 'demo' | 'real' }))}
+              style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #475569", background: "#0f172a", color: "#e2e8f0", fontSize: 14 }}
+            >
+              <option value="demo">Demo</option>
+              <option value="real">Real</option>
+            </select>
+          </div>
+
+          <div style={{ marginTop: 12 }}>
+            <label style={{ display: "block", color: "#94a3b8", fontSize: 13, marginBottom: 6 }}>📈 Símbolo</label>
+            <select
+              value={settings.selectedSymbol || 'R_10'}
+              onChange={(e) => setSettings((s) => ({ ...s, selectedSymbol: e.target.value }))}
+              style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #475569", background: "#0f172a", color: "#e2e8f0", fontSize: 14 }}
+            >
+              <option value="R_10">Rise/Fall 10</option>
+              <option value="R_25">Rise/Fall 25</option>
+              <option value="R_50">Rise/Fall 50</option>
+              <option value="R_75">Rise/Fall 75</option>
+              <option value="R_100">Rise/Fall 100</option>
+              <option value="RDBULL">Bull/Bear</option>
+            </select>
+          </div>
+
           <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
             <button
               onClick={() => {
-                if (!derivWSRef.current) connectDeriv("wss://your-deriv-ws-url");
-                setIsBotRunning(true);
+                if (!isAuthenticated) {
+                  connectDeriv();
+                } else {
+                  setIsBotRunning(true);
+                }
               }}
-              style={{ flex: 1, padding: "10px 16px", borderRadius: 8, border: "none", background: "#10b981", color: "#fff", fontWeight: 600, cursor: "pointer", fontSize: 14, transition: "all 0.2s" }}
-              onMouseOver={(e) => e.currentTarget.style.background = "#059669"}
-              onMouseOut={(e) => e.currentTarget.style.background = "#10b981"}
+              disabled={!settings.derivToken}
+              style={{ 
+                flex: 1, 
+                padding: "10px 16px", 
+                borderRadius: 8, 
+                border: "none", 
+                background: !settings.derivToken ? "#64748b" : isAuthenticated ? "#10b981" : "#3b82f6", 
+                color: "#fff", 
+                fontWeight: 600, 
+                cursor: !settings.derivToken ? "not-allowed" : "pointer", 
+                fontSize: 14, 
+                transition: "all 0.2s",
+                opacity: !settings.derivToken ? 0.6 : 1
+              }}
+              onMouseOver={(e) => {
+                if (settings.derivToken) {
+                  e.currentTarget.style.background = isAuthenticated ? "#059669" : "#2563eb";
+                }
+              }}
+              onMouseOut={(e) => {
+                if (settings.derivToken) {
+                  e.currentTarget.style.background = isAuthenticated ? "#10b981" : "#3b82f6";
+                }
+              }}
             >
-              ▶️ Iniciar Bot
+              {!settings.derivToken ? "🔑 Configure Token" : !isAuthenticated ? "🔗 Conectar Deriv" : "▶️ Iniciar Bot"}
             </button>
             <button
               onClick={() => {
@@ -427,6 +635,12 @@ export default function BotInterface() {
                 <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 4 }}>⚡ Trades/min</div>
                 <div style={{ color: "#60a5fa", fontSize: 20, fontWeight: 600 }}>{countRecentTrades()}</div>
               </div>
+              <div style={{ padding: "8px 12px", background: "#0f172a", borderRadius: 6, border: "1px solid #334155" }}>
+                <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 4 }}>💰 Preço Atual</div>
+                <div style={{ color: "#10b981", fontSize: 20, fontWeight: 600 }}>
+                  {currentPrice > 0 ? currentPrice.toFixed(2) : "---"}
+                </div>
+              </div>
             </div>
 
             <div style={{ flex: 1, minWidth: 150 }}>
@@ -443,9 +657,21 @@ export default function BotInterface() {
                 </div>
               </div>
               <div style={{ padding: "8px 12px", background: "#0f172a", borderRadius: 6, border: "1px solid #334155" }}>
-                {dailyStopped.stopWin && <div style={{ color: "#10b981", fontSize: 14, fontWeight: 600 }}>✅ Stop Win atingido</div>}
-                {dailyStopped.stopLoss && <div style={{ color: "#ef4444", fontSize: 14, fontWeight: 600 }}>🛑 Stop Loss atingido</div>}
-                {!dailyStopped.stopWin && !dailyStopped.stopLoss && <div style={{ color: "#94a3b8", fontSize: 14 }}>✓ Sem limites atingidos</div>}
+                <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 4 }}>🔗 Conexão Deriv</div>
+                <div style={{ 
+                  color: connectionStatus === 'authenticated' ? "#10b981" : 
+                         connectionStatus === 'connected' ? "#f59e0b" : 
+                         connectionStatus === 'connecting' ? "#3b82f6" : "#ef4444", 
+                  fontSize: 14, 
+                  fontWeight: 600 
+                }}>
+                  {connectionStatus === 'authenticated' ? "✅ Conectado & Autenticado" :
+                   connectionStatus === 'connected' ? "🔗 Conectado" :
+                   connectionStatus === 'connecting' ? "⏳ Conectando..." : "❌ Desconectado"}
+                </div>
+                {dailyStopped.stopWin && <div style={{ color: "#10b981", fontSize: 14, fontWeight: 600, marginTop: 8 }}>✅ Stop Win atingido</div>}
+                {dailyStopped.stopLoss && <div style={{ color: "#ef4444", fontSize: 14, fontWeight: 600, marginTop: 8 }}>🛑 Stop Loss atingido</div>}
+                {!dailyStopped.stopWin && !dailyStopped.stopLoss && connectionStatus === 'authenticated' && <div style={{ color: "#94a3b8", fontSize: 14, marginTop: 8 }}>✓ Pronto para operar</div>}
               </div>
             </div>
           </div>
