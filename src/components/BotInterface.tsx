@@ -158,7 +158,7 @@ export default function BotInterface() {
     derivTokenReal: '',
     selectedTokenType: 'demo',
     selectedSymbol: 'R_10', // NOVO: Símbolo selecionado
-    mhiPeriods: 20,
+    mhiPeriods: 5,
     emaFast: 8,
     emaSlow: 18,
     rsiPeriods: 10,
@@ -1385,10 +1385,19 @@ export default function BotInterface() {
       const savedSettings = localStorage.getItem(settingsKey);
       if (savedSettings) {
         const parsedSettings = JSON.parse(savedSettings);
-        // Forçar confiança para 30 se estiver em 60
+        // Forçar migração de configurações antigas
+        let needsUpdate = false;
         if (parsedSettings.confidence === 60) {
           parsedSettings.confidence = 30;
+          needsUpdate = true;
+        }
+        if (parsedSettings.mhiPeriods > 10) {
+          parsedSettings.mhiPeriods = 5;
+          needsUpdate = true;
+        }
+        if (needsUpdate) {
           localStorage.setItem(settingsKey, JSON.stringify(parsedSettings));
+          console.log('🔄 Configurações migradas:', parsedSettings);
         }
         setSettings(parsedSettings);
       }
