@@ -28,11 +28,7 @@ import {
   Bell,
   Download,
   Upload,
-  RotateCcw,
-  Rocket,
-  TrendingDown,
-  Clock,
-  PieChart
+  RotateCcw
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
@@ -75,29 +71,10 @@ interface TradingSettings {
   useStopLoss: boolean;
   useTakeProfit: boolean;
   tradingHours: {
-    start: string;
-    end: string;
-  };
-  
-  // NOVAS CONFIGURAÇÕES DE SCALPING
-  scalpingMode: boolean;
-  takeProfitPercent: number;
-  stopLossPercent: number;
-  progressiveMartingale: boolean;
-  martingaleOnWin: boolean;
-  maxMartingaleSteps: number;
-  volumeFilter: boolean;
-  minVolume: number;
-  trendFilter: boolean;
-  reversalDetection: boolean;
-  quickCloseEnabled: boolean;
-  quickCloseProfit: number;
-  trailingStop: boolean;
-  trailingStopDistance: number;
-  dynamicStaking: boolean;
-  maxStakeMultiplier: number;
-  timeBasedExit: boolean;
-  maxTradeTime: number;
+  start: string;
+  end: string;
+}
+
 }
 
 // ===== ATIVOS DISPONÍVEIS =====
@@ -173,34 +150,15 @@ export default function BotInterface() {
   // ===== REFS =====
   const botContainerRef = useRef<HTMLDivElement>(null);
   
-  // ===== CONTROLE DE OPERAÇÕES AVANÇADO =====
+  // ===== CONTROLE DE OPERAÇÕES =====
   interface TradeQueueItem {
     signal: 'CALL' | 'PUT';
     price: number;
     analysis: TechnicalAnalysis;
-    martingaleStep: number;
-    parentTradeId?: string;
-  }
-  
-  interface ActiveTrade {
-    id: string;
-    signal: 'CALL' | 'PUT';
-    entryPrice: number;
-    currentPrice: number;
-    stake: number;
-    martingaleStep: number;
-    startTime: Date;
-    parentTradeId?: string;
-    takeProfitPrice: number;
-    stopLossPrice: number;
-    maxProfitReached: number;
-    status: 'open' | 'closing' | 'closed';
   }
   
   const [isTradeInProgress, setIsTradeInProgress] = useState(false);
   const [tradeQueue, setTradeQueue] = useState<TradeQueueItem[]>([]);
-  const [activeTrades, setActiveTrades] = useState<ActiveTrade[]>([]);
-  const [martingaleSequence, setMartingaleSequence] = useState<number>(0);
   const isInitialized = useRef(false);
   const priceChartRef = useRef<any>(null);
   const performanceChartRef = useRef<any>(null);
@@ -232,27 +190,7 @@ export default function BotInterface() {
     tradingHours: {
       start: '09:00',
       end: '18:00'
-    },
-    
-    // NOVAS CONFIGURAÇÕES
-    scalpingMode: true,
-    takeProfitPercent: 2, // 2% de lucro
-    stopLossPercent: 1,   // 1% de perda
-    progressiveMartingale: true,
-    martingaleOnWin: true, // Martingale no win para alavancar
-    maxMartingaleSteps: 3,
-    volumeFilter: true,
-    minVolume: 1000,
-    trendFilter: true,
-    reversalDetection: true,
-    quickCloseEnabled: true,
-    quickCloseProfit: 0.5, // Fechar rápido com 0.5% de lucro
-    trailingStop: false,
-    trailingStopDistance: 0.5,
-    dynamicStaking: true,
-    maxStakeMultiplier: 3,
-    timeBasedExit: true,
-    maxTradeTime: 60 // segundos
+    }
   });
 
   // ===== ESTADOS DO TELEGRAM =====
@@ -535,411 +473,6 @@ export default function BotInterface() {
     reason: string;
     strategy: string;
   }
-
-  // ===== FUNÇÕES DE SCALPING AVANÇADO =====
-  
-  // Função para calcular níveis de scalping
-  const calculateScalpingLevels = (entryPrice: number, signal: 'CALL' | 'PUT') => {
-    const takeProfitPrice = signal === 'CALL' 
-      ? entryPrice * (1 + settings.takeProfitPercent / 100)
-      : entryPrice * (1 - settings.takeProfitPercent / 100);
-    
-    const stopLossPrice = signal === 'CALL'
-      ? entryPrice * (1 - settings.stopLossPercent / 100)
-      : entryPrice * (1 + settings.stopLossPercent / 100);
-    
-    const quickClosePrice = signal === 'CALL'
-      ? entryPrice * (1 + settings.quickCloseProfit / 100)
-      : entryPrice * (1 - settings.quickCloseProfit / 100);
-    
-    return { takeProfitPrice, stopLossPrice, quickClosePrice };
-  };
-
-  // Martingale progressivo
-  const calculateProgressiveStake = (baseStake: number, martingaleStep: number, previousResult?: 'WIN' | 'LOSS') => {
-    if (!settings.progressiveMartingale) {
-      return baseStake;
-    }
-    
-    let multiplier = 1;
-    
-    if (previousResult === 'LOSS') {
-      // Martingale tradicional após perda
-      multiplier = Math.pow(settings.martingale, martingaleStep);
-    } else if (settings.martingaleOnWin && previousResult === 'WIN') {
-      // Martingale no win - aumenta aposta após vitória para alavancar
-      multiplier = 1 + (martingaleStep * 0.5); // Aumenta 50% por passo
-    }
-    
-    // Limitar pelo multiplicador máximo
-    multiplier = Math.min(multiplier, settings.maxStakeMultiplier);
-    
-    return baseStake * multiplier;
-  };
-
-  // Funções de cálculo técnico para scalping
-  const calculateVolatility = (prices: number[]): number => {
-    if (prices.length < 2) return 0;
-    const returns = [];
-    for (let i = 1; i < prices.length; i++) {
-      returns.push((prices[i] - prices[i-1]) / prices[i-1]);
-    }
-    const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
-    const variance = returns.reduce((a, b) => a + Math.pow(b - avgReturn, 2), 0) / returns.length;
-    return Math.sqrt(variance) * 100; // Volatilidade em percentual
-  };
-
-  const calculateTrendStrength = (prices: number[]): number => {
-    if (prices.length < 10) return 0;
-    const firstHalf = prices.slice(0, Math.floor(prices.length / 2));
-    const secondHalf = prices.slice(Math.floor(prices.length / 2));
-    const avgFirst = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
-    const avgSecond = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
-    return (avgSecond - avgFirst) / avgFirst;
-  };
-
-  const calculateMomentum = (prices: number[]): number => {
-    if (prices.length < 5) return 0;
-    const shortPeriod = prices.slice(-5);
-    const mediumPeriod = prices.slice(-10);
-    const shortAvg = shortPeriod.reduce((a, b) => a + b, 0) / shortPeriod.length;
-    const mediumAvg = mediumPeriod.reduce((a, b) => a + b, 0) / mediumPeriod.length;
-    return (shortAvg - mediumAvg) / mediumAvg;
-  };
-
-  const detectReversal = (prices: number[], type: 'bullish' | 'bearish'): boolean => {
-    if (prices.length < 10) return false;
-    
-    const recent = prices.slice(-5);
-    const previous = prices.slice(-10, -5);
-    
-    const recentTrend = (recent[recent.length-1] - recent[0]) / recent[0];
-    const previousTrend = (previous[previous.length-1] - previous[0]) / previous[0];
-    
-    if (type === 'bullish') {
-      return previousTrend < -0.01 && recentTrend > 0.01; // Reversão de baixa para alta
-    } else {
-      return previousTrend > 0.01 && recentTrend < -0.01; // Reversão de alta para baixa
-    }
-  };
-
-  // ===== FUNÇÕES DE ANÁLISE TÉCNICA (DO BACKUP) =====
-  
-  // Função principal de análise do backup
-  const analyzeSignals = (prices: any[], volumes: any[]) => {
-    try {
-      // ✅ VALIDAÇÃO ROBUSTA: Precisa de pelo menos 50 velas (4+ horas) para análise segura
-      const minRequiredCandles = Math.max(settings.mhiPeriods, settings.emaSlow, settings.rsiPeriods, 50);
-      if (!prices || prices.length < minRequiredCandles) {
-        console.log(`⚠️ Dados insuficientes: ${prices?.length || 0} velas (mínimo: ${minRequiredCandles})`);
-        return null;
-      }
-      
-      // ✅ ANÁLISE DE TENDÊNCIA DE 24H: Usar EMA 50 e EMA 200 para tendência REAL
-      const currentPrice = prices[prices.length - 1].close;
-      
-      // Calcular EMAs de longo prazo
-      const ema50 = calculateEMA(prices.slice(-50), 50);
-      const ema100 = calculateEMA(prices.slice(-100), 100);
-      const ema200 = prices.length >= 200 ? calculateEMA(prices.slice(-200), 200) : ema100;
-      
-      // Determinar tendência baseada em EMAs (mais confiável)
-      let trend24h = "NEUTRO";
-      let trend24hStrength = 0;
-      
-      if (ema50 > ema100 && ema100 > ema200 && currentPrice > ema50) {
-        trend24h = "ALTA";
-        trend24hStrength = ((ema50 - ema200) / ema200) * 100;
-      } else if (ema50 < ema100 && ema100 < ema200 && currentPrice < ema50) {
-        trend24h = "BAIXA";
-        trend24hStrength = ((ema200 - ema50) / ema200) * 100;
-      } else {
-        // Tendência indefinida ou lateral
-        trend24h = currentPrice > ema50 ? "ALTA" : "BAIXA";
-        trend24hStrength = Math.abs((currentPrice - ema50) / ema50) * 100;
-      }
-      
-      trend24hStrength = Math.abs(trend24hStrength);
-      
-      // ✅ NOVO: Calcular suporte e resistência de 24h
-      const suporteResistencia = calculateSupportResistance(prices);
-      
-      console.log(`📊 Tendência REAL (EMAs): ${trend24h} (${trend24hStrength.toFixed(2)}%) | EMA50: $${ema50.toFixed(4)} | Preço: $${currentPrice.toFixed(4)}`);
-      console.log(`🎯 Suporte: $${suporteResistencia.suporte.toFixed(4)} | Resistência: $${suporteResistencia.resistencia.toFixed(4)} (Força: ${suporteResistencia.forca})`);
-      
-      // ✅ MHI REATIVADO
-      const mhiData = prices.slice(-settings.mhiPeriods);
-      let highSum = 0, lowSum = 0;
-      mhiData.forEach(candle => {
-        highSum += candle.high;
-        lowSum += candle.low;
-      });
-      
-      const avgHigh = highSum / settings.mhiPeriods;
-      const avgLow = lowSum / settings.mhiPeriods;
-      
-      let mhiSignal = "NEUTRO";
-      if (currentPrice > avgHigh) {
-        mhiSignal = "CALL";
-      } else if (currentPrice < avgLow) {
-        mhiSignal = "PUT";
-      }
-      
-      // EMA Calculation
-      const emaFastValue = calculateEMA(prices, settings.emaFast);
-      const emaSlowValue = calculateEMA(prices, settings.emaSlow);
-      
-      let trendSignal = "NEUTRO";
-      if (emaFastValue > emaSlowValue && currentPrice > emaFastValue) {
-        trendSignal = "CALL";
-      } else if (emaFastValue < emaSlowValue && currentPrice < emaFastValue) {
-        trendSignal = "PUT";
-      }
-      
-      // ✅ RSI OTIMIZADO - Filtro inteligente
-      const rsi = calculateRSI(prices, settings.rsiPeriods);
-      let rsiSignal = "NEUTRO";
-      
-      // Para COMPRA: RSI entre 30-45 (saindo de oversold)
-      if (rsi >= 30 && rsi <= 45) {
-        rsiSignal = "CALL";
-      } 
-      // Para VENDA: RSI entre 55-70 (saindo de overbought)
-      else if (rsi >= 55 && rsi <= 70) {
-        rsiSignal = "PUT";
-      }
-      
-      // ✅ BOLLINGER OTIMIZADO - Confirmação de Timing
-      const bollingerBands = calculateBollingerBands(prices, 20, 2);
-      let bollingerSignal = "NEUTRO";
-      
-      if (bollingerBands) {
-        const { upper, middle, lower } = bollingerBands;
-        const pricePosition = (currentPrice - lower) / (upper - lower); // 0 = banda inferior, 1 = banda superior
-        
-        // ✅ COMPRA: Preço na banda inferior (0-20% da banda) + subindo
-        if (pricePosition <= 0.2 && currentPrice >= lower) {
-          bollingerSignal = "CALL";
-          console.log(`📊 Bollinger CALL: Preço tocando banda inferior (${(pricePosition * 100).toFixed(1)}% da banda)`);
-        }
-        // ✅ VENDA: Preço na banda superior (80-100% da banda) + descendo
-        else if (pricePosition >= 0.8 && currentPrice <= upper) {
-          bollingerSignal = "PUT";
-          console.log(`📊 Bollinger PUT: Preço tocando banda superior (${(pricePosition * 100).toFixed(1)}% da banda)`);
-        }
-        // ⚠️ NEUTRO: Preço no meio da banda
-        else {
-          console.log(`📊 Bollinger NEUTRO: Preço no meio da banda (${(pricePosition * 100).toFixed(1)}%)`);
-        }
-      }
-      
-      const signals: any = {
-        mhi: mhiSignal,
-        trend: trendSignal,
-        ema: currentPrice > emaFastValue ? "CALL" : "PUT",
-        rsi: rsiSignal,
-        bollinger: bollingerSignal,
-        fibonacci: "NEUTRO",
-        volume: "NEUTRO"
-      };
-      
-      // ✅ ESTRATÉGIA ROBUSTA - Incluir dados de tendência 24h + suporte/resistência
-      signals.trend24h = trend24h;
-      signals.trend24hStrength = trend24hStrength;
-      signals.suporteResistencia = suporteResistencia;
-      let finalSignal = calculateFinalSignal(signals);
-      
-      const confidence = calculateConfidence(signals, rsi);
-      
-      return {
-        signals: { ...signals, final: finalSignal },
-        confidence,
-        finalSignal,
-        fibonacciData: { signal: "NEUTRO", confidence: 0, reason: "Desabilitado" }
-      };
-    } catch (error) {
-      console.log(`❌ Erro no cálculo MHI: ${error.message}`);
-      return null;
-    }
-  };
-
-  // Função para calcular sinal final (do backup)
-  const calculateFinalSignal = (signals: any) => {
-    // ✅ ESTRATÉGIA ROBUSTA - RSI + Bollinger + Tendência 24h + Suporte/Resistência
-    const trend24h = signals.trend24h || "NEUTRO";
-    const trend24hStrength = signals.trend24hStrength || 0;
-    const sr = signals.suporteResistencia || { suporte: 0, resistencia: 0, forca: 0 };
-    
-    // ✅ ESTRATÉGIA MELHORADA: SEMPRE seguir a tendência REAL (baseada em EMAs)
-    // Só opera A FAVOR da tendência principal detectada pelas EMAs
-    
-    // 🔴 REGRA 1: Se tendência é BAIXA (EMA50 < EMA100 < EMA200), NUNCA fazer CALL
-    if (trend24h === "BAIXA" && trend24hStrength >= 0.02) {
-      // Só permite PUT se RSI ou Bollinger confirmarem
-      if (signals.rsi === "PUT" || signals.bollinger === "PUT") {
-        console.log(`✅ PUT aprovado: A FAVOR da tendência BAIXA (${trend24hStrength.toFixed(2)}%) + RSI(${signals.rsi}) BB(${signals.bollinger})`);
-        return "PUT";
-      } else {
-        console.log(`⚠️ Operação bloqueada: Tendência BAIXA (${trend24hStrength.toFixed(2)}%), mas indicadores não confirmam PUT. Aguardando...`);
-        return "NEUTRO";
-      }
-    }
-    
-    // 🟢 REGRA 2: Se tendência é ALTA (EMA50 > EMA100 > EMA200), NUNCA fazer PUT
-    if (trend24h === "ALTA" && trend24hStrength >= 0.02) {
-      // Só permite CALL se RSI ou Bollinger confirmarem
-      if (signals.rsi === "CALL" || signals.bollinger === "CALL") {
-        console.log(`✅ CALL aprovado: A FAVOR da tendência ALTA (${trend24hStrength.toFixed(2)}%) + RSI(${signals.rsi}) BB(${signals.bollinger})`);
-        return "CALL";
-      } else {
-        console.log(`⚠️ Operação bloqueada: Tendência ALTA (${trend24hStrength.toFixed(2)}%), mas indicadores não confirmam CALL. Aguardando...`);
-        return "NEUTRO";
-      }
-    }
-    
-    // 🟡 REGRA 3: Se tendência é extremamente LATERAL/FRACA (< 0.05%), ser mais cauteloso
-    if (trend24hStrength < 0.02) {
-      // ✅ MHI + RSI para confirmação dupla em mercado lateral
-      if (signals.mhi === "CALL" && signals.rsi === "CALL") {
-        console.log(`✅ CALL aprovado em mercado lateral: MHI + RSI confirmam`);
-        return "CALL";
-      } else if (signals.mhi === "PUT" && signals.rsi === "PUT") {
-        console.log(`✅ PUT aprovado em mercado lateral: MHI + RSI confirmam`);
-        return "PUT";
-      } else {
-        console.log(`⚠️ Mercado MUITO LATERAL detectado (${trend24hStrength.toFixed(3)}%). Aguardando confirmação dupla MHI + RSI...`);
-        return "NEUTRO";
-      }
-    }
-    
-    console.log(`⏸️ Nenhum sinal válido: Aguardando condições favoráveis...`);
-    return "NEUTRO";
-  };
-
-  // Função para calcular confiança (do backup)
-  const calculateConfidence = (signals: any, rsi: number) => {
-    let confidence = 50; // Base de 50%
-    
-    // ✅ CONFIANÇA SIMPLES - RSI + Bollinger
-    if (signals.rsi !== "NEUTRO") confidence += 20;
-    if (signals.bollinger !== "NEUTRO") confidence += 20;
-    
-    // ✅ BONUS SE AMBOS CONCORDAM
-    if (signals.rsi === signals.bollinger && signals.rsi !== "NEUTRO") {
-      confidence += 10; // +10% quando RSI e Bollinger concordam
-    }
-    
-    return Math.min(95, confidence);
-  };
-
-  // Função para calcular Bollinger Bands (do backup)
-  const calculateBollingerBands = (prices: any[], period = 20, stdDev = 2) => {
-    if (prices.length < period) return null;
-    
-    try {
-      // Pegar os últimos 'period' preços de fechamento
-      const recentPrices = prices.slice(-period).map(candle => candle.close);
-      
-      // Calcular média móvel simples (SMA)
-      const sma = recentPrices.reduce((sum, price) => sum + price, 0) / period;
-      
-      // Calcular desvio padrão
-      const variance = recentPrices.reduce((sum, price) => {
-        return sum + Math.pow(price - sma, 2);
-      }, 0) / period;
-      
-      const standardDeviation = Math.sqrt(variance);
-      
-      // Calcular as bandas
-      const upperBand = sma + (stdDev * standardDeviation);
-      const middleBand = sma;
-      const lowerBand = sma - (stdDev * standardDeviation);
-      
-      return {
-        upper: upperBand,
-        middle: middleBand,
-        lower: lowerBand,
-        sma: sma,
-        stdDev: standardDeviation
-      };
-    } catch (error) {
-      console.error('Erro ao calcular Bollinger Bands:', error);
-      return null;
-    }
-  };
-
-  // Função para calcular suporte e resistência (do backup)
-  const calculateSupportResistance = (prices: any[]) => {
-    try {
-      if (!prices || prices.length < 50) {
-        return { suporte: 0, resistencia: 0, forca: 0 };
-      }
-      
-      // Pegar dados das últimas 24h (288 velas de 5min)
-      const last24h = prices.slice(-288);
-      
-      // Encontrar máximos e mínimos locais
-      const highs = [];
-      const lows = [];
-      
-      for (let i = 2; i < last24h.length - 2; i++) {
-        const current = last24h[i];
-        const prev2 = last24h[i-2];
-        const prev1 = last24h[i-1];
-        const next1 = last24h[i+1];
-        const next2 = last24h[i+2];
-        
-        // Máximo local (resistência)
-        if (current.high > prev2.high && current.high > prev1.high && 
-            current.high > next1.high && current.high > next2.high) {
-          highs.push({ price: current.high, timestamp: current.timestamp });
-        }
-        
-        // Mínimo local (suporte)
-        if (current.low < prev2.low && current.low < prev1.low && 
-            current.low < next1.low && current.low < next2.low) {
-          lows.push({ price: current.low, timestamp: current.timestamp });
-        }
-      }
-      
-      // Calcular níveis de suporte e resistência
-      const resistencia = highs.length > 0 ? Math.max(...highs.map(h => h.price)) : 0;
-      const suporte = lows.length > 0 ? Math.min(...lows.map(l => l.price)) : 0;
-      const forca = highs.length + lows.length; // Força baseada no número de toques
-      
-      return { suporte, resistencia, forca };
-    } catch (error) {
-      console.error('Erro ao calcular suporte/resistência:', error);
-      return { suporte: 0, resistencia: 0, forca: 0 };
-    }
-  };
-
-  // Função para calcular EMA (do backup)
-  const calculateEMA = (prices: any[], period: number) => {
-    if (prices.length < period) return 0;
-    const multiplier = 2 / (period + 1);
-    let ema = prices.slice(0, period).reduce((sum, candle) => sum + candle.close, 0) / period;
-    for (let i = period; i < prices.length; i++) {
-      ema = (prices[i].close - ema) * multiplier + ema;
-    }
-    return ema;
-  };
-
-  // Função para calcular RSI (do backup)
-  const calculateRSI = (prices: any[], period: number) => {
-    if (prices.length <= period) return 50;
-    let gains = 0, losses = 0;
-    for (let i = 1; i <= period; i++) {
-      const change = prices[prices.length - i].close - prices[prices.length - i - 1].close;
-      if (change > 0) gains += change;
-      else losses -= change;
-    }
-    const avgGain = gains / period;
-    const avgLoss = losses / period;
-    if (avgLoss === 0) return 100;
-    const rs = avgGain / avgLoss;
-    return 100 - (100 / (1 + rs));
-  };
 
   // ===== ESTRATÉGIA MARTINGALE INTELIGENTE =====
   const smartMartingaleStrategy = (prices: number[]): StrategyResult => {
@@ -1282,11 +815,11 @@ export default function BotInterface() {
       mhiPeriods: settings.mhiPeriods
     });
     
-    if (!priceChartRef.current || priceChartRef.current.data.datasets[0].data.length < 50) {
+    if (!priceChartRef.current || priceChartRef.current.data.datasets[0].data.length < 10) {
       return {
         signal: 'HOLD',
         confidence: 0,
-        reason: 'Dados insuficientes para análise (mínimo 50 velas)',
+        reason: 'Dados insuficientes para análise',
         indicators: {
           mhi: { signal: 'HOLD', confidence: 0 },
           ema: { signal: 'HOLD', confidence: 0 },
@@ -1296,55 +829,71 @@ export default function BotInterface() {
       };
     }
 
-    // Converter dados do chart para formato do backup
-    const chartData = priceChartRef.current.data.datasets[0].data;
-    const prices = chartData.map((point: any, index: number) => ({
-      close: point.y,
-      high: point.y + (Math.random() - 0.5) * 0.001, // Simular high/low
-      low: point.y - (Math.random() - 0.5) * 0.001,
-      timestamp: Date.now() - (chartData.length - index) * 300000 // 5min intervals
-    }));
+    const prices = priceChartRef.current.data.datasets[0].data.map((point: any) => point.y);
     
-    // Usar estratégia do backup
-    const analysis = analyzeSignals(prices, []);
+    // Executar todas as estratégias
+    const martingaleResult = smartMartingaleStrategy(prices);
+    const mhiResult = advancedMHIStrategy(prices);
+    const emaResult = advancedEMAStrategy(prices);
+    const rsiResult = advancedRSIStrategy(prices);
     
-    if (!analysis) {
-      return {
+    console.log('📊 Resultados das estratégias:', {
+      martingale: martingaleResult,
+      mhi: mhiResult,
+      ema: emaResult,
+      rsi: rsiResult
+    });
+    
+    let finalResult: StrategyResult;
+    
+    // Selecionar estratégia baseada na configuração
+    switch (settings.strategy) {
+      case 'martingale':
+        finalResult = fuseStrategies([martingaleResult, mhiResult, emaResult, rsiResult]);
+        break;
+      case 'mhi':
+        finalResult = mhiResult;
+        break;
+      case 'ema':
+        finalResult = emaResult;
+        break;
+      case 'rsi':
+        finalResult = rsiResult;
+        break;
+      default:
+        finalResult = fuseStrategies([martingaleResult, mhiResult, emaResult, rsiResult]);
+    }
+    
+    // Aplicar filtro de confiança mínima
+    if (finalResult.confidence < settings.confidence) {
+      finalResult = {
         signal: 'HOLD',
-        confidence: 0,
-        reason: 'Erro na análise técnica',
-        indicators: {
-          mhi: { signal: 'HOLD', confidence: 0 },
-          ema: { signal: 'HOLD', confidence: 0 },
-          rsi: { signal: 'HOLD', confidence: 0 },
-          trend: { signal: 'HOLD', confidence: 0 }
-        }
+        confidence: finalResult.confidence,
+        reason: `${finalResult.reason} (Confiança ${finalResult.confidence.toFixed(1)}% < ${settings.confidence}%)`,
+        strategy: finalResult.strategy
       };
     }
     
-    // Converter resultado do backup para formato atual
-    const signal = analysis.finalSignal === 'CALL' ? 'CALL' : analysis.finalSignal === 'PUT' ? 'PUT' : 'HOLD';
-    
     return {
-      signal: signal as 'CALL' | 'PUT' | 'HOLD',
-      confidence: analysis.confidence,
-      reason: `Estratégia do backup: ${analysis.signals.final}`,
+      signal: finalResult.signal,
+      confidence: finalResult.confidence,
+      reason: finalResult.reason,
       indicators: {
         mhi: { 
-          signal: analysis.signals.mhi === 'CALL' ? 'CALL' : analysis.signals.mhi === 'PUT' ? 'PUT' : 'HOLD', 
-          confidence: analysis.confidence * 0.8
+          signal: mhiResult.signal, 
+          confidence: mhiResult.confidence 
         },
         ema: { 
-          signal: analysis.signals.ema === 'CALL' ? 'CALL' : analysis.signals.ema === 'PUT' ? 'PUT' : 'HOLD', 
-          confidence: analysis.confidence * 0.7
+          signal: emaResult.signal, 
+          confidence: emaResult.confidence 
         },
         rsi: { 
-          signal: analysis.signals.rsi === 'CALL' ? 'CALL' : analysis.signals.rsi === 'PUT' ? 'PUT' : 'HOLD', 
-          confidence: analysis.confidence * 0.9
+          signal: rsiResult.signal, 
+          confidence: rsiResult.confidence 
         },
         trend: { 
-          signal: analysis.signals.trend === 'CALL' ? 'CALL' : analysis.signals.trend === 'PUT' ? 'PUT' : 'HOLD', 
-          confidence: analysis.confidence * 0.6
+          signal: martingaleResult.signal, 
+          confidence: martingaleResult.confidence 
         }
       }
     };
@@ -1451,17 +1000,17 @@ export default function BotInterface() {
       
       return;
     }
-
+    
     // Executar trade apenas se sinal for válido, confiança suficiente e gestão de risco OK
     if (analysis.signal !== 'HOLD' && analysis.confidence >= settings.confidence) {
       // Adicionar à fila de operações se não houver operação em andamento
       if (!isTradeInProgress) {
         console.log(`📋 Adicionando trade à fila: ${analysis.signal} a $${currentPrice.toFixed(4)}`);
-        setTradeQueue(prev => [...prev, {signal: analysis.signal as 'CALL' | 'PUT', price: currentPrice, analysis, martingaleStep: 0}]);
+        setTradeQueue(prev => [...prev, {signal: analysis.signal as 'CALL' | 'PUT', price: currentPrice, analysis}]);
         processTradeQueue();
       } else {
         console.log(`⏳ Operação em andamento, trade adicionado à fila: ${analysis.signal}`);
-        setTradeQueue(prev => [...prev, {signal: analysis.signal as 'CALL' | 'PUT', price: currentPrice, analysis, martingaleStep: 0}]);
+        setTradeQueue(prev => [...prev, {signal: analysis.signal as 'CALL' | 'PUT', price: currentPrice, analysis}]);
       }
     }
   };
@@ -1677,7 +1226,7 @@ export default function BotInterface() {
           
           // Marcar operação como concluída e processar próxima da fila
           setIsTradeInProgress(false);
-    setTimeout(() => {
+          setTimeout(() => {
             processTradeQueue();
           }, 1000);
           return;
@@ -1747,14 +1296,14 @@ export default function BotInterface() {
                   timestamp: new Date(),
                   analysis
                 };
-      
-      console.log(`💰 Trade ${result}: ${signal} - Lucro: $${profit.toFixed(2)}`);
-      
-      // Atualizar interface com resultado
+                
+                console.log(`💰 Trade ${result}: ${signal} - Lucro: $${profit.toFixed(2)}`);
+                
+                // Atualizar interface com resultado
                 const tradeEmoji = result === 'WIN' ? '🎉' : '😞';
                 const profitEmoji = profit > 0 ? '💰' : '💸';
                 
-      toast({
+                toast({
                   title: `${tradeEmoji} Trade ${result}`,
                   description: `${signal} - ${profitEmoji} $${profit.toFixed(2)} | 🎯 ${analysis.confidence.toFixed(1)}% | 📊 ${settings.strategy.toUpperCase()}`,
                   variant: result === 'WIN' ? "default" : "destructive",
@@ -2189,9 +1738,9 @@ export default function BotInterface() {
       }
       
       if (!loadedSettings) {
-      const settingsKey = user?.id ? `mvb_bot_settings_${user.id}` : 'mvb_bot_settings_temp';
-      const savedSettings = localStorage.getItem(settingsKey);
-      if (savedSettings) {
+        const settingsKey = user?.id ? `mvb_bot_settings_${user.id}` : 'mvb_bot_settings_temp';
+        const savedSettings = localStorage.getItem(settingsKey);
+        if (savedSettings) {
           loadedSettings = JSON.parse(savedSettings);
         }
       }
@@ -2308,27 +1857,7 @@ export default function BotInterface() {
       maxRiskPerTrade: 10,
       useStopLoss: true,
       useTakeProfit: true,
-      tradingHours: { start: '00:00', end: '23:59' },
-      
-      // NOVAS CONFIGURAÇÕES
-      scalpingMode: true,
-      takeProfitPercent: 2,
-      stopLossPercent: 1,
-      progressiveMartingale: true,
-      martingaleOnWin: true,
-      maxMartingaleSteps: 3,
-      volumeFilter: true,
-      minVolume: 1000,
-      trendFilter: true,
-      reversalDetection: true,
-      quickCloseEnabled: true,
-      quickCloseProfit: 0.5,
-      trailingStop: false,
-      trailingStopDistance: 0.5,
-      dynamicStaking: true,
-      maxStakeMultiplier: 3,
-      timeBasedExit: true,
-      maxTradeTime: 60
+      tradingHours: { start: '00:00', end: '23:59' }
     };
     
     setSettings(defaultSettings);
@@ -2686,7 +2215,7 @@ export default function BotInterface() {
       <Card className="shadow-2xl border-slate-700 bg-slate-800">
         <CardContent className="p-2 sm:p-6">
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-4 sm:mb-6 h-10 sm:h-12 bg-slate-700">
+            <TabsList className="grid w-full grid-cols-3 mb-4 sm:mb-6 h-10 sm:h-12 bg-slate-700">
               <TabsTrigger 
                 value="trading" 
                 className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 data-[state=active]:bg-blue-600"
@@ -2694,13 +2223,6 @@ export default function BotInterface() {
                 <Play className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span className="hidden sm:inline">Trading</span>
                 <span className="sm:hidden">Trade</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="scalping" 
-                className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 data-[state=active]:bg-green-600"
-              >
-                <Rocket className="h-3 w-3 sm:h-4 sm:w-4" />
-                Scalping
               </TabsTrigger>
               <TabsTrigger 
                 value="analytics" 
@@ -2835,13 +2357,13 @@ export default function BotInterface() {
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div>
-                  <CardTitle className="text-lg text-white flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" />
-                    Gráfico em Tempo Real
-                  </CardTitle>
-                  <CardDescription className="text-gray-400">
-                    Preços atualizados em tempo real
-                  </CardDescription>
+                      <CardTitle className="text-lg text-white flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5" />
+                        Gráfico em Tempo Real
+                      </CardTitle>
+                      <CardDescription className="text-gray-400">
+                        Preços atualizados em tempo real
+                      </CardDescription>
                     </div>
                     <div className="flex gap-2">
                       <Button
@@ -3049,149 +2571,6 @@ export default function BotInterface() {
               <div ref={botContainerRef} className="w-full" />
             </TabsContent>
 
-            {/* NOVA ABA SCALPING */}
-            <TabsContent value="scalping" className="space-y-4">
-              {/* Status do Scalping */}
-              <Card className="border-slate-600 bg-slate-750">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg text-white flex items-center gap-2">
-                    <Rocket className="h-5 w-5" />
-                    Status do Scalping
-                  </CardTitle>
-                  <CardDescription className="text-gray-400">
-                    Monitoramento em tempo real das operações de scalping
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div className="text-center p-4 bg-slate-700 rounded-lg">
-                      <div className="text-2xl font-bold text-white">
-                        {activeTrades.length}
-                      </div>
-                      <div className="text-sm text-gray-400">Trades Ativos</div>
-                    </div>
-                    <div className="text-center p-4 bg-slate-700 rounded-lg">
-                      <div className="text-2xl font-bold text-white">
-                        {tradeQueue.length}
-                      </div>
-                      <div className="text-sm text-gray-400">Na Fila</div>
-                    </div>
-                    <div className="text-center p-4 bg-slate-700 rounded-lg">
-                      <div className="text-2xl font-bold text-green-400">
-                        {settings.takeProfitPercent}%
-                      </div>
-                      <div className="text-sm text-gray-400">Take Profit</div>
-                    </div>
-                    <div className="text-center p-4 bg-slate-700 rounded-lg">
-                      <div className="text-2xl font-bold text-red-400">
-                        {settings.stopLossPercent}%
-                      </div>
-                      <div className="text-sm text-gray-400">Stop Loss</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Trades Ativos */}
-              <Card className="border-slate-600 bg-slate-750">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg text-white flex items-center gap-2">
-                    <Activity className="h-5 w-5" />
-                    Trades Ativos
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {activeTrades.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>Nenhum trade ativo no momento</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {activeTrades.map(trade => (
-                        <div key={trade.id} className="p-4 bg-slate-700 rounded-lg border border-slate-600">
-                          <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                              <div className={`text-2xl ${
-                                trade.signal === 'CALL' ? 'text-green-400' : 'text-red-400'
-                              }`}>
-                                {trade.signal === 'CALL' ? '📈' : '📉'}
-                              </div>
-                              <div>
-                                <div className="font-semibold text-white">{trade.signal}</div>
-                                <div className="text-sm text-gray-400">
-                                  Entrada: ${trade.entryPrice.toFixed(4)}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className={`text-lg font-bold ${
-                                trade.currentPrice > trade.entryPrice ? 'text-green-400' : 'text-red-400'
-                              }`}>
-                                ${trade.currentPrice.toFixed(4)}
-                              </div>
-                              <div className="text-sm text-gray-400">
-                                Stake: ${trade.stake.toFixed(2)}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* Barra de Progresso */}
-                          <div className="mt-3">
-                            <div className="flex justify-between text-sm text-gray-400 mb-1">
-                              <span>Stop Loss</span>
-                              <span>Take Profit</span>
-                            </div>
-                            <div className="w-full bg-slate-600 rounded-full h-2">
-                              <div 
-                                className="h-2 rounded-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-400"
-                                style={{ 
-                                  width: '100%'
-                                }}
-                              ></div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Indicadores de Scalping */}
-              <Card className="border-slate-600 bg-slate-750">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg text-white flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" />
-                    Indicadores de Scalping
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                    <div className="text-center p-4 bg-slate-700 rounded-lg">
-                      <div className="text-lg font-bold text-blue-400" id="momentum-indicator">-</div>
-                      <div className="text-sm text-gray-400">Momentum</div>
-                      <div className="text-xs text-gray-500" id="momentum-confidence">0%</div>
-                    </div>
-                    <div className="text-center p-4 bg-slate-700 rounded-lg">
-                      <div className="text-lg font-bold text-purple-400" id="volume-indicator">-</div>
-                      <div className="text-sm text-gray-400">Volume</div>
-                      <div className="text-xs text-gray-500" id="volume-confidence">0%</div>
-                    </div>
-                    <div className="text-center p-4 bg-slate-700 rounded-lg">
-                      <div className="text-lg font-bold text-orange-400">
-                        {settings.scalpingMode ? '✅' : '❌'}
-                      </div>
-                      <div className="text-sm text-gray-400">Modo Scalping</div>
-                      <div className="text-xs text-gray-500">
-                        {settings.scalpingMode ? 'Ativo' : 'Inativo'}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
             {/* ABA ANALYTICS */}
             <TabsContent value="analytics" className="space-y-4">
               {/* Filtros */}
@@ -3343,197 +2722,6 @@ export default function BotInterface() {
 
             {/* ABA CONFIGURAÇÕES */}
             <TabsContent value="settings" className="space-y-4">
-              {/* Configurações de Scalping */}
-              <Card className="border-slate-600 bg-slate-750">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-white">
-                    <Rocket className="h-5 w-5" />
-                    Configurações de Scalping
-                  </CardTitle>
-                  <CardDescription className="text-gray-400">
-                    Configure os parâmetros avançados de scalping
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="scalpingMode" className="text-sm font-medium text-gray-300">
-                        Modo Scalping
-                      </Label>
-                      <Select
-                        value={settings.scalpingMode ? 'true' : 'false'}
-                        onValueChange={(value) => updateSetting('scalpingMode', value === 'true')}
-                      >
-                        <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-slate-700 border-slate-600">
-                          <SelectItem value="true">✅ Ativado</SelectItem>
-                          <SelectItem value="false">❌ Desativado</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="takeProfitPercent" className="text-sm font-medium text-gray-300">
-                        Take Profit (%)
-                      </Label>
-                      <Input
-                        id="takeProfitPercent"
-                        type="number"
-                        value={settings.takeProfitPercent}
-                        onChange={(e) => updateSetting('takeProfitPercent', parseFloat(e.target.value) || 2)}
-                        className="bg-slate-700 border-slate-600 text-white"
-                        min="0.1"
-                        max="10"
-                        step="0.1"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="stopLossPercent" className="text-sm font-medium text-gray-300">
-                        Stop Loss (%)
-                      </Label>
-                      <Input
-                        id="stopLossPercent"
-                        type="number"
-                        value={settings.stopLossPercent}
-                        onChange={(e) => updateSetting('stopLossPercent', parseFloat(e.target.value) || 1)}
-                        className="bg-slate-700 border-slate-600 text-white"
-                        min="0.1"
-                        max="5"
-                        step="0.1"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="quickCloseProfit" className="text-sm font-medium text-gray-300">
-                        Quick Close (%)
-                      </Label>
-                      <Input
-                        id="quickCloseProfit"
-                        type="number"
-                        value={settings.quickCloseProfit}
-                        onChange={(e) => updateSetting('quickCloseProfit', parseFloat(e.target.value) || 0.5)}
-                        className="bg-slate-700 border-slate-600 text-white"
-                        min="0.1"
-                        max="5"
-                        step="0.1"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="martingaleOnWin" className="text-sm font-medium text-gray-300">
-                        Martingale no Win
-                      </Label>
-                      <Select
-                        value={settings.martingaleOnWin ? 'true' : 'false'}
-                        onValueChange={(value) => updateSetting('martingaleOnWin', value === 'true')}
-                      >
-                        <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-slate-700 border-slate-600">
-                          <SelectItem value="true">✅ Ativado</SelectItem>
-                          <SelectItem value="false">❌ Desativado</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="maxMartingaleSteps" className="text-sm font-medium text-gray-300">
-                        Máx. Martingale Steps
-                      </Label>
-                      <Input
-                        id="maxMartingaleSteps"
-                        type="number"
-                        value={settings.maxMartingaleSteps}
-                        onChange={(e) => updateSetting('maxMartingaleSteps', parseInt(e.target.value) || 3)}
-                        className="bg-slate-700 border-slate-600 text-white"
-                        min="1"
-                        max="10"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Filtros Avançados */}
-                  <div className="mt-6 p-4 bg-slate-800 rounded-lg border border-slate-600">
-                    <h4 className="text-sm font-medium text-white mb-4">🔧 Filtros Avançados</h4>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="volumeFilter"
-                          checked={settings.volumeFilter}
-                          onChange={(e) => updateSetting('volumeFilter', e.target.checked)}
-                          className="rounded bg-slate-700 border-slate-600 text-blue-500 focus:ring-blue-500"
-                        />
-                        <Label htmlFor="volumeFilter" className="text-sm font-medium text-gray-300">
-                          Filtro de Volume
-                        </Label>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="trendFilter"
-                          checked={settings.trendFilter}
-                          onChange={(e) => updateSetting('trendFilter', e.target.checked)}
-                          className="rounded bg-slate-700 border-slate-600 text-blue-500 focus:ring-blue-500"
-                        />
-                        <Label htmlFor="trendFilter" className="text-sm font-medium text-gray-300">
-                          Filtro de Tendência
-                        </Label>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="reversalDetection"
-                          checked={settings.reversalDetection}
-                          onChange={(e) => updateSetting('reversalDetection', e.target.checked)}
-                          className="rounded bg-slate-700 border-slate-600 text-blue-500 focus:ring-blue-500"
-                        />
-                        <Label htmlFor="reversalDetection" className="text-sm font-medium text-gray-300">
-                          Detecção de Reversão
-                        </Label>
-                      </div>
-                    </div>
-
-                    {settings.volumeFilter && (
-                      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="minVolume" className="text-sm font-medium text-gray-300">
-                            Volume Mínimo
-                          </Label>
-                          <Input
-                            id="minVolume"
-                            type="number"
-                            value={settings.minVolume}
-                            onChange={(e) => updateSetting('minVolume', parseInt(e.target.value) || 1000)}
-                            className="bg-slate-700 border-slate-600 text-white"
-                            min="100"
-                            step="100"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-4">
-                    <Button onClick={resetSettings} variant="outline" className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white">
-                      <RotateCcw className="h-4 w-4 mr-2" />
-                      Resetar
-                    </Button>
-                    <Button onClick={saveSettings} className="bg-blue-600 hover:bg-blue-700">
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Salvar Configurações
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
               {/* Configurações de Trading */}
               <Card className="border-slate-600 bg-slate-750">
                 <CardHeader>
