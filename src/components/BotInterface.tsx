@@ -66,6 +66,15 @@ interface TradingSettings {
   rsiPeriods: number;
   autoCloseTime: number;
   autoCloseProfit: number;
+  minConfidence: number;
+  maxRiskPerTrade: number;
+  useStopLoss: boolean;
+  useTakeProfit: boolean;
+  tradingHours: {
+  start: string;
+  end: string;
+}
+
 }
 
 // ===== ATIVOS DISPONÍVEIS =====
@@ -163,7 +172,15 @@ export default function BotInterface() {
     emaSlow: 18,
     rsiPeriods: 10,
     autoCloseTime: 30,
-    autoCloseProfit: 20
+    autoCloseProfit: 20,
+    minConfidence: 30,
+    maxRiskPerTrade: 10,
+    useStopLoss: true,
+    useTakeProfit: true,
+    tradingHours: {
+      start: '09:00',
+      end: '18:00'
+    }
   });
 
   // ===== ESTADOS DO TELEGRAM =====
@@ -439,143 +456,348 @@ export default function BotInterface() {
     };
   }
 
-  // ===== ANÁLISE TÉCNICA MHI (MARTINGALE HORÁRIO INTELIGENTE) =====
-  const analyzeMHI = (prices: number[]): { signal: string; confidence: number } => {
-    if (prices.length < settings.mhiPeriods) {
-      return { signal: 'HOLD', confidence: 0 };
-    }
+  // ===== SISTEMA DE ESTRATÉGIAS PROFISSIONAIS =====
+  interface StrategyResult {
+    signal: 'CALL' | 'PUT' | 'HOLD';
+    confidence: number;
+    reason: string;
+    strategy: string;
+  }
 
-    const recentPrices = prices.slice(-settings.mhiPeriods);
-    const currentPrice = recentPrices[recentPrices.length - 1];
-    const previousPrice = recentPrices[recentPrices.length - 2];
-    
-    // Análise de padrões MHI
-    const priceChange = currentPrice - previousPrice;
-    const avgChange = recentPrices.slice(1).reduce((sum, price, i) => {
-      return sum + (price - recentPrices[i]);
-    }, 0) / (recentPrices.length - 1);
-    
-    // Identificar padrões de reversão
-    const isReversal = Math.abs(priceChange) > Math.abs(avgChange) * 1.5;
-    const isOversold = priceChange < -Math.abs(avgChange) * 0.8;
-    const isOverbought = priceChange > Math.abs(avgChange) * 0.8;
-    
-    let signal = 'HOLD';
-    let confidence = 0;
-    
-    if (isReversal && isOversold) {
-      signal = 'CALL';
-      confidence = Math.min(85, 60 + (Math.abs(priceChange) / Math.abs(avgChange)) * 10);
-    } else if (isReversal && isOverbought) {
-      signal = 'PUT';
-      confidence = Math.min(85, 60 + (Math.abs(priceChange) / Math.abs(avgChange)) * 10);
-    }
-    
-    return { signal, confidence };
-  };
-
-  // ===== ANÁLISE TÉCNICA EMA (EXPONENTIAL MOVING AVERAGE) =====
-  const analyzeEMA = (prices: number[]): { signal: string; confidence: number } => {
-    if (prices.length < Math.max(settings.emaFast, settings.emaSlow)) {
-      return { signal: 'HOLD', confidence: 0 };
-    }
-
-    // Calcular EMAs
-    const calculateEMA = (data: number[], period: number) => {
-      const multiplier = 2 / (period + 1);
-      let ema = data.slice(0, period).reduce((sum, val) => sum + val, 0) / period;
-      
-      for (let i = period; i < data.length; i++) {
-        ema = (data[i] * multiplier) + (ema * (1 - multiplier));
-      }
-      return ema;
-    };
-
-    const emaFast = calculateEMA(prices, settings.emaFast);
-    const emaSlow = calculateEMA(prices, settings.emaSlow);
-    const currentPrice = prices[prices.length - 1];
-    
-    let signal = 'HOLD';
-    let confidence = 0;
-    
-    // Crossover analysis
-    if (emaFast > emaSlow && currentPrice > emaFast) {
-      signal = 'CALL';
-      confidence = Math.min(90, 70 + ((emaFast - emaSlow) / emaSlow) * 100);
-    } else if (emaFast < emaSlow && currentPrice < emaFast) {
-      signal = 'PUT';
-      confidence = Math.min(90, 70 + ((emaSlow - emaFast) / emaFast) * 100);
-    }
-    
-    return { signal, confidence };
-  };
-
-  // ===== ANÁLISE TÉCNICA RSI (RELATIVE STRENGTH INDEX) =====
-  const analyzeRSI = (prices: number[]): { signal: string; confidence: number } => {
-    if (prices.length < settings.rsiPeriods + 1) {
-      return { signal: 'HOLD', confidence: 0 };
-    }
-
-    const recentPrices = prices.slice(-settings.rsiPeriods - 1);
-    let gains = 0;
-    let losses = 0;
-    
-    for (let i = 1; i < recentPrices.length; i++) {
-      const change = recentPrices[i] - recentPrices[i - 1];
-      if (change > 0) gains += change;
-      else losses += Math.abs(change);
-    }
-    
-    const avgGain = gains / settings.rsiPeriods;
-    const avgLoss = losses / settings.rsiPeriods;
-    const rs = avgGain / (avgLoss || 0.0001);
-    const rsi = 100 - (100 / (1 + rs));
-    
-    let signal = 'HOLD';
-    let confidence = 0;
-    
-    // RSI overbought/oversold analysis
-    if (rsi < 30) {
-      signal = 'CALL';
-      confidence = Math.min(85, 60 + (30 - rsi) * 2);
-    } else if (rsi > 70) {
-      signal = 'PUT';
-      confidence = Math.min(85, 60 + (rsi - 70) * 2);
-    }
-    
-    return { signal, confidence };
-  };
-
-  // ===== ANÁLISE DE TENDÊNCIA =====
-  const analyzeTrend = (prices: number[]): { signal: string; confidence: number } => {
-    if (prices.length < 20) {
-      return { signal: 'HOLD', confidence: 0 };
+  // ===== ESTRATÉGIA MARTINGALE INTELIGENTE =====
+  const smartMartingaleStrategy = (prices: number[]): StrategyResult => {
+    if (prices.length < 10) {
+      return {
+        signal: 'HOLD',
+        confidence: 0,
+        reason: 'Dados insuficientes',
+        strategy: 'martingale'
+      };
     }
 
     const recentPrices = prices.slice(-20);
-    const firstHalf = recentPrices.slice(0, 10);
-    const secondHalf = recentPrices.slice(10);
+    const currentPrice = recentPrices[recentPrices.length - 1];
     
-    const avgFirst = firstHalf.reduce((sum, price) => sum + price, 0) / firstHalf.length;
-    const avgSecond = secondHalf.reduce((sum, price) => sum + price, 0) / secondHalf.length;
+    // Análise de tendência de curto prazo
+    const shortTerm = recentPrices.slice(-5);
+    const shortTermTrend = shortTerm[shortTerm.length - 1] - shortTerm[0];
     
-    const trendStrength = (avgSecond - avgFirst) / avgFirst;
+    // Análise de tendência de médio prazo
+    const mediumTerm = recentPrices.slice(-15);
+    const mediumTermTrend = mediumTerm[mediumTerm.length - 1] - mediumTerm[0];
     
-    let signal = 'HOLD';
+    // Cálculo de volatilidade
+    const volatilities = [];
+    for (let i = 1; i < recentPrices.length; i++) {
+      volatilities.push(Math.abs(recentPrices[i] - recentPrices[i - 1]));
+    }
+    const avgVolatility = volatilities.reduce((a, b) => a + b, 0) / volatilities.length;
+    const currentVolatility = Math.abs(recentPrices[recentPrices.length - 1] - recentPrices[recentPrices.length - 2]);
+    
+    // Identificar padrões de reversão
+    const isHighVolatility = currentVolatility > avgVolatility * 1.5;
+    const isOversold = shortTermTrend < -avgVolatility * 2;
+    const isOverbought = shortTermTrend > avgVolatility * 2;
+    
+    let signal: 'CALL' | 'PUT' | 'HOLD' = 'HOLD';
     let confidence = 0;
+    let reason = '';
     
-    if (trendStrength > 0.001) {
+    if (isHighVolatility && isOversold && mediumTermTrend > 0) {
       signal = 'CALL';
-      confidence = Math.min(80, 50 + Math.abs(trendStrength) * 10000);
-    } else if (trendStrength < -0.001) {
+      confidence = Math.min(85, 60 + (currentVolatility / avgVolatility) * 15);
+      reason = `Reversão de alta detectada - Volatilidade: ${(currentVolatility / avgVolatility).toFixed(2)}x`;
+    } else if (isHighVolatility && isOverbought && mediumTermTrend < 0) {
       signal = 'PUT';
-      confidence = Math.min(80, 50 + Math.abs(trendStrength) * 10000);
+      confidence = Math.min(85, 60 + (currentVolatility / avgVolatility) * 15);
+      reason = `Reversão de baixa detectada - Volatilidade: ${(currentVolatility / avgVolatility).toFixed(2)}x`;
+    } else if (mediumTermTrend > avgVolatility * 3) {
+      signal = 'CALL';
+      confidence = Math.min(75, 50 + Math.abs(mediumTermTrend) * 100);
+      reason = `Tendência de alta forte - Força: ${(mediumTermTrend / avgVolatility).toFixed(2)}x`;
+    } else if (mediumTermTrend < -avgVolatility * 3) {
+      signal = 'PUT';
+      confidence = Math.min(75, 50 + Math.abs(mediumTermTrend) * 100);
+      reason = `Tendência de baixa forte - Força: ${(Math.abs(mediumTermTrend) / avgVolatility).toFixed(2)}x`;
     }
     
-    return { signal, confidence };
+    return { signal, confidence, reason, strategy: 'martingale' };
   };
 
-  // ===== ANÁLISE TÉCNICA COMPLETA =====
+  // ===== ESTRATÉGIA MHI AVANÇADO =====
+  const advancedMHIStrategy = (prices: number[]): StrategyResult => {
+    if (prices.length < settings.mhiPeriods) {
+      return {
+        signal: 'HOLD',
+        confidence: 0,
+        reason: 'Dados insuficientes para MHI',
+        strategy: 'mhi'
+      };
+    }
+
+    const periods = settings.mhiPeriods;
+    const recentPrices = prices.slice(-periods);
+    const currentPrice = recentPrices[recentPrices.length - 1];
+    
+    // Análise de padrões de candlestick (simplificada)
+    const patterns = [];
+    for (let i = 1; i < recentPrices.length - 1; i++) {
+      const prev = recentPrices[i - 1];
+      const current = recentPrices[i];
+      const next = recentPrices[i + 1];
+      
+      // Padrão de martelo (reversão de baixa)
+      if (current < prev && next > current && (next - current) > (current - prev) * 0.5) {
+        patterns.push('HAMMER');
+      }
+      // Padrão de estrela cadente (reversão de alta)
+      else if (current > prev && next < current && (current - next) > (current - prev) * 0.5) {
+        patterns.push('SHOOTING_STAR');
+      }
+    }
+    
+    // Análise de força relativa
+    const firstHalf = recentPrices.slice(0, Math.floor(periods / 2));
+    const secondHalf = recentPrices.slice(Math.floor(periods / 2));
+    
+    const firstAvg = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
+    const secondAvg = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
+    const strength = (secondAvg - firstAvg) / firstAvg;
+    
+    // Contagem de padrões
+    const hammerCount = patterns.filter(p => p === 'HAMMER').length;
+    const shootingStarCount = patterns.filter(p => p === 'SHOOTING_STAR').length;
+    
+    let signal: 'CALL' | 'PUT' | 'HOLD' = 'HOLD';
+    let confidence = 0;
+    let reason = '';
+    
+    if (hammerCount >= 2 && strength > 0.001) {
+      signal = 'CALL';
+      confidence = Math.min(80, 50 + hammerCount * 10 + Math.abs(strength) * 10000);
+      reason = `Padrão MHI de alta - ${hammerCount} martelos detectados`;
+    } else if (shootingStarCount >= 2 && strength < -0.001) {
+      signal = 'PUT';
+      confidence = Math.min(80, 50 + shootingStarCount * 10 + Math.abs(strength) * 10000);
+      reason = `Padrão MHI de baixa - ${shootingStarCount} estrelas cadentes`;
+    } else if (Math.abs(strength) > 0.005) {
+      signal = strength > 0 ? 'CALL' : 'PUT';
+      confidence = Math.min(70, 40 + Math.abs(strength) * 8000);
+      reason = `Tendência MHI ${strength > 0 ? 'alta' : 'baixa'} - Força: ${(Math.abs(strength) * 100).toFixed(2)}%`;
+    }
+    
+    return { signal, confidence, reason, strategy: 'mhi' };
+  };
+
+  // ===== ESTRATÉGIA EMA CROSSOVER AVANÇADO =====
+  const advancedEMAStrategy = (prices: number[]): StrategyResult => {
+    const emaFastPeriod = settings.emaFast;
+    const emaSlowPeriod = settings.emaSlow;
+    
+    if (prices.length < Math.max(emaFastPeriod, emaSlowPeriod) + 5) {
+      return {
+        signal: 'HOLD',
+        confidence: 0,
+        reason: 'Dados insuficientes para EMA',
+        strategy: 'ema'
+      };
+    }
+
+    // Calcular EMAs
+    const calculateEMA = (data: number[], period: number): number[] => {
+      const emas: number[] = [];
+      const multiplier = 2 / (period + 1);
+      
+      // EMA inicial (SMA)
+      let ema = data.slice(0, period).reduce((sum, val) => sum + val, 0) / period;
+      emas.push(ema);
+      
+      // Calcular EMA subsequente
+      for (let i = period; i < data.length; i++) {
+        ema = (data[i] * multiplier) + (ema * (1 - multiplier));
+        emas.push(ema);
+      }
+      
+      return emas;
+    };
+
+    const emaFast = calculateEMA(prices, emaFastPeriod);
+    const emaSlow = calculateEMA(prices, emaSlowPeriod);
+    
+    const currentFast = emaFast[emaFast.length - 1];
+    const currentSlow = emaSlow[emaSlow.length - 1];
+    const previousFast = emaFast[emaFast.length - 2];
+    const previousSlow = emaSlow[emaSlow.length - 2];
+    const currentPrice = prices[prices.length - 1];
+    
+    // Detectar crossover
+    const fastAboveSlow = currentFast > currentSlow;
+    const previousFastAboveSlow = previousFast > previousSlow;
+    const crossover = fastAboveSlow !== previousFastAboveSlow;
+    
+    // Força do sinal
+    const gap = Math.abs(currentFast - currentSlow) / currentSlow;
+    const priceAboveFast = currentPrice > currentFast;
+    const priceAboveSlow = currentPrice > currentSlow;
+    
+    let signal: 'CALL' | 'PUT' | 'HOLD' = 'HOLD';
+    let confidence = 0;
+    let reason = '';
+    
+    if (crossover && fastAboveSlow && priceAboveFast) {
+      signal = 'CALL';
+      confidence = Math.min(90, 60 + gap * 500);
+      reason = `Bullish EMA Crossover - Gap: ${(gap * 100).toFixed(2)}%`;
+    } else if (crossover && !fastAboveSlow && !priceAboveFast) {
+      signal = 'PUT';
+      confidence = Math.min(90, 60 + gap * 500);
+      reason = `Bearish EMA Crossover - Gap: ${(gap * 100).toFixed(2)}%`;
+    } else if (fastAboveSlow && priceAboveFast && gap > 0.001) {
+      signal = 'CALL';
+      confidence = Math.min(75, 45 + gap * 300);
+      reason = `Tendência de alta EMA - Gap: ${(gap * 100).toFixed(2)}%`;
+    } else if (!fastAboveSlow && !priceAboveFast && gap > 0.001) {
+      signal = 'PUT';
+      confidence = Math.min(75, 45 + gap * 300);
+      reason = `Tendência de baixa EMA - Gap: ${(gap * 100).toFixed(2)}%`;
+    }
+    
+    return { signal, confidence, reason, strategy: 'ema' };
+  };
+
+  // ===== ESTRATÉGIA RSI AVANÇADO =====
+  const advancedRSIStrategy = (prices: number[]): StrategyResult => {
+    const rsiPeriods = settings.rsiPeriods;
+    
+    if (prices.length < rsiPeriods + 10) {
+      return {
+        signal: 'HOLD',
+        confidence: 0,
+        reason: 'Dados insuficientes para RSI',
+        strategy: 'rsi'
+      };
+    }
+
+    // Calcular RSI
+    const calculateRSI = (data: number[], period: number): number[] => {
+      const rsis: number[] = [];
+      
+      for (let i = period; i < data.length; i++) {
+        const segment = data.slice(i - period, i + 1);
+        let gains = 0;
+        let losses = 0;
+        
+        for (let j = 1; j < segment.length; j++) {
+          const change = segment[j] - segment[j - 1];
+          if (change > 0) gains += change;
+          else losses += Math.abs(change);
+        }
+        
+        const avgGain = gains / period;
+        const avgLoss = losses / period;
+        const rs = avgGain / (avgLoss || 0.0001);
+        const rsi = 100 - (100 / (1 + rs));
+        rsis.push(rsi);
+      }
+      
+      return rsis;
+    };
+
+    const rsiValues = calculateRSI(prices, rsiPeriods);
+    const currentRSI = rsiValues[rsiValues.length - 1];
+    const previousRSI = rsiValues[rsiValues.length - 2];
+    
+    // Análise de divergência
+    const recentPrices = prices.slice(-rsiPeriods);
+    const priceTrend = recentPrices[recentPrices.length - 1] - recentPrices[0];
+    const rsiTrend = currentRSI - rsiValues[0];
+    
+    // Detectar divergências
+    const bullishDivergence = priceTrend < 0 && rsiTrend > 5;
+    const bearishDivergence = priceTrend > 0 && rsiTrend < -5;
+    
+    let signal: 'CALL' | 'PUT' | 'HOLD' = 'HOLD';
+    let confidence = 0;
+    let reason = '';
+    
+    if (currentRSI < 30 && bullishDivergence) {
+      signal = 'CALL';
+      confidence = Math.min(85, 50 + (30 - currentRSI) * 2 + 15);
+      reason = `RSI Oversold + Divergência de alta - RSI: ${currentRSI.toFixed(1)}`;
+    } else if (currentRSI > 70 && bearishDivergence) {
+      signal = 'PUT';
+      confidence = Math.min(85, 50 + (currentRSI - 70) * 2 + 15);
+      reason = `RSI Overbought + Divergência de baixa - RSI: ${currentRSI.toFixed(1)}`;
+    } else if (currentRSI < 25) {
+      signal = 'CALL';
+      confidence = Math.min(80, 40 + (30 - currentRSI) * 2);
+      reason = `RSI Extremamente Oversold - RSI: ${currentRSI.toFixed(1)}`;
+    } else if (currentRSI > 75) {
+      signal = 'PUT';
+      confidence = Math.min(80, 40 + (currentRSI - 70) * 2);
+      reason = `RSI Extremamente Overbought - RSI: ${currentRSI.toFixed(1)}`;
+    } else if (currentRSI < 35 && previousRSI < 30) {
+      signal = 'CALL';
+      confidence = Math.min(70, 35 + (35 - currentRSI));
+      reason = `Recuperação de oversold - RSI: ${currentRSI.toFixed(1)}`;
+    } else if (currentRSI > 65 && previousRSI > 70) {
+      signal = 'PUT';
+      confidence = Math.min(70, 35 + (currentRSI - 65));
+      reason = `Recuo de overbought - RSI: ${currentRSI.toFixed(1)}`;
+    }
+    
+    return { signal, confidence, reason, strategy: 'rsi' };
+  };
+
+  // ===== SISTEMA DE FUSÃO DE ESTRATÉGIAS =====
+  const fuseStrategies = (strategies: StrategyResult[]): StrategyResult => {
+    const validStrategies = strategies.filter(s => s.signal !== 'HOLD' && s.confidence >= 30);
+    
+    if (validStrategies.length === 0) {
+      return {
+        signal: 'HOLD',
+        confidence: 0,
+        reason: 'Nenhuma estratégia gerou sinal válido',
+        strategy: 'consensus'
+      };
+    }
+    
+    // Agrupar por sinal
+    const callStrategies = validStrategies.filter(s => s.signal === 'CALL');
+    const putStrategies = validStrategies.filter(s => s.signal === 'PUT');
+    
+    // Calcular confiança média ponderada
+    const totalConfidence = validStrategies.reduce((sum, s) => sum + s.confidence, 0);
+    const callWeight = callStrategies.reduce((sum, s) => sum + s.confidence, 0) / totalConfidence;
+    const putWeight = putStrategies.reduce((sum, s) => sum + s.confidence, 0) / totalConfidence;
+    
+    // Tomar decisão baseada no consenso
+    let signal: 'CALL' | 'PUT' | 'HOLD' = 'HOLD';
+    let confidence = 0;
+    let reason = '';
+    
+    if (callWeight > 0.6 && callStrategies.length >= 2) {
+      signal = 'CALL';
+      confidence = Math.min(90, callStrategies.reduce((sum, s) => sum + s.confidence, 0) / callStrategies.length);
+      reason = `Consenso de CALL (${callStrategies.length}/4 estratégias) - ${callStrategies.map(s => s.strategy).join(', ')}`;
+    } else if (putWeight > 0.6 && putStrategies.length >= 2) {
+      signal = 'PUT';
+      confidence = Math.min(90, putStrategies.reduce((sum, s) => sum + s.confidence, 0) / putStrategies.length);
+      reason = `Consenso de PUT (${putStrategies.length}/4 estratégias) - ${putStrategies.map(s => s.strategy).join(', ')}`;
+    } else if (callWeight > putWeight && callStrategies.length > 0) {
+      signal = 'CALL';
+      confidence = callStrategies.reduce((sum, s) => sum + s.confidence, 0) / callStrategies.length * 0.8;
+      reason = `Tendência CALL fraca (${callStrategies.length}/4) - ${callStrategies.map(s => s.strategy).join(', ')}`;
+    } else if (putWeight > callWeight && putStrategies.length > 0) {
+      signal = 'PUT';
+      confidence = putStrategies.reduce((sum, s) => sum + s.confidence, 0) / putStrategies.length * 0.8;
+      reason = `Tendência PUT fraca (${putStrategies.length}/4) - ${putStrategies.map(s => s.strategy).join(', ')}`;
+    }
+    
+    return { signal, confidence, reason, strategy: 'consensus' };
+  };
+
+  // ===== ANÁLISE TÉCNICA COMPLETA ATUALIZADA =====
   const performTechnicalAnalysis = (currentPrice: number): TechnicalAnalysis => {
     console.log(`🔧 Configurações atuais:`, {
       strategy: settings.strategy,
@@ -599,79 +821,70 @@ export default function BotInterface() {
 
     const prices = priceChartRef.current.data.datasets[0].data.map((point: any) => point.y);
     
-    // Executar todas as análises
-    const mhiAnalysis = analyzeMHI(prices);
-    const emaAnalysis = analyzeEMA(prices);
-    const rsiAnalysis = analyzeRSI(prices);
-    const trendAnalysis = analyzeTrend(prices);
+    // Executar todas as estratégias
+    const martingaleResult = smartMartingaleStrategy(prices);
+    const mhiResult = advancedMHIStrategy(prices);
+    const emaResult = advancedEMAStrategy(prices);
+    const rsiResult = advancedRSIStrategy(prices);
     
-    console.log(`🔍 Análises individuais:`, {
-      mhi: mhiAnalysis,
-      ema: emaAnalysis,
-      rsi: rsiAnalysis,
-      trend: trendAnalysis,
-      strategy: settings.strategy,
-      confidence_threshold: settings.confidence,
-      dados_disponíveis: prices.length
+    console.log('📊 Resultados das estratégias:', {
+      martingale: martingaleResult,
+      mhi: mhiResult,
+      ema: emaResult,
+      rsi: rsiResult
     });
     
-    // Calcular sinal final baseado na estratégia selecionada
-    let finalSignal = 'HOLD';
-    let finalConfidence = 0;
-    let reason = '';
+    let finalResult: StrategyResult;
     
+    // Selecionar estratégia baseada na configuração
     switch (settings.strategy) {
-      case 'mhi':
-        finalSignal = mhiAnalysis.signal;
-        finalConfidence = mhiAnalysis.confidence;
-        reason = `MHI: ${mhiAnalysis.signal} (${mhiAnalysis.confidence.toFixed(1)}%)`;
-        break;
-        
-      case 'ema':
-        finalSignal = emaAnalysis.signal;
-        finalConfidence = emaAnalysis.confidence;
-        reason = `EMA: ${emaAnalysis.signal} (${emaAnalysis.confidence.toFixed(1)}%)`;
-        break;
-        
-      case 'rsi':
-        finalSignal = rsiAnalysis.signal;
-        finalConfidence = rsiAnalysis.confidence;
-        reason = `RSI: ${rsiAnalysis.signal} (${rsiAnalysis.confidence.toFixed(1)}%)`;
-        break;
-        
       case 'martingale':
-        // Estratégia híbrida com peso para cada indicador
-        const signals = [mhiAnalysis, emaAnalysis, rsiAnalysis, trendAnalysis];
-        const callSignals = signals.filter(s => s.signal === 'CALL');
-        const putSignals = signals.filter(s => s.signal === 'PUT');
-        
-        if (callSignals.length >= 2) {
-          finalSignal = 'CALL';
-          finalConfidence = callSignals.reduce((sum, s) => sum + s.confidence, 0) / callSignals.length;
-          reason = `Consenso CALL: ${callSignals.length}/4 indicadores`;
-        } else if (putSignals.length >= 2) {
-          finalSignal = 'PUT';
-          finalConfidence = putSignals.reduce((sum, s) => sum + s.confidence, 0) / putSignals.length;
-          reason = `Consenso PUT: ${putSignals.length}/4 indicadores`;
-        }
+        finalResult = fuseStrategies([martingaleResult, mhiResult, emaResult, rsiResult]);
         break;
+      case 'mhi':
+        finalResult = mhiResult;
+        break;
+      case 'ema':
+        finalResult = emaResult;
+        break;
+      case 'rsi':
+        finalResult = rsiResult;
+        break;
+      default:
+        finalResult = fuseStrategies([martingaleResult, mhiResult, emaResult, rsiResult]);
     }
     
     // Aplicar filtro de confiança mínima
-    if (finalConfidence < settings.confidence) {
-      finalSignal = 'HOLD';
-      reason += ` (Confiança ${finalConfidence.toFixed(1)}% < ${settings.confidence}%)`;
+    if (finalResult.confidence < settings.confidence) {
+      finalResult = {
+        signal: 'HOLD',
+        confidence: finalResult.confidence,
+        reason: `${finalResult.reason} (Confiança ${finalResult.confidence.toFixed(1)}% < ${settings.confidence}%)`,
+        strategy: finalResult.strategy
+      };
     }
     
     return {
-      signal: finalSignal as 'CALL' | 'PUT' | 'HOLD',
-      confidence: finalConfidence,
-      reason,
+      signal: finalResult.signal,
+      confidence: finalResult.confidence,
+      reason: finalResult.reason,
       indicators: {
-        mhi: mhiAnalysis,
-        ema: emaAnalysis,
-        rsi: rsiAnalysis,
-        trend: trendAnalysis
+        mhi: { 
+          signal: mhiResult.signal, 
+          confidence: mhiResult.confidence 
+        },
+        ema: { 
+          signal: emaResult.signal, 
+          confidence: emaResult.confidence 
+        },
+        rsi: { 
+          signal: rsiResult.signal, 
+          confidence: rsiResult.confidence 
+        },
+        trend: { 
+          signal: martingaleResult.signal, 
+          confidence: martingaleResult.confidence 
+        }
       }
     };
   };
