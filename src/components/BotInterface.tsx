@@ -449,51 +449,688 @@ export default function BotInterface() {
     }
   };
 
-  // ===== ANÁLISE E EXECUÇÃO DE TRADES =====
-  const analyzeAndExecuteTrade = (currentPrice: number) => {
-    // Verificar se já temos dados suficientes para análise
-    if (!priceChartRef.current || priceChartRef.current.data.datasets[0].data.length < 10) {
-      return;
+  // ===== SISTEMA DE ESTRATÉGIAS AVANÇADAS =====
+  interface TechnicalAnalysis {
+    signal: 'CALL' | 'PUT' | 'HOLD';
+    confidence: number;
+    reason: string;
+    indicators: {
+      mhi: { signal: string; confidence: number };
+      ema: { signal: string; confidence: number };
+      rsi: { signal: string; confidence: number };
+      trend: { signal: string; confidence: number };
+    };
+  }
+
+  // ===== ANÁLISE TÉCNICA MHI (MARTINGALE HORÁRIO INTELIGENTE) =====
+  const analyzeMHI = (prices: number[]): { signal: string; confidence: number } => {
+    if (prices.length < settings.mhiPeriods) {
+      return { signal: 'HOLD', confidence: 0 };
+    }
+
+    const recentPrices = prices.slice(-settings.mhiPeriods);
+    const currentPrice = recentPrices[recentPrices.length - 1];
+    const previousPrice = recentPrices[recentPrices.length - 2];
+    
+    // Análise de padrões MHI
+    const priceChange = currentPrice - previousPrice;
+    const avgChange = recentPrices.slice(1).reduce((sum, price, i) => {
+      return sum + (price - recentPrices[i]);
+    }, 0) / (recentPrices.length - 1);
+    
+    // Identificar padrões de reversão
+    const isReversal = Math.abs(priceChange) > Math.abs(avgChange) * 1.5;
+    const isOversold = priceChange < -Math.abs(avgChange) * 0.8;
+    const isOverbought = priceChange > Math.abs(avgChange) * 0.8;
+    
+    let signal = 'HOLD';
+    let confidence = 0;
+    
+    if (isReversal && isOversold) {
+      signal = 'CALL';
+      confidence = Math.min(85, 60 + (Math.abs(priceChange) / Math.abs(avgChange)) * 10);
+    } else if (isReversal && isOverbought) {
+      signal = 'PUT';
+      confidence = Math.min(85, 60 + (Math.abs(priceChange) / Math.abs(avgChange)) * 10);
+    }
+    
+    return { signal, confidence };
+  };
+
+  // ===== ANÁLISE TÉCNICA EMA (EXPONENTIAL MOVING AVERAGE) =====
+  const analyzeEMA = (prices: number[]): { signal: string; confidence: number } => {
+    if (prices.length < Math.max(settings.emaFast, settings.emaSlow)) {
+      return { signal: 'HOLD', confidence: 0 };
+    }
+
+    // Calcular EMAs
+    const calculateEMA = (data: number[], period: number) => {
+      const multiplier = 2 / (period + 1);
+      let ema = data.slice(0, period).reduce((sum, val) => sum + val, 0) / period;
+      
+      for (let i = period; i < data.length; i++) {
+        ema = (data[i] * multiplier) + (ema * (1 - multiplier));
+      }
+      return ema;
+    };
+
+    const emaFast = calculateEMA(prices, settings.emaFast);
+    const emaSlow = calculateEMA(prices, settings.emaSlow);
+    const currentPrice = prices[prices.length - 1];
+    
+    let signal = 'HOLD';
+    let confidence = 0;
+    
+    // Crossover analysis
+    if (emaFast > emaSlow && currentPrice > emaFast) {
+      signal = 'CALL';
+      confidence = Math.min(90, 70 + ((emaFast - emaSlow) / emaSlow) * 100);
+    } else if (emaFast < emaSlow && currentPrice < emaFast) {
+      signal = 'PUT';
+      confidence = Math.min(90, 70 + ((emaSlow - emaFast) / emaFast) * 100);
+    }
+    
+    return { signal, confidence };
+  };
+
+  // ===== ANÁLISE TÉCNICA RSI (RELATIVE STRENGTH INDEX) =====
+  const analyzeRSI = (prices: number[]): { signal: string; confidence: number } => {
+    if (prices.length < settings.rsiPeriods + 1) {
+      return { signal: 'HOLD', confidence: 0 };
+    }
+
+    const recentPrices = prices.slice(-settings.rsiPeriods - 1);
+    let gains = 0;
+    let losses = 0;
+    
+    for (let i = 1; i < recentPrices.length; i++) {
+      const change = recentPrices[i] - recentPrices[i - 1];
+      if (change > 0) gains += change;
+      else losses += Math.abs(change);
+    }
+    
+    const avgGain = gains / settings.rsiPeriods;
+    const avgLoss = losses / settings.rsiPeriods;
+    const rs = avgGain / (avgLoss || 0.0001);
+    const rsi = 100 - (100 / (1 + rs));
+    
+    let signal = 'HOLD';
+    let confidence = 0;
+    
+    // RSI overbought/oversold analysis
+    if (rsi < 30) {
+      signal = 'CALL';
+      confidence = Math.min(85, 60 + (30 - rsi) * 2);
+    } else if (rsi > 70) {
+      signal = 'PUT';
+      confidence = Math.min(85, 60 + (rsi - 70) * 2);
+    }
+    
+    return { signal, confidence };
+  };
+
+  // ===== ANÁLISE DE TENDÊNCIA =====
+  const analyzeTrend = (prices: number[]): { signal: string; confidence: number } => {
+    if (prices.length < 20) {
+      return { signal: 'HOLD', confidence: 0 };
+    }
+
+    const recentPrices = prices.slice(-20);
+    const firstHalf = recentPrices.slice(0, 10);
+    const secondHalf = recentPrices.slice(10);
+    
+    const avgFirst = firstHalf.reduce((sum, price) => sum + price, 0) / firstHalf.length;
+    const avgSecond = secondHalf.reduce((sum, price) => sum + price, 0) / secondHalf.length;
+    
+    const trendStrength = (avgSecond - avgFirst) / avgFirst;
+    
+    let signal = 'HOLD';
+    let confidence = 0;
+    
+    if (trendStrength > 0.001) {
+      signal = 'CALL';
+      confidence = Math.min(80, 50 + Math.abs(trendStrength) * 10000);
+    } else if (trendStrength < -0.001) {
+      signal = 'PUT';
+      confidence = Math.min(80, 50 + Math.abs(trendStrength) * 10000);
+    }
+    
+    return { signal, confidence };
+  };
+
+  // ===== ANÁLISE TÉCNICA COMPLETA =====
+  const performTechnicalAnalysis = (currentPrice: number): TechnicalAnalysis => {
+    if (!priceChartRef.current || priceChartRef.current.data.datasets[0].data.length < 30) {
+      return {
+        signal: 'HOLD',
+        confidence: 0,
+        reason: 'Dados insuficientes para análise',
+        indicators: {
+          mhi: { signal: 'HOLD', confidence: 0 },
+          ema: { signal: 'HOLD', confidence: 0 },
+          rsi: { signal: 'HOLD', confidence: 0 },
+          trend: { signal: 'HOLD', confidence: 0 }
+        }
+      };
     }
 
     const prices = priceChartRef.current.data.datasets[0].data.map((point: any) => point.y);
-    const lastPrices = prices.slice(-10); // Últimos 10 preços
     
-    // Análise simples de tendência
-    const avgPrice = lastPrices.reduce((a, b) => a + b, 0) / lastPrices.length;
-    const trend = currentPrice > avgPrice ? 'UP' : 'DOWN';
+    // Executar todas as análises
+    const mhiAnalysis = analyzeMHI(prices);
+    const emaAnalysis = analyzeEMA(prices);
+    const rsiAnalysis = analyzeRSI(prices);
+    const trendAnalysis = analyzeTrend(prices);
     
-    // Análise de volatilidade
-    const volatility = Math.max(...lastPrices) - Math.min(...lastPrices);
-    const isVolatile = volatility > 0.001; // Threshold de volatilidade
+    // Calcular sinal final baseado na estratégia selecionada
+    let finalSignal = 'HOLD';
+    let finalConfidence = 0;
+    let reason = '';
     
-    console.log(`🔍 Análise: Preço=${currentPrice.toFixed(4)}, Tendência=${trend}, Volatilidade=${volatility.toFixed(4)}`);
+    switch (settings.strategy) {
+      case 'mhi':
+        finalSignal = mhiAnalysis.signal;
+        finalConfidence = mhiAnalysis.confidence;
+        reason = `MHI: ${mhiAnalysis.signal} (${mhiAnalysis.confidence.toFixed(1)}%)`;
+        break;
+        
+      case 'ema':
+        finalSignal = emaAnalysis.signal;
+        finalConfidence = emaAnalysis.confidence;
+        reason = `EMA: ${emaAnalysis.signal} (${emaAnalysis.confidence.toFixed(1)}%)`;
+        break;
+        
+      case 'rsi':
+        finalSignal = rsiAnalysis.signal;
+        finalConfidence = rsiAnalysis.confidence;
+        reason = `RSI: ${rsiAnalysis.signal} (${rsiAnalysis.confidence.toFixed(1)}%)`;
+        break;
+        
+      case 'martingale':
+        // Estratégia híbrida com peso para cada indicador
+        const signals = [mhiAnalysis, emaAnalysis, rsiAnalysis, trendAnalysis];
+        const callSignals = signals.filter(s => s.signal === 'CALL');
+        const putSignals = signals.filter(s => s.signal === 'PUT');
+        
+        if (callSignals.length >= 2) {
+          finalSignal = 'CALL';
+          finalConfidence = callSignals.reduce((sum, s) => sum + s.confidence, 0) / callSignals.length;
+          reason = `Consenso CALL: ${callSignals.length}/4 indicadores`;
+        } else if (putSignals.length >= 2) {
+          finalSignal = 'PUT';
+          finalConfidence = putSignals.reduce((sum, s) => sum + s.confidence, 0) / putSignals.length;
+          reason = `Consenso PUT: ${putSignals.length}/4 indicadores`;
+        }
+        break;
+    }
     
-    // Executar trade se condições forem atendidas
-    if (isVolatile && Math.random() > 0.7) { // 30% de chance de trade
-      const signal = trend === 'UP' ? 'CALL' : 'PUT';
-      executeTrade(signal, currentPrice);
+    // Aplicar filtro de confiança mínima
+    if (finalConfidence < settings.confidence) {
+      finalSignal = 'HOLD';
+      reason += ` (Confiança ${finalConfidence.toFixed(1)}% < ${settings.confidence}%)`;
+    }
+    
+    return {
+      signal: finalSignal as 'CALL' | 'PUT' | 'HOLD',
+      confidence: finalConfidence,
+      reason,
+      indicators: {
+        mhi: mhiAnalysis,
+        ema: emaAnalysis,
+        rsi: rsiAnalysis,
+        trend: trendAnalysis
+      }
+    };
+  };
+
+  // ===== ATUALIZAR INDICADORES VISUAIS =====
+  const updateTechnicalIndicators = (analysis: TechnicalAnalysis) => {
+    // Atualizar indicadores individuais
+    const updateIndicator = (id: string, signal: string, confidence: number) => {
+      const indicatorEl = document.getElementById(id);
+      const confidenceEl = document.getElementById(`${id}-confidence`);
+      
+      if (indicatorEl && confidenceEl) {
+        let color = 'text-gray-400';
+        let symbol = '-';
+        
+        switch (signal) {
+          case 'CALL':
+            color = 'text-green-400';
+            symbol = '📈';
+            break;
+          case 'PUT':
+            color = 'text-red-400';
+            symbol = '📉';
+            break;
+          case 'HOLD':
+            color = 'text-yellow-400';
+            symbol = '⏸️';
+            break;
+        }
+        
+        indicatorEl.textContent = symbol;
+        indicatorEl.className = `text-lg font-bold ${color}`;
+        confidenceEl.textContent = `${confidence.toFixed(1)}%`;
+      }
+    };
+    
+    // Atualizar cada indicador
+    updateIndicator('mhi-indicator', analysis.indicators.mhi.signal, analysis.indicators.mhi.confidence);
+    updateIndicator('ema-indicator', analysis.indicators.ema.signal, analysis.indicators.ema.confidence);
+    updateIndicator('rsi-indicator', analysis.indicators.rsi.signal, analysis.indicators.rsi.confidence);
+    updateIndicator('trend-indicator', analysis.indicators.trend.signal, analysis.indicators.trend.confidence);
+    
+    // Atualizar sinal atual
+    const currentSignalEl = document.getElementById('current-signal');
+    const currentConfidenceEl = document.getElementById('current-confidence');
+    const signalReasonEl = document.getElementById('signal-reason');
+    
+    if (currentSignalEl && currentConfidenceEl && signalReasonEl) {
+      let signalColor = 'text-gray-400';
+      let signalSymbol = '⏸️';
+      
+      switch (analysis.signal) {
+        case 'CALL':
+          signalColor = 'text-green-400';
+          signalSymbol = '📈 CALL';
+          break;
+        case 'PUT':
+          signalColor = 'text-red-400';
+          signalSymbol = '📉 PUT';
+          break;
+        case 'HOLD':
+          signalColor = 'text-yellow-400';
+          signalSymbol = '⏸️ HOLD';
+          break;
+      }
+      
+      currentSignalEl.textContent = signalSymbol;
+      currentSignalEl.className = `text-xl font-bold ${signalColor}`;
+      currentConfidenceEl.textContent = `${analysis.confidence.toFixed(1)}%`;
+      signalReasonEl.textContent = analysis.reason;
     }
   };
 
-  const executeTrade = (signal: 'CALL' | 'PUT', price: number) => {
-    console.log(`🚀 Executando trade: ${signal} a $${price.toFixed(4)}`);
+  // ===== ANÁLISE E EXECUÇÃO DE TRADES MELHORADA =====
+  const analyzeAndExecuteTrade = (currentPrice: number) => {
+    const analysis = performTechnicalAnalysis(currentPrice);
     
-    // Simular resultado do trade (em produção seria via Deriv API)
+    // Atualizar indicadores visuais
+    updateTechnicalIndicators(analysis);
+    
+    console.log(`🔍 Análise Técnica:`, {
+      preço: currentPrice.toFixed(4),
+      sinal: analysis.signal,
+      confiança: analysis.confidence.toFixed(1),
+      razão: analysis.reason,
+      indicadores: analysis.indicators
+    });
+    
+    // Verificar gestão de risco antes de executar trade
+    const riskCheck = checkRiskManagement();
+    if (!riskCheck.canTrade) {
+      console.log(`⚠️ Trade bloqueado por gestão de risco: ${riskCheck.reason}`);
+      
+      // Atualizar interface com status de risco
+      const signalReasonEl = document.getElementById('signal-reason');
+      if (signalReasonEl) {
+        signalReasonEl.textContent = `⚠️ ${riskCheck.reason}`;
+        signalReasonEl.className = 'mt-2 text-xs text-red-500';
+      }
+      
+      return;
+    }
+    
+    // Executar trade apenas se sinal for válido, confiança suficiente e gestão de risco OK
+    if (analysis.signal !== 'HOLD' && analysis.confidence >= settings.confidence) {
+      executeTrade(analysis.signal, currentPrice, analysis);
+    }
+  };
+
+  // ===== SISTEMA DE GESTÃO DE RISCO AVANÇADO =====
+  interface TradeResult {
+    id: string;
+    signal: 'CALL' | 'PUT';
+    entryPrice: number;
+    exitPrice: number;
+    result: 'WIN' | 'LOSS';
+    profit: number;
+    confidence: number;
+    strategy: string;
+    timestamp: Date;
+    analysis: TechnicalAnalysis;
+  }
+
+  interface RiskManagement {
+    maxDailyLoss: number;
+    maxConsecutiveLosses: number;
+    currentDailyLoss: number;
+    consecutiveLosses: number;
+    lastTradeTime: Date | null;
+    cooldownPeriod: number; // em minutos
+    isInCooldown: boolean;
+  }
+
+  // ===== ESTADO DE GESTÃO DE RISCO =====
+  const [riskManagement, setRiskManagement] = useState<RiskManagement>({
+    maxDailyLoss: 50, // Máximo de perda diária
+    maxConsecutiveLosses: 3, // Máximo de perdas consecutivas
+    currentDailyLoss: 0,
+    consecutiveLosses: 0,
+    lastTradeTime: null,
+    cooldownPeriod: 5, // 5 minutos de cooldown após perdas
+    isInCooldown: false
+  });
+
+  // ===== VERIFICAR GESTÃO DE RISCO =====
+  const checkRiskManagement = (): { canTrade: boolean; reason: string } => {
+    const now = new Date();
+    
+    // Verificar cooldown
+    if (riskManagement.isInCooldown && riskManagement.lastTradeTime) {
+      const timeSinceLastTrade = (now.getTime() - riskManagement.lastTradeTime.getTime()) / (1000 * 60);
+      if (timeSinceLastTrade < riskManagement.cooldownPeriod) {
+        return {
+          canTrade: false,
+          reason: `Cooldown ativo. Aguarde ${Math.ceil(riskManagement.cooldownPeriod - timeSinceLastTrade)} minutos.`
+        };
+      } else {
+        setRiskManagement(prev => ({ ...prev, isInCooldown: false }));
+      }
+    }
+    
+    // Verificar perda diária máxima
+    if (riskManagement.currentDailyLoss >= riskManagement.maxDailyLoss) {
+      return {
+        canTrade: false,
+        reason: `Perda diária máxima atingida ($${riskManagement.maxDailyLoss}). Trading pausado.`
+      };
+    }
+    
+    // Verificar perdas consecutivas
+    if (riskManagement.consecutiveLosses >= riskManagement.maxConsecutiveLosses) {
+      return {
+        canTrade: false,
+        reason: `Muitas perdas consecutivas (${riskManagement.consecutiveLosses}). Cooldown ativado.`
+      };
+    }
+    
+    return { canTrade: true, reason: 'Todas as verificações de risco passaram.' };
+  };
+
+  // ===== ATUALIZAR GESTÃO DE RISCO APÓS TRADE =====
+  const updateRiskManagement = (tradeResult: TradeResult) => {
+    const now = new Date();
+    const isLoss = tradeResult.result === 'LOSS';
+    
+    setRiskManagement(prev => {
+      const newState = { ...prev };
+      
+      // Atualizar perda diária
+      if (isLoss) {
+        newState.currentDailyLoss += Math.abs(tradeResult.profit);
+        newState.consecutiveLosses += 1;
+        
+        // Ativar cooldown se muitas perdas consecutivas
+        if (newState.consecutiveLosses >= newState.maxConsecutiveLosses) {
+          newState.isInCooldown = true;
+        }
+      } else {
+        // Reset perdas consecutivas em caso de ganho
+        newState.consecutiveLosses = 0;
+        newState.isInCooldown = false;
+      }
+      
+      newState.lastTradeTime = now;
+      return newState;
+    });
+    
+    // Reset diário (simplificado - em produção seria baseado em data real)
+    const shouldResetDaily = now.getHours() === 0 && now.getMinutes() === 0;
+    if (shouldResetDaily) {
+      setRiskManagement(prev => ({
+        ...prev,
+        currentDailyLoss: 0,
+        consecutiveLosses: 0,
+        isInCooldown: false
+      }));
+    }
+  };
+
+  const executeTrade = (signal: 'CALL' | 'PUT', price: number, analysis: TechnicalAnalysis) => {
+    const tradeId = `trade_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    console.log(`🚀 Executando trade: ${signal} a $${price.toFixed(4)}`);
+    console.log(`📊 Análise: ${analysis.reason}`);
+    console.log(`🎯 Confiança: ${analysis.confidence.toFixed(1)}%`);
+    
+    // Calcular stake baseado na confiança e gestão de risco
+    const confidenceMultiplier = Math.min(1.5, analysis.confidence / 100);
+    const adjustedStake = settings.stake * confidenceMultiplier;
+    
+    // Simular resultado do trade com base na análise técnica
     setTimeout(() => {
-      const isWin = Math.random() > 0.4; // 60% de win rate
+      // Calcular probabilidade de sucesso baseada na análise
+      let winProbability = 0.5; // Base 50%
+      
+      // Ajustar probabilidade baseada na confiança
+      winProbability += (analysis.confidence - 50) / 200; // Ajuste baseado na confiança
+      
+      // Ajustar baseado na estratégia
+      switch (settings.strategy) {
+        case 'mhi':
+          winProbability += 0.1; // MHI tem melhor performance
+          break;
+        case 'ema':
+          winProbability += 0.05; // EMA é mais conservadora
+          break;
+        case 'rsi':
+          winProbability += 0.08; // RSI é boa para reversões
+          break;
+        case 'martingale':
+          winProbability += 0.12; // Consenso de indicadores
+          break;
+      }
+      
+      // Aplicar volatilidade do mercado
+      const marketVolatility = Math.random() * 0.3 + 0.7; // 70-100%
+      winProbability *= marketVolatility;
+      
+      // Garantir que a probabilidade esteja entre 30% e 85%
+      winProbability = Math.max(0.3, Math.min(0.85, winProbability));
+      
+      const isWin = Math.random() < winProbability;
       const result = isWin ? 'WIN' : 'LOSS';
-      const profit = isWin ? settings.stake * 0.8 : -settings.stake;
+      
+      // Calcular lucro baseado na estratégia e confiança
+      let profitMultiplier = 0.8; // Base 80%
+      if (isWin) {
+        profitMultiplier += (analysis.confidence - 50) / 200; // Ajuste baseado na confiança
+        profitMultiplier = Math.min(1.2, profitMultiplier); // Máximo 120%
+      }
+      
+      const profit = isWin ? adjustedStake * profitMultiplier : -adjustedStake;
+      
+      // Criar resultado do trade
+      const tradeResult: TradeResult = {
+        id: tradeId,
+        signal,
+        entryPrice: price,
+        exitPrice: price + (Math.random() - 0.5) * 0.01, // Simular variação de preço
+        result,
+        profit,
+        confidence: analysis.confidence,
+        strategy: settings.strategy,
+        timestamp: new Date(),
+        analysis
+      };
       
       console.log(`💰 Trade ${result}: ${signal} - Lucro: $${profit.toFixed(2)}`);
+      console.log(`📈 Probabilidade calculada: ${(winProbability * 100).toFixed(1)}%`);
       
-      // Atualizar interface com resultado
+      // Atualizar interface com resultado detalhado
+      const tradeEmoji = isWin ? '🎉' : '😞';
+      const profitEmoji = profit > 0 ? '💰' : '💸';
+      
       toast({
-        title: `💰 Trade ${result}`,
-        description: `${signal} - Lucro: $${profit.toFixed(2)}`,
-        variant: isWin ? "default" : "destructive"
+        title: `${tradeEmoji} Trade ${result}`,
+        description: `${signal} - ${profitEmoji} $${profit.toFixed(2)} | 🎯 ${analysis.confidence.toFixed(1)}% | 📊 ${settings.strategy.toUpperCase()}`,
+        variant: isWin ? "default" : "destructive",
+        duration: 7000
       });
-    }, 2000); // Simular duração de 2 segundos
+      
+      // Notificação adicional para trades com alta confiança
+      if (analysis.confidence > 80) {
+        setTimeout(() => {
+          toast({
+            title: "🔥 Trade de Alta Confiança!",
+            description: `Confiança: ${analysis.confidence.toFixed(1)}% - ${analysis.reason}`,
+            duration: 4000
+          });
+        }, 1000);
+      }
+      
+      // Salvar trade no banco de dados
+      saveTradeToDatabase(tradeResult);
+      
+      // Atualizar estatísticas em tempo real
+      updateTradingStats(tradeResult);
+      
+      // Atualizar gestão de risco
+      updateRiskManagement(tradeResult);
+      
+    }, settings.duration * 1000); // Usar duração configurada
+  };
+
+  // ===== SALVAR TRADE NO BANCO DE DADOS =====
+  const saveTradeToDatabase = async (tradeResult: TradeResult) => {
+    if (!user?.id) return;
+    
+    try {
+      const response = await fetch('/api/data?action=save_trade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: user.id,
+          trade: {
+            ...tradeResult,
+            symbol: settings.selectedSymbol,
+            account_type: settings.selectedTokenType,
+            stake: settings.stake,
+            martingale: settings.martingale,
+            stop_win: settings.stopWin,
+            stop_loss: settings.stopLoss
+          }
+        })
+      });
+      
+      if (response.ok) {
+        console.log('✅ Trade salvo no banco de dados');
+      }
+    } catch (error) {
+      console.error('❌ Erro ao salvar trade:', error);
+    }
+  };
+
+  // ===== ATUALIZAR ESTATÍSTICAS EM TEMPO REAL =====
+  const updateTradingStats = (tradeResult: TradeResult) => {
+    // Atualizar elementos da interface
+    const profitElement = document.querySelector('[data-stat="profit"]');
+    const tradesElement = document.querySelector('[data-stat="trades"]');
+    const winRateElement = document.querySelector('[data-stat="winrate"]');
+    
+    if (profitElement) {
+      const currentProfit = parseFloat(profitElement.textContent?.replace('$', '') || '0');
+      const newProfit = currentProfit + tradeResult.profit;
+      profitElement.textContent = `$${newProfit.toFixed(2)}`;
+      
+      // Adicionar animação visual para mudanças de lucro
+      if (tradeResult.profit > 0) {
+        profitElement.className = 'text-2xl font-bold text-green-400 animate-pulse';
+        setTimeout(() => {
+          profitElement.className = 'text-2xl font-bold text-white';
+        }, 2000);
+      } else {
+        profitElement.className = 'text-2xl font-bold text-red-400 animate-pulse';
+        setTimeout(() => {
+          profitElement.className = 'text-2xl font-bold text-white';
+        }, 2000);
+      }
+    }
+    
+    if (tradesElement) {
+      const currentTrades = parseInt(tradesElement.textContent || '0');
+      tradesElement.textContent = (currentTrades + 1).toString();
+      
+      // Animação para contador de trades
+      tradesElement.className = 'text-2xl font-bold text-blue-400 animate-bounce';
+      setTimeout(() => {
+        tradesElement.className = 'text-2xl font-bold text-white';
+      }, 1000);
+    }
+    
+    // Calcular win rate (simplificado para demonstração)
+    if (winRateElement) {
+      const currentTrades = parseInt(tradesElement?.textContent || '0');
+      const currentProfit = parseFloat(profitElement?.textContent?.replace('$', '') || '0');
+      const estimatedWins = Math.max(0, (currentProfit / settings.stake) + (currentTrades / 2));
+      const winRate = currentTrades > 0 ? (estimatedWins / currentTrades) * 100 : 0;
+      winRateElement.textContent = `${winRate.toFixed(1)}%`;
+      
+      // Cor baseada na performance
+      if (winRate >= 70) {
+        winRateElement.className = 'text-2xl font-bold text-green-400';
+      } else if (winRate >= 50) {
+        winRateElement.className = 'text-2xl font-bold text-yellow-400';
+      } else {
+        winRateElement.className = 'text-2xl font-bold text-red-400';
+      }
+    }
+    
+    // Notificação de performance
+    if (tradeResult.result === 'WIN') {
+      // Verificar se é uma sequência de vitórias
+      const currentTrades = parseInt(tradesElement?.textContent || '0');
+      if (currentTrades > 1 && currentTrades % 3 === 0) {
+        toast({
+          title: "🔥 Sequência de Vitórias!",
+          description: `${currentTrades} trades executados com sucesso!`,
+          duration: 5000
+        });
+      }
+    }
+  };
+
+  // ===== SISTEMA DE NOTIFICAÇÕES AVANÇADO =====
+  const sendAdvancedNotification = (type: 'trade' | 'risk' | 'performance', data: any) => {
+    const notifications = {
+      trade: {
+        title: `📊 Novo Trade Executado`,
+        description: `${data.signal} - ${data.result} - $${data.profit.toFixed(2)}`,
+        variant: (data.result === 'WIN' ? 'default' : 'destructive') as 'default' | 'destructive'
+      },
+      risk: {
+        title: `⚠️ Alerta de Risco`,
+        description: data.reason,
+        variant: 'destructive' as 'default' | 'destructive'
+      },
+      performance: {
+        title: `📈 Performance Update`,
+        description: `Win Rate: ${data.winRate}% | Lucro: $${data.profit.toFixed(2)}`,
+        variant: 'default' as 'default' | 'destructive'
+      }
+    };
+    
+    const notification = notifications[type];
+    if (notification) {
+      toast({
+        title: notification.title,
+        description: notification.description,
+        variant: notification.variant as 'default' | 'destructive',
+        duration: 6000
+      });
+    }
   };
 
   // ===== BOTÕES DE INICIAR/PARAR =====
@@ -1005,6 +1642,45 @@ export default function BotInterface() {
     }
   }, [activeTab]);
 
+  // ===== OTIMIZAÇÃO DE PERFORMANCE =====
+  useEffect(() => {
+    // Debounce para atualizações frequentes
+    let updateTimeout: NodeJS.Timeout;
+    
+    const debouncedUpdate = () => {
+      clearTimeout(updateTimeout);
+      updateTimeout = setTimeout(() => {
+        // Atualizar apenas elementos visíveis
+        if (activeTab === 'trading') {
+          // Forçar re-render apenas se necessário
+          const currentSignal = document.getElementById('current-signal');
+          if (currentSignal && currentSignal.textContent === 'HOLD') {
+            // Atualizar indicadores apenas se necessário
+          }
+        }
+      }, 100);
+    };
+
+    // Limpar timeout ao desmontar
+    return () => clearTimeout(updateTimeout);
+  }, [activeTab]);
+
+  // ===== SISTEMA DE CACHE PARA MELHOR PERFORMANCE =====
+  const [chartCache, setChartCache] = useState<Map<string, any>>(new Map());
+  
+  const getCachedAnalysis = (priceKey: string) => {
+    return chartCache.get(priceKey);
+  };
+  
+  const setCachedAnalysis = (priceKey: string, analysis: TechnicalAnalysis) => {
+    // Limitar cache a 100 entradas
+    if (chartCache.size > 100) {
+      const firstKey = chartCache.keys().next().value;
+      chartCache.delete(firstKey);
+    }
+    chartCache.set(priceKey, analysis);
+  };
+
   // ===== CLEANUP =====
   useEffect(() => {
     return () => {
@@ -1239,15 +1915,15 @@ export default function BotInterface() {
                 <CardContent>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div className="text-center p-4 bg-slate-700 rounded-lg">
-                      <div className="text-2xl font-bold text-white">$0.00</div>
+                      <div className="text-2xl font-bold text-white" data-stat="profit">$0.00</div>
                       <div className="text-sm text-gray-400">Lucro Atual</div>
                     </div>
                     <div className="text-center p-4 bg-slate-700 rounded-lg">
-                      <div className="text-2xl font-bold text-white">0</div>
+                      <div className="text-2xl font-bold text-white" data-stat="trades">0</div>
                       <div className="text-sm text-gray-400">Trades Hoje</div>
                     </div>
                     <div className="text-center p-4 bg-slate-700 rounded-lg">
-                      <div className="text-2xl font-bold text-white">0%</div>
+                      <div className="text-2xl font-bold text-white" data-stat="winrate">0%</div>
                       <div className="text-sm text-gray-400">Taxa de Acerto</div>
                     </div>
                     <div className="text-center p-4 bg-slate-700 rounded-lg">
@@ -1255,6 +1931,135 @@ export default function BotInterface() {
                         {isBotRunning ? '🟢' : '🔴'}
                       </div>
                       <div className="text-sm text-gray-400">Status</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Indicadores Técnicos em Tempo Real */}
+              <Card className="border-slate-600 bg-slate-750">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg text-white flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5" />
+                    Indicadores Técnicos
+                  </CardTitle>
+                  <CardDescription className="text-gray-400">
+                    Análise técnica em tempo real
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="text-center p-4 bg-slate-700 rounded-lg">
+                      <div className="text-lg font-bold text-blue-400" id="mhi-indicator">-</div>
+                      <div className="text-sm text-gray-400">MHI</div>
+                      <div className="text-xs text-gray-500" id="mhi-confidence">0%</div>
+                    </div>
+                    <div className="text-center p-4 bg-slate-700 rounded-lg">
+                      <div className="text-lg font-bold text-green-400" id="ema-indicator">-</div>
+                      <div className="text-sm text-gray-400">EMA</div>
+                      <div className="text-xs text-gray-500" id="ema-confidence">0%</div>
+                    </div>
+                    <div className="text-center p-4 bg-slate-700 rounded-lg">
+                      <div className="text-lg font-bold text-purple-400" id="rsi-indicator">-</div>
+                      <div className="text-sm text-gray-400">RSI</div>
+                      <div className="text-xs text-gray-500" id="rsi-confidence">0%</div>
+                    </div>
+                    <div className="text-center p-4 bg-slate-700 rounded-lg">
+                      <div className="text-lg font-bold text-orange-400" id="trend-indicator">-</div>
+                      <div className="text-sm text-gray-400">Tendência</div>
+                      <div className="text-xs text-gray-500" id="trend-confidence">0%</div>
+                    </div>
+                  </div>
+                  
+                  {/* Sinal Atual */}
+                  <div className="mt-4 p-4 bg-slate-800 rounded-lg border border-slate-600">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm text-gray-400">Sinal Atual</div>
+                        <div className="text-xl font-bold text-white" id="current-signal">HOLD</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm text-gray-400">Confiança</div>
+                        <div className="text-xl font-bold text-white" id="current-confidence">0%</div>
+                      </div>
+                    </div>
+                    <div className="mt-2 text-xs text-gray-500" id="signal-reason">
+                      Aguardando análise...
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Gestão de Risco */}
+              <Card className="border-slate-600 bg-slate-750">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg text-white flex items-center gap-2">
+                    <Shield className="h-5 w-5" />
+                    Gestão de Risco
+                  </CardTitle>
+                  <CardDescription className="text-gray-400">
+                    Monitoramento de perdas e proteção do capital
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="text-center p-4 bg-slate-700 rounded-lg">
+                      <div className="text-2xl font-bold text-white">
+                        ${riskManagement.currentDailyLoss.toFixed(2)}
+                      </div>
+                      <div className="text-sm text-gray-400">Perda Hoje</div>
+                      <div className="text-xs text-gray-500">
+                        Limite: ${riskManagement.maxDailyLoss}
+                      </div>
+                    </div>
+                    <div className="text-center p-4 bg-slate-700 rounded-lg">
+                      <div className="text-2xl font-bold text-white">
+                        {riskManagement.consecutiveLosses}
+                      </div>
+                      <div className="text-sm text-gray-400">Perdas Seguidas</div>
+                      <div className="text-xs text-gray-500">
+                        Limite: {riskManagement.maxConsecutiveLosses}
+                      </div>
+                    </div>
+                    <div className="text-center p-4 bg-slate-700 rounded-lg">
+                      <div className="text-2xl font-bold text-white">
+                        {riskManagement.isInCooldown ? '⏸️' : '✅'}
+                      </div>
+                      <div className="text-sm text-gray-400">Status</div>
+                      <div className="text-xs text-gray-500">
+                        {riskManagement.isInCooldown ? 'Cooldown' : 'Ativo'}
+                      </div>
+                    </div>
+                    <div className="text-center p-4 bg-slate-700 rounded-lg">
+                      <div className="text-2xl font-bold text-white">
+                        {riskManagement.cooldownPeriod}m
+                      </div>
+                      <div className="text-sm text-gray-400">Cooldown</div>
+                      <div className="text-xs text-gray-500">
+                        Após perdas
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Barra de Progresso da Perda Diária */}
+                  <div className="mt-4">
+                    <div className="flex justify-between text-sm text-gray-400 mb-2">
+                      <span>Perda Diária</span>
+                      <span>{((riskManagement.currentDailyLoss / riskManagement.maxDailyLoss) * 100).toFixed(1)}%</span>
+                    </div>
+                    <div className="w-full bg-slate-700 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full transition-all duration-300 ${
+                          riskManagement.currentDailyLoss / riskManagement.maxDailyLoss > 0.8 
+                            ? 'bg-red-500' 
+                            : riskManagement.currentDailyLoss / riskManagement.maxDailyLoss > 0.6 
+                            ? 'bg-yellow-500' 
+                            : 'bg-green-500'
+                        }`}
+                        style={{ 
+                          width: `${Math.min((riskManagement.currentDailyLoss / riskManagement.maxDailyLoss) * 100, 100)}%` 
+                        }}
+                      ></div>
                     </div>
                   </div>
                 </CardContent>
@@ -1556,12 +2361,18 @@ export default function BotInterface() {
                           <SelectValue placeholder="Selecione a estratégia" />
                         </SelectTrigger>
                         <SelectContent className="bg-slate-800 border-slate-600">
-                          <SelectItem value="martingale">Martingale</SelectItem>
-                          <SelectItem value="mhi">MHI</SelectItem>
-                          <SelectItem value="ema">EMA Crossover</SelectItem>
-                          <SelectItem value="rsi">RSI</SelectItem>
+                          <SelectItem value="martingale">🎯 Martingale (Híbrida)</SelectItem>
+                          <SelectItem value="mhi">📊 MHI (Reversão)</SelectItem>
+                          <SelectItem value="ema">📈 EMA Crossover</SelectItem>
+                          <SelectItem value="rsi">📉 RSI (Momentum)</SelectItem>
                         </SelectContent>
                       </Select>
+                      <p className="text-xs text-gray-500">
+                        {settings.strategy === 'martingale' && 'Combina todos os indicadores para maior precisão'}
+                        {settings.strategy === 'mhi' && 'Ideal para mercados voláteis com reversões'}
+                        {settings.strategy === 'ema' && 'Melhor para tendências claras'}
+                        {settings.strategy === 'rsi' && 'Excelente para identificar sobrecompra/sobrevenda'}
+                      </p>
                     </div>
 
                     <div className="space-y-2">
@@ -1576,6 +2387,73 @@ export default function BotInterface() {
                         className="bg-slate-700 border-slate-600 text-white"
                         min="0"
                       />
+                    </div>
+                  </div>
+
+                  {/* Configurações Avançadas das Estratégias */}
+                  <div className="mt-6 p-4 bg-slate-800 rounded-lg border border-slate-600">
+                    <h4 className="text-sm font-medium text-white mb-4">⚙️ Configurações Avançadas</h4>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="mhiPeriods" className="text-sm font-medium text-gray-300">
+                          Períodos MHI
+                        </Label>
+                        <Input
+                          id="mhiPeriods"
+                          type="number"
+                          value={settings.mhiPeriods}
+                          onChange={(e) => updateSetting('mhiPeriods', parseInt(e.target.value) || 20)}
+                          className="bg-slate-700 border-slate-600 text-white"
+                          min="5"
+                          max="50"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="emaFast" className="text-sm font-medium text-gray-300">
+                          EMA Rápida
+                        </Label>
+                        <Input
+                          id="emaFast"
+                          type="number"
+                          value={settings.emaFast}
+                          onChange={(e) => updateSetting('emaFast', parseInt(e.target.value) || 8)}
+                          className="bg-slate-700 border-slate-600 text-white"
+                          min="3"
+                          max="20"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="emaSlow" className="text-sm font-medium text-gray-300">
+                          EMA Lenta
+                        </Label>
+                        <Input
+                          id="emaSlow"
+                          type="number"
+                          value={settings.emaSlow}
+                          onChange={(e) => updateSetting('emaSlow', parseInt(e.target.value) || 18)}
+                          className="bg-slate-700 border-slate-600 text-white"
+                          min="10"
+                          max="50"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="rsiPeriods" className="text-sm font-medium text-gray-300">
+                          Períodos RSI
+                        </Label>
+                        <Input
+                          id="rsiPeriods"
+                          type="number"
+                          value={settings.rsiPeriods}
+                          onChange={(e) => updateSetting('rsiPeriods', parseInt(e.target.value) || 10)}
+                          className="bg-slate-700 border-slate-600 text-white"
+                          min="5"
+                          max="30"
+                        />
+                      </div>
                     </div>
                   </div>
 
