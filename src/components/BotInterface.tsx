@@ -111,12 +111,12 @@ export default function BotInterface() {
       });
       
       // checar stop win / stop loss
-      if (settings.stopWinDaily !== undefined && next >= settings.stopWinDaily) {
+      if (settings.stopWinDaily !== undefined && next > settings.stopWinDaily) {
         setDailyStopped((s) => ({ ...s, stopWin: true }));
         setIsBotRunning(false);
         console.info("Stop Win diário atingido. Bot pausado.");
       }
-      if (settings.stopLossDaily !== undefined && next <= -Math.abs(settings.stopLossDaily)) {
+      if (settings.stopLossDaily !== undefined && next < -Math.abs(settings.stopLossDaily)) {
         setDailyStopped((s) => ({ ...s, stopLoss: true }));
         setIsBotRunning(false);
         console.info("Stop Loss diário atingido. Bot pausado.");
@@ -313,10 +313,14 @@ export default function BotInterface() {
     const payout = parseFloat(data.buy.payout || 0);
     const profit = payout - stake;
 
+    // Usar a direção do sinal original (que foi enviado na proposta)
+    // Se contract_type não estiver disponível, usar PUT como padrão
+    const direction = data.buy.contract_type === 'CALL' ? 'CALL' : 'PUT';
+
     const trade: TradeRecord = {
       id: data.buy.contract_id,
       symbol: settings.selectedSymbol || 'R_10',
-      direction: data.buy.contract_type === 'CALL' ? 'CALL' : 'PUT',
+      direction: direction,
       stake: stake,
       payout: payout,
       profit: profit,
@@ -336,7 +340,9 @@ export default function BotInterface() {
       payout: payout,
       profit: profit,
       direction: trade.direction,
-      contract_type: data.buy.contract_type
+      contract_type: data.buy.contract_type,
+      isWinning: profit > 0,
+      rawData: data.buy
     });
   };
 
