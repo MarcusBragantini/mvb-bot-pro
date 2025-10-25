@@ -226,6 +226,10 @@ export default function BotInterface() {
         }
       }
       
+      if (data.msg_type === 'proposal') {
+        handleProposal(data);
+      }
+      
       if (data.msg_type === 'buy') {
         handleTradeResult(data);
       }
@@ -259,6 +263,28 @@ export default function BotInterface() {
     };
 
     ws.send(JSON.stringify(request));
+  };
+
+  // Handler para propostas da Deriv
+  const handleProposal = (data: any) => {
+    if (data.error) {
+      console.error("Erro na proposta:", data.error);
+      return;
+    }
+
+    if (data.proposal && data.proposal.id) {
+      // Executar a compra usando o ID da proposta
+      const ws = derivWSRef.current;
+      if (!ws) return;
+
+      const buyRequest = {
+        buy: data.proposal.id,
+        price: data.proposal.ask_price
+      };
+
+      console.info("Executando compra com proposta:", buyRequest);
+      ws.send(JSON.stringify(buyRequest));
+    }
   };
 
   // Handler para resultados de trades
@@ -381,19 +407,21 @@ export default function BotInterface() {
     if (!ws) return console.warn("WebSocket Deriv não conectado");
 
     try {
-      // Executar trade diretamente na Deriv
-      const buyRequest = {
-        buy: 1,
-        price: adjustedStake,
-        symbol: analysis.symbol,
+      // Primeiro, obter uma proposta (proposal) para o símbolo
+      const proposalRequest = {
+        proposal: 1,
+        subscribe: 1,
+        amount: adjustedStake,
+        basis: 'stake',
         contract_type: analysis.direction,
+        currency: 'USD',
         duration: settings.durationSec ?? 60,
         duration_unit: 's',
-        basis: 'stake'
+        symbol: analysis.symbol
       };
 
-      console.info("Executando trade na Deriv:", buyRequest);
-      ws.send(JSON.stringify(buyRequest));
+      console.info("Solicitando proposta da Deriv:", proposalRequest);
+      ws.send(JSON.stringify(proposalRequest));
       
       // Adicionar timestamp para controle de trades por minuto
       setTradesTimestamps(prev => [Date.now(), ...prev.slice(0, 49)]);
