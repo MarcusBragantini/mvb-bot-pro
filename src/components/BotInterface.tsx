@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,489 +15,682 @@ import {
   Key,
   Activity,
   Play,
-  BarChart3,
+  Square,
+  HelpCircle,
   Settings,
   Bot,
-  Bell,
-  Target,
+  BarChart3,
+  Smartphone,
   TrendingUp,
   DollarSign,
+  Target,
   Zap,
-  Smartphone
+  Bell,
+  Download,
+  Upload,
+  RotateCcw
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { toast as sonnerToast } from 'sonner';
+import { Toaster as ReactToaster } from '@/components/ui/toaster';
 
-export default function BotInterfaceSimple() {
+// ===== TIPOS TYPESCRIPT =====
+interface LicenseInfo {
+  type: string;
+  days: number;
+  features: string[];
+  maxDevices: number;
+}
+
+interface TelegramSettings {
+  botToken: string;
+  userTelegram: string;
+  notificationsEnabled: boolean;
+}
+
+interface TradingSettings {
+  stake: number;
+  martingale: number;
+  duration: number;
+  stopWin: number;
+  stopLoss: number;
+  confidence: number;
+  strategy: string;
+  derivTokenDemo: string;
+  derivTokenReal: string;
+  selectedTokenType: 'demo' | 'real';
+  mhiPeriods: number;
+  emaFast: number;
+  emaSlow: number;
+  rsiPeriods: number;
+  autoCloseTime: number;
+  autoCloseProfit: number;
+}
+
+// ===== SISTEMA DE LICENÇAS =====
+const LICENSE_KEYS: Record<string, LicenseInfo> = {
+  'STANDARD-MVB-2025': {
+    type: 'standard',
+    days: 30,
+    features: ['all_features', 'premium_support'],
+    maxDevices: 2
+  },
+  'BASIC-MVB-7': {
+    type: 'basic', 
+    days: 7,
+    features: ['basic_features', 'email_support'],
+    maxDevices: 1
+  },
+  'FREE-MVB-24': {
+    type: 'free',
+    days: 1,
+    features: ['limited_features'],
+    maxDevices: 1
+  },
+  'PRO-MVB-UNLIMITED': {
+    type: 'pro',
+    days: 365,
+    features: ['all_features', 'premium_support', 'unlimited_trades'],
+    maxDevices: 5
+  }
+};
+
+export default function BotInterface() {
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
   
-  // Estados básicos
-  const [isLicenseValid, setIsLicenseValid] = useState(true);
+  // ===== ESTADOS DE LICENÇA =====
+  const [isLicenseValid, setIsLicenseValid] = useState(false);
+  const [licenseKey, setLicenseKey] = useState('');
+  const [licenseInfo, setLicenseInfo] = useState<LicenseInfo | null>(null);
+  const [deviceId, setDeviceId] = useState('');
+  const [licenseStatus, setLicenseStatus] = useState('');
+  const [userLicenses, setUserLicenses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('trading');
-  const [botRunning, setBotRunning] = useState(false);
-  const [settings, setSettings] = useState({
+  
+  // ===== ESTADOS DE ANALYTICS =====
+  const [analyticsAccountFilter, setAnalyticsAccountFilter] = useState<'all' | 'real' | 'demo'>('all');
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [realTimePrices, setRealTimePrices] = useState<number[]>([]);
+  const [priceHistory, setPriceHistory] = useState<{timestamp: number, price: number}[]>([]);
+
+  // ===== REFS =====
+  const botContainerRef = useRef<HTMLDivElement>(null);
+  const isInitialized = useRef(false);
+  const priceChartRef = useRef<any>(null);
+  const performanceChartRef = useRef<any>(null);
+
+  // ===== ESTADOS DAS CONFIGURAÇÕES =====
+  const [settings, setSettings] = useState<TradingSettings>({
     stake: 1,
-    symbol: 'R_10',
-    accountType: 'demo',
+    martingale: 2,
     duration: 15,
     stopWin: 3,
     stopLoss: -5,
+    confidence: 70,
+    strategy: 'martingale',
     derivTokenDemo: '',
     derivTokenReal: '',
-    selectedTokenType: 'demo'
+    selectedTokenType: 'demo',
+    mhiPeriods: 20,
+    emaFast: 8,
+    emaSlow: 18,
+    rsiPeriods: 10,
+    autoCloseTime: 30,
+    autoCloseProfit: 20
   });
-  const [chartData, setChartData] = useState<any[]>([]);
-  const [currentPrice, setCurrentPrice] = useState(0);
-  const [tradingHistory, setTradingHistory] = useState<any[]>([]);
 
-  // Refs
-  const botContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<HTMLCanvasElement>(null);
-  const chartInstance = useRef<any>(null);
+  // ===== ESTADOS DO TELEGRAM =====
+  const [telegramSettings, setTelegramSettings] = useState<TelegramSettings>({
+    botToken: '',
+    userTelegram: '',
+    notificationsEnabled: false
+  });
+  const [botTokenLoaded, setBotTokenLoaded] = useState(false);
 
-  // Função para inicializar gráfico
-  const initializeChart = () => {
-    if (!chartRef.current) return;
+  // ===== FUNÇÕES UTILITÁRIAS =====
+  const isBotRunning = () => {
+    const statusElement = document.getElementById('status');
+    if (statusElement && statusElement.textContent) {
+      const statusText = statusElement.textContent.trim();
+      return !statusText.includes('⏸️') && !statusText.includes('Bot Parado') && statusText !== '';
+    }
+    return false;
+  };
+
+  const handleTabChange = (newTab: string) => {
+    if (activeTab === 'trading' && newTab !== 'trading' && isBotRunning()) {
+      toast({
+        title: "⚠️ Bot em Execução!",
+        description: "O bot continua rodando em segundo plano.",
+        duration: 4000,
+      });
+    }
+    setActiveTab(newTab);
     
-    const ctx = chartRef.current.getContext('2d');
+    if (newTab === 'analytics' && user?.id) {
+      loadAnalyticsFromDatabase();
+    }
+  };
+
+  // ===== SISTEMA DE GRAFICO EM TEMPO REAL =====
+  const initializeRealTimeChart = () => {
+    if (typeof window === 'undefined' || !(window as any).Chart) return;
+
+    const canvas = document.getElementById('realTimeChart') as HTMLCanvasElement;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     // Destruir gráfico existente
-    if (chartInstance.current) {
-      chartInstance.current.destroy();
+    if (priceChartRef.current) {
+      priceChartRef.current.destroy();
     }
 
-    // Dados iniciais simulados
-    const initialData = [];
-    const now = Date.now();
-    let basePrice = 1.0000;
-    
-    for (let i = 60; i >= 0; i--) {
-      const timestamp = now - (i * 60000); // 1 minuto
-      const trend = Math.sin(i * 0.1) * 0.02;
-      const noise = (Math.random() - 0.5) * 0.01;
-      basePrice += trend + noise;
-      
-      const open = basePrice;
-      const close = basePrice + (Math.random() - 0.5) * 0.005;
-      const high = Math.max(open, close) + Math.random() * 0.003;
-      const low = Math.min(open, close) - Math.random() * 0.003;
-      
-      initialData.push({
-        x: timestamp,
-        o: open,
-        h: high,
-        l: low,
-        c: close
-      });
-    }
-
-    setChartData(initialData);
-
-    // Criar gráfico com Chart.js
-    if (typeof (window as any).Chart !== 'undefined') {
-      chartInstance.current = new (window as any).Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: initialData.map((_, i) => i),
-          datasets: [{
-            label: 'Preço',
-            data: initialData.map(d => d.c),
-            borderColor: '#10b981',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            borderWidth: 2,
-            fill: true,
-            tension: 0.1
-          }]
+    priceChartRef.current = new (window as any).Chart(ctx, {
+      type: 'line',
+      data: {
+        datasets: [{
+          label: 'Preço em Tempo Real',
+          data: [],
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: true,
+          tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: {
+          duration: 0
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            x: {
-              display: false
-            },
-            y: {
-              beginAtZero: false,
-              grid: {
-                color: '#334155'
-              },
-              ticks: {
-                color: '#94a3b8'
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+            titleColor: '#f1f5f9',
+            bodyColor: '#cbd5e1',
+            borderColor: '#334155',
+            borderWidth: 1
+          }
+        },
+        scales: {
+          x: {
+            type: 'realtime',
+            realtime: {
+              duration: 60000,
+              refresh: 1000,
+              delay: 200,
+              onRefresh: (chart: any) => {
+                // Dados serão adicionados via updateRealTimeChart
               }
+            },
+            grid: {
+              color: '#334155'
+            },
+            ticks: {
+              color: '#94a3b8',
+              maxTicksLimit: 8
             }
           },
-          plugins: {
-            legend: {
-              display: false
+          y: {
+            grid: {
+              color: '#334155'
+            },
+            ticks: {
+              color: '#94a3b8',
+              callback: (value: any) => `$${parseFloat(value).toFixed(4)}`
+            }
+          }
+        },
+        interaction: {
+          intersect: false,
+          mode: 'index'
+        }
+      }
+    });
+  };
+
+  const updateRealTimeChart = (price: number) => {
+    if (!priceChartRef.current) return;
+
+    const now = Date.now();
+    const newData = { timestamp: now, price: price };
+
+    setPriceHistory(prev => {
+      const updated = [...prev, newData].slice(-100); // Manter últimas 100 entradas
+      return updated;
+    });
+
+    priceChartRef.current.data.datasets[0].data = [...priceHistory, newData].map(d => ({ x: d.timestamp, y: d.price }));
+    priceChartRef.current.update('quiet');
+  };
+
+  // ===== CARREGAR ANALYTICS DO BANCO =====
+  const loadAnalyticsFromDatabase = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const filterParam = analyticsAccountFilter !== 'all' ? `&account_type=${analyticsAccountFilter}` : '';
+      const response = await fetch(`/api/data?action=trading_history&user_id=${user.id}${filterParam}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        const trades = data.trades || [];
+        
+        if (trades.length > 0) {
+          // Calcular estatísticas
+          const totalTrades = trades.length;
+          const wins = trades.filter((t: any) => t.result === 'WIN').length;
+          const losses = totalTrades - wins;
+          const winRate = ((wins / totalTrades) * 100).toFixed(1);
+          const totalProfit = trades.reduce((sum: number, t: any) => sum + (parseFloat(t.profit) || 0), 0);
+          
+          // Atualizar UI
+          const totalEl = document.getElementById('analytics-total-trades');
+          const winRateEl = document.getElementById('analytics-win-rate');
+          const profitEl = document.getElementById('analytics-profit');
+          
+          if (totalEl) totalEl.textContent = totalTrades.toString();
+          if (winRateEl) winRateEl.textContent = winRate + '%';
+          if (profitEl) profitEl.textContent = '$' + totalProfit.toFixed(2);
+          
+          // Atualizar tabela
+          updateAnalyticsTable(trades);
+          createPerformanceChart(trades, wins, losses);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar analytics:', error);
+    }
+  };
+
+  const updateAnalyticsTable = (trades: any[]) => {
+    const historyBody = document.getElementById('analytics-history');
+    if (!historyBody) return;
+
+    historyBody.innerHTML = '';
+    
+    trades.forEach((trade: any) => {
+      const row = document.createElement('tr');
+      const resultColor = trade.result === 'WIN' ? '#10b981' : '#ef4444';
+      const profitColor = parseFloat(trade.profit) >= 0 ? '#10b981' : '#ef4444';
+      
+      row.innerHTML = `
+        <td class="px-4 py-3 text-sm text-gray-300">${new Date(trade.created_at).toLocaleString()}</td>
+        <td class="px-4 py-3 text-sm font-semibold text-gray-100">${trade.symbol || '-'}</td>
+        <td class="px-4 py-3 text-sm font-semibold" style="color: ${trade.trade_signal === 'CALL' ? '#10b981' : '#ef4444'}">
+          ${trade.trade_signal || trade.trade_type || '-'}
+        </td>
+        <td class="px-4 py-3 text-sm text-gray-300">$${parseFloat(trade.stake || 0).toFixed(2)}</td>
+        <td class="px-4 py-3 text-sm font-semibold" style="color: ${resultColor}">${trade.result || '-'}</td>
+        <td class="px-4 py-3 text-sm font-semibold" style="color: ${profitColor}">
+          $${parseFloat(trade.profit || 0).toFixed(2)}
+        </td>
+      `;
+      
+      historyBody.appendChild(row);
+    });
+  };
+
+  // ===== CRIAR GRÁFICO DE PERFORMANCE =====
+  const createPerformanceChart = (trades: any[], wins: number, losses: number) => {
+    const canvas = document.getElementById('performanceChart') as HTMLCanvasElement;
+    if (!canvas || typeof (window as any).Chart === 'undefined') return;
+    
+    // Destruir gráfico existente
+    if (performanceChartRef.current) {
+      performanceChartRef.current.destroy();
+    }
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    // Preparar dados
+    let cumulativeProfit = 0;
+    const profitData = trades.map((trade: any) => {
+      cumulativeProfit += parseFloat(trade.profit) || 0;
+      return {
+        x: new Date(trade.created_at),
+        y: cumulativeProfit
+      };
+    });
+    
+    performanceChartRef.current = new (window as any).Chart(ctx, {
+      type: 'line',
+      data: {
+        datasets: [{
+          label: 'Evolução do Lucro',
+          data: profitData,
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          borderWidth: 3,
+          fill: true,
+          tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            labels: {
+              color: '#cbd5e1',
+              font: { size: 12 }
+            }
+          }
+        },
+        scales: {
+          x: {
+            type: 'time',
+            time: {
+              unit: 'hour'
+            },
+            grid: {
+              color: '#334155'
+            },
+            ticks: {
+              color: '#94a3b8'
             }
           },
-          elements: {
-            point: {
-              radius: 0
+          y: {
+            grid: {
+              color: '#334155'
+            },
+            ticks: {
+              color: '#94a3b8',
+              callback: (value: any) => '$' + value
             }
           }
         }
+      }
+    });
+  };
+
+  // ===== FUNÇÕES DE CONFIGURAÇÃO =====
+  const loadSettings = async () => {
+    try {
+      if (user?.id) {
+        const response = await fetch(`/api/data?action=settings&user_id=${user.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.settings) {
+            setSettings(prev => ({ ...prev, ...data.settings }));
+            return;
+          }
+        }
+      }
+      
+      const settingsKey = user?.id ? `mvb_bot_settings_${user.id}` : 'mvb_bot_settings_temp';
+      const savedSettings = localStorage.getItem(settingsKey);
+      if (savedSettings) {
+        setSettings(JSON.parse(savedSettings));
+      }
+    } catch (error) {
+      console.error('Erro ao carregar configurações:', error);
+    }
+  };
+
+  const saveSettings = async () => {
+    try {
+      const settingsKey = user?.id ? `mvb_bot_settings_${user.id}` : 'mvb_bot_settings_temp';
+      localStorage.setItem(settingsKey, JSON.stringify(settings));
+      
+      if (user?.id) {
+        await fetch('/api/data?action=settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: user.id, settings })
+        });
+      }
+      
+      toast({
+        title: "✅ Configurações salvas!",
+        description: user?.id ? "Sincronizadas em todos os dispositivos!" : "Salvas localmente!",
+      });
+    } catch (error) {
+      toast({
+        title: "❌ Erro ao salvar",
+        description: "Não foi possível salvar as configurações.",
+        variant: "destructive",
       });
     }
   };
 
-  // Função para atualizar gráfico
-  const updateChart = (newPrice: number) => {
-    if (!chartInstance.current) return;
+  const updateSetting = (key: keyof TradingSettings, value: any) => {
+    const newSettings = { ...settings, [key]: value };
+    setSettings(newSettings);
     
-    // Adicionar novo preço aos dados
-    const newData = [...chartData, { c: newPrice }].slice(-100); // Manter últimas 100 pontos
-    setChartData(newData);
-    
-    // Atualizar gráfico
-    chartInstance.current.data.datasets[0].data = newData.map(d => d.c);
-    chartInstance.current.update('none');
-    setCurrentPrice(newPrice);
+    const settingsKey = user?.id ? `mvb_bot_settings_${user.id}` : 'mvb_bot_settings_temp';
+    localStorage.setItem(settingsKey, JSON.stringify(newSettings));
   };
 
-  // Função para inicializar bot
-  const initializeBot = () => {
-    if (!botContainerRef.current) return;
-    
-    botContainerRef.current.innerHTML = `
-      <div style="background: #1e293b; border-radius: 8px; padding: 16px; border: 1px solid #334155;">
-        <h3 style="color: #f1f5f9; margin-bottom: 16px;">🤖 Controle do Bot</h3>
-        
-        <div style="margin-bottom: 16px;">
-          <label style="display: block; color: #f1f5f9; margin-bottom: 8px;">Símbolo:</label>
-          <select id="symbol" style="width: 100%; padding: 8px; border: 1px solid #334155; border-radius: 4px; background: #0f172a; color: #e2e8f0;">
-            <option value="R_10">Volatility 10 Index</option>
-            <option value="R_25">Volatility 25 Index</option>
-            <option value="R_50">Volatility 50 Index</option>
-            <option value="CRASH300N">Crash 300 Index</option>
-            <option value="BOOM300N">Boom 300 Index</option>
-          </select>
-        </div>
+  // ===== FUNÇÕES DO TELEGRAM =====
+  const sendTelegramNotification = async (message: string) => {
+    try {
+      if (!telegramSettings.notificationsEnabled || !telegramSettings.userTelegram) return false;
 
-        <div style="margin-bottom: 16px;">
-          <label style="display: block; color: #f1f5f9; margin-bottom: 8px;">Stake:</label>
-          <input type="number" id="stake" value="1" min="0.5" step="0.5" style="width: 100%; padding: 8px; border: 1px solid #334155; border-radius: 4px; background: #0f172a; color: #e2e8f0;">
-        </div>
+      const isNumeric = /^\d+$/.test(telegramSettings.userTelegram);
+      if (!isNumeric) return false;
 
-        <div style="margin-bottom: 16px;">
-          <label style="display: block; color: #f1f5f9; margin-bottom: 8px;">Duração (min):</label>
-          <input type="number" id="duration" value="15" min="5" max="60" style="width: 100%; padding: 8px; border: 1px solid #334155; border-radius: 4px; background: #0f172a; color: #e2e8f0;">
-        </div>
+      const response = await fetch(`https://api.telegram.org/bot${telegramSettings.botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: telegramSettings.userTelegram,
+          text: message,
+          parse_mode: 'HTML'
+        })
+      });
 
-        <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-          <button id="startBtn" onclick="startBot()" style="flex: 1; padding: 12px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer;">
-            🚀 Iniciar Bot
-          </button>
-          <button id="stopBtn" onclick="stopBot()" style="flex: 1; padding: 12px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">
-            ⏹️ Parar Bot
-          </button>
-        </div>
-
-        <div id="status" style="padding: 8px; background: #0f172a; border-radius: 4px; color: #94a3b8; text-align: center;">
-          ⏸️ Bot Parado
-        </div>
-
-        <div id="logs" style="margin-top: 16px; max-height: 200px; overflow-y: auto; background: #0f172a; border-radius: 4px; padding: 8px;">
-          <div style="color: #94a3b8; font-size: 12px;">📊 Logs do Bot aparecerão aqui...</div>
-        </div>
-      </div>
-    `;
-  };
-
-  // Função para analisar estratégias de trading
-  const analyzeTradingStrategies = (price: number) => {
-    // Estratégia simples: análise de tendência
-    if (chartData.length < 10) return;
-    
-    const recentPrices = chartData.slice(-10).map(d => d.c);
-    const avgPrice = recentPrices.reduce((sum, p) => sum + p, 0) / recentPrices.length;
-    const currentPrice = price;
-    
-    // Calcular tendência
-    const trend = currentPrice > avgPrice ? 'UP' : 'DOWN';
-    const strength = Math.abs(currentPrice - avgPrice) / avgPrice;
-    
-    // Gerar sinal se força for suficiente
-    if (strength > 0.01) { // 1% de diferença
-      const signal = trend === 'UP' ? 'CALL' : 'PUT';
-      addLog(`🎯 Sinal detectado: ${signal} (Tendência: ${trend})`);
-      
-      // Executar trade
-      executeTrade(signal, currentPrice);
+      return response.ok;
+    } catch (error) {
+      return false;
     }
   };
 
-  // Função para executar trade
-  const executeTrade = (signal: string, price: number) => {
-    addLog(`🚀 Executando trade: ${signal} em $${price.toFixed(4)}`);
-    
-    // Simular resultado após 5 segundos
-    setTimeout(() => {
-      const isWin = Math.random() > 0.4; // 60% de chance de win
-      const result = isWin ? 'WIN' : 'LOSS';
-      const profit = isWin ? settings.stake * 0.8 : -settings.stake;
-      
-      addLog(`✅ Trade ${result}: ${profit > 0 ? '+' : ''}$${profit.toFixed(2)}`);
-      
-      // Adicionar ao histórico
-      const newTrade = {
-        id: Date.now(),
-        symbol: settings.symbol,
-        signal,
-        result,
-        profit,
-        timestamp: new Date()
-      };
-      setTradingHistory(prev => [newTrade, ...prev]);
-    }, 5000);
+  const testTelegramNotification = async () => {
+    if (!telegramSettings.userTelegram) {
+      toast({
+        title: "❌ Chat ID não configurado",
+        description: "Por favor, insira seu Chat ID do Telegram",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const success = await sendTelegramNotification(`
+🤖 <b>Teste de Notificação - Zeus</b>
+
+✅ Sistema de notificações funcionando perfeitamente!
+📊 Agora você receberá atualizações automáticas
+
+⏰ ${new Date().toLocaleString()}
+    `.trim());
+
+    if (success) {
+      toast({
+        title: "✅ Teste enviado!",
+        description: "Verifique seu Telegram para confirmar o recebimento.",
+      });
+    } else {
+      toast({
+        title: "❌ Erro no envio",
+        description: "Verifique o token do bot e seu Chat ID.",
+        variant: "destructive"
+      });
+    }
   };
 
-  // Função para modo simulado
-  const startSimulatedMode = () => {
-    addLog('🎮 Iniciando modo simulado...');
-    
-    // Gerar dados simulados para o gráfico
-    let basePrice = 1.0000;
-    const generateSimulatedPrice = () => {
-      const change = (Math.random() - 0.5) * 0.01; // ±0.5%
-      basePrice += change;
-      return basePrice;
+  const saveTelegramSettings = async () => {
+    const settingsToSave = {
+      userTelegram: telegramSettings.userTelegram,
+      notificationsEnabled: telegramSettings.notificationsEnabled
     };
+    localStorage.setItem('telegram_settings', JSON.stringify(settingsToSave));
     
-    // Atualizar gráfico com dados simulados a cada 2 segundos
-    const interval = setInterval(() => {
-      if (!botRunning) {
-        clearInterval(interval);
+    if (user?.id && telegramSettings.userTelegram) {
+      try {
+        await fetch('/api/data?action=save_telegram_chat_id', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: user.id,
+            telegram_chat_id: telegramSettings.userTelegram
+          })
+        });
+      } catch (error) {
+        console.error('Erro ao salvar Chat ID:', error);
+      }
+    }
+    
+    toast({
+      title: "✅ Configurações salvas!",
+      description: "Notificações configuradas com sucesso.",
+    });
+  };
+
+  // ===== CARREGAR LICENÇAS DO USUÁRIO =====
+  useEffect(() => {
+    const loadUserLicenses = async () => {
+      if (!isAuthenticated || !user) {
+        setLoading(false);
         return;
       }
-      
-      const newPrice = generateSimulatedPrice();
-      updateChart(newPrice);
-      
-      // Analisar estratégias com dados simulados
-      analyzeTradingStrategies(newPrice);
-    }, 2000);
-    
-    // Armazenar interval para poder parar
-    (window as any).simulatedInterval = interval;
-  };
 
-  // Função para carregar tokens do localStorage
-  const loadTokensFromStorage = () => {
-    try {
-      const savedSettings = localStorage.getItem('bot_settings');
-      if (savedSettings) {
-        const parsedSettings = JSON.parse(savedSettings);
-        setSettings(prev => ({
-          ...prev,
-          derivTokenDemo: parsedSettings.derivTokenDemo || '',
-          derivTokenReal: parsedSettings.derivTokenReal || '',
-          selectedTokenType: parsedSettings.selectedTokenType || 'demo'
-        }));
-        console.log('🔑 Tokens carregados do localStorage');
-      }
-    } catch (error) {
-      console.error('Erro ao carregar tokens:', error);
-    }
-  };
-
-  // Função para conectar com Deriv
-  const connectToDeriv = async () => {
-    try {
-      // Tentar carregar tokens diretamente do localStorage
-      let token = '';
-      let selectedType = 'demo';
-      
       try {
-        const savedSettings = localStorage.getItem('bot_settings');
-        if (savedSettings) {
-          const parsedSettings = JSON.parse(savedSettings);
-          selectedType = parsedSettings.selectedTokenType || 'demo';
-          token = selectedType === 'demo' ? parsedSettings.derivTokenDemo : parsedSettings.derivTokenReal;
+        setLoading(true);
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://mvb-bot-pro.vercel.app/api';
+        const response = await fetch(`${API_BASE_URL}/data?action=licenses&user_id=${user.id}`);
+        
+        if (!response.ok) throw new Error('Erro ao carregar licenças');
+        
+        const data = await response.json();
+        const licenses = data.licenses || [];
+        setUserLicenses(licenses);
+        
+        const latestLicense = licenses.find(license => license.is_active);
+        
+        if (latestLicense) {
+          const now = new Date();
+          const isLicenseValid = new Date(latestLicense.expires_at) > now;
+          
+          if (isLicenseValid) {
+            const licenseInfo: LicenseInfo = {
+              type: latestLicense.license_type,
+              days: Math.ceil((new Date(latestLicense.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
+              features: latestLicense.license_type === 'free' ? ['limited_features'] : ['all_features'],
+              maxDevices: latestLicense.max_devices
+            };
+            
+            setLicenseInfo(licenseInfo);
+            setLicenseKey(latestLicense.license_key);
+            setIsLicenseValid(true);
+            setLicenseStatus(`Licença válida! Expira em ${licenseInfo.days} dias.`);
+          } else {
+            setIsLicenseValid(false);
+            setLicenseStatus('Licença expirada. Renove para continuar.');
+          }
+        } else {
+          setIsLicenseValid(false);
+          setLicenseStatus('Nenhuma licença encontrada.');
         }
       } catch (error) {
-        console.error('Erro ao ler localStorage:', error);
+        console.error('Erro ao carregar licenças:', error);
+        setLicenseStatus('Erro ao carregar licenças.');
+      } finally {
+        setLoading(false);
       }
-      
-      console.log('🔍 Verificando token:', {
-        selectedType,
-        tokenLength: token ? token.length : 0,
-        hasToken: !!token
-      });
-      
-      if (!token) {
-        addLog('❌ Token não configurado - Configure na aba Configurações');
-        addLog('💡 Dica: Vá em Configurações → Cole seu token → Salvar');
-        return null;
-      }
+    };
 
-      const wsUrl = 'wss://ws.binaryws.com/websockets/v3?app_id=1089';
-      const ws = new WebSocket(wsUrl);
-      
-      ws.onopen = () => {
-        addLog('🔗 Conectado com Deriv');
-        ws.send(JSON.stringify({ authorize: token }));
-      };
+    loadUserLicenses();
+  }, [isAuthenticated, user]);
 
-      ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        
-        if (data.msg_type === 'authorize') {
-          addLog('✅ Autorizado com Deriv');
-          // Subscribir a ticks
-          ws.send(JSON.stringify({
-            ticks: settings.symbol,
-            subscribe: 1
-          }));
-        }
-        
-        if (data.msg_type === 'tick') {
-          const tick = data.tick;
-          updateChart(tick.quote);
-          
-          // Analisar estratégias e gerar sinais
-          analyzeTradingStrategies(tick.quote);
-        }
-      };
-
-      ws.onerror = (error) => {
-        addLog('❌ Erro na conexão');
-        console.error('WebSocket error:', error);
-      };
-
-      return ws;
-    } catch (error) {
-      addLog('❌ Erro ao conectar');
-      console.error('Connection error:', error);
-      return null;
-    }
-  };
-
-  // Funções do bot
-  const startBot = async () => {
-    console.log('🚀 Iniciando bot...');
-    console.log('🔍 Estado atual:', { botRunning, isLicenseValid, activeTab });
-    setBotRunning(true);
-    
-    const statusElement = document.getElementById('status');
-    if (statusElement) {
-      statusElement.innerHTML = '🟢 Bot Operando';
-      statusElement.style.color = '#10b981';
-    }
-
-    const startBtn = document.getElementById('startBtn') as HTMLButtonElement;
-    const stopBtn = document.getElementById('stopBtn') as HTMLButtonElement;
-    
-    if (startBtn) startBtn.disabled = true;
-    if (stopBtn) stopBtn.disabled = false;
-
-    addLog('📊 Iniciando análise...');
-    
-    // Conectar com Deriv
-    const ws = await connectToDeriv();
-    if (ws) {
-      (window as any).derivWS = ws;
-      addLog('🔗 Conectado com Deriv API');
-    } else {
-      addLog('⚠️ Usando modo simulado - Configure tokens para operações reais');
-      addLog('📊 Gráfico funcionando em modo simulado');
-      
-      // Iniciar modo simulado com dados fake
-      startSimulatedMode();
-    }
-  };
-
-  const stopBot = () => {
-    console.log('⏹️ Parando bot...');
-    setBotRunning(false);
-    
-    // Fechar WebSocket se existir
-    if ((window as any).derivWS) {
-      (window as any).derivWS.close();
-      (window as any).derivWS = null;
-      addLog('🔌 Conexão Deriv fechada');
-    }
-    
-    // Parar modo simulado se existir
-    if ((window as any).simulatedInterval) {
-      clearInterval((window as any).simulatedInterval);
-      (window as any).simulatedInterval = null;
-      addLog('🎮 Modo simulado parado');
-    }
-    
-    const statusElement = document.getElementById('status');
-    if (statusElement) {
-      statusElement.innerHTML = '⏸️ Bot Parado';
-      statusElement.style.color = '#94a3b8';
-    }
-
-    const startBtn = document.getElementById('startBtn') as HTMLButtonElement;
-    const stopBtn = document.getElementById('stopBtn') as HTMLButtonElement;
-    
-    if (startBtn) startBtn.disabled = false;
-    if (stopBtn) stopBtn.disabled = true;
-    
-    addLog('⏹️ Bot parado com sucesso');
-  };
-
-  const addLog = (message: string) => {
-    const logsElement = document.getElementById('logs');
-    if (logsElement) {
-      const logEntry = document.createElement('div');
-      logEntry.style.color = '#e2e8f0';
-      logEntry.style.fontSize = '12px';
-      logEntry.style.marginBottom = '4px';
-      logEntry.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
-      
-      logsElement.insertBefore(logEntry, logsElement.firstChild);
-      logsElement.scrollTop = 0;
-    }
-  };
-
-  // Carregar configurações do localStorage ao montar o componente
+  // ===== INICIALIZAÇÃO =====
   useEffect(() => {
-    loadTokensFromStorage();
+    if (user?.id) {
+      loadSettings();
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    const loadBotToken = async () => {
+      try {
+        const response = await fetch('/api/telegram-config');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.botToken) {
+            setTelegramSettings(prev => ({ ...prev, botToken: data.botToken }));
+            setBotTokenLoaded(true);
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao carregar token do Telegram:', error);
+      }
+    };
+
+    loadBotToken();
   }, []);
 
-  // Exportar funções para window
   useEffect(() => {
-    (window as any).startBot = startBot;
-    (window as any).stopBot = stopBot;
+    const savedTelegramSettings = localStorage.getItem('telegram_settings');
+    if (savedTelegramSettings) {
+      const parsed = JSON.parse(savedTelegramSettings);
+      setTelegramSettings(prev => ({
+        ...prev,
+        userTelegram: parsed.userTelegram || '',
+        notificationsEnabled: parsed.notificationsEnabled || false
+      }));
+    }
   }, []);
 
-  // Inicializar bot e gráfico
+  // ===== INICIALIZAR BOT =====
   useEffect(() => {
-    if (activeTab === 'trading' && isLicenseValid) {
+    if (isLicenseValid && botContainerRef.current && !isInitialized.current) {
       setTimeout(() => {
-        initializeBot();
-        initializeChart();
-      }, 100);
+        if (botContainerRef.current && !botContainerRef.current.innerHTML.trim()) {
+          isInitialized.current = true;
+          initializeOriginalBot();
+        }
+      }, 500);
     }
-  }, [activeTab, isLicenseValid]);
+  }, [isLicenseValid]);
 
-  // Atualizar gráfico quando dados mudarem
+  // ===== INICIALIZAR GRÁFICO =====
   useEffect(() => {
-    if (chartInstance.current && chartData.length > 0) {
-      chartInstance.current.data.datasets[0].data = chartData;
-      chartInstance.current.update('none');
+    if (activeTab === 'trading') {
+      setTimeout(initializeRealTimeChart, 1000);
     }
-  }, [chartData]);
+  }, [activeTab]);
 
-  if (!isAuthenticated) {
+  // ===== RENDER =====
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-center">🔐 Acesso Negado</CardTitle>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
+        <Card className="w-full max-w-md shadow-2xl border-slate-700 bg-slate-800">
+          <CardHeader className="text-center pb-8">
+            <div className="text-6xl mb-4">🤖</div>
+            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              Carregando Zeus
+            </CardTitle>
+            <CardDescription className="text-gray-400 mt-2">
+              Verificando suas licenças...
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Alert>
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                Você precisa estar logado para acessar o bot.
-              </AlertDescription>
-            </Alert>
+          <CardContent className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 mx-auto"></div>
+            <p className="text-sm text-gray-400 mt-4">
+              Aguarde enquanto verificamos seu acesso
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -505,344 +698,533 @@ export default function BotInterfaceSimple() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
+    <div className="min-h-screen bg-slate-900 p-2 sm:p-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-2">
+            <Bot className="h-6 w-6 sm:h-8 sm:w-8" />
+            Zeus Trading Bot
+          </h1>
+          <p className="text-gray-400 text-sm sm:text-base">
+            Sistema automatizado de trading profissional
+          </p>
+        </div>
+        
+        {licenseInfo && (
+          <Badge variant={isLicenseValid ? "default" : "destructive"} className="text-xs sm:text-sm">
+            {isLicenseValid ? `✅ ${licenseInfo.type.toUpperCase()}` : '❌ Licença Expirada'}
+          </Badge>
+        )}
+      </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="trading">🤖 Trading</TabsTrigger>
-          <TabsTrigger value="analytics">📊 Analytics</TabsTrigger>
-          <TabsTrigger value="settings">⚙️ Configurações</TabsTrigger>
-          <TabsTrigger value="telegram">📱 Telegram</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="trading" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Painel de Controle */}
-            <Card className="lg:col-span-1">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Activity className="h-5 w-5" />
-                  <span>Controle do Bot</span>
-                </CardTitle>
-                <CardDescription>
-                  Configure e controle o bot de trading
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div ref={botContainerRef} className="min-h-[400px]">
-                  <div className="flex items-center justify-center h-48 text-slate-400">
-                    <div className="text-center">
-                      <Bot className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>Carregando bot...</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Gráfico */}
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <BarChart3 className="h-5 w-5" />
-                  <span>Gráfico de Preços</span>
-                </CardTitle>
-                <CardDescription>
-                  Análise em tempo real
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64 bg-slate-800 rounded-lg p-4">
-                  <canvas ref={chartRef} className="w-full h-full" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="analytics" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Cards de Estatísticas */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-slate-400">Total de Trades</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-400">{tradingHistory.length}</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-slate-400">Taxa de Acerto</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-400">
-                  {tradingHistory.length > 0 
-                    ? Math.round((tradingHistory.filter(t => t.result === 'WIN').length / tradingHistory.length) * 100)
-                    : 0}%
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-slate-400">Lucro Total</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-purple-400">
-                  ${tradingHistory.reduce((sum, trade) => sum + (trade.profit || 0), 0).toFixed(2)}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-slate-400">Preço Atual</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-orange-400">
-                  ${currentPrice.toFixed(4)}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Histórico de Trades */}
-          <Card>
-            <CardHeader>
-              <CardTitle>📋 Histórico de Trades</CardTitle>
-              <CardDescription>Últimas operações realizadas</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {tradingHistory.length > 0 ? (
-                <div className="space-y-2">
-                  {tradingHistory.slice(0, 10).map((trade) => (
-                    <div key={trade.id} className="flex items-center justify-between p-3 bg-slate-800 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-2 h-2 rounded-full ${trade.result === 'WIN' ? 'bg-green-400' : 'bg-red-400'}`} />
-                        <div>
-                          <div className="font-medium text-white">{trade.symbol}</div>
-                          <div className="text-sm text-slate-400">{trade.signal}</div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className={`font-bold ${trade.result === 'WIN' ? 'text-green-400' : 'text-red-400'}`}>
-                          {trade.result === 'WIN' ? '+' : '-'}${Math.abs(trade.profit).toFixed(2)}
-                        </div>
-                        <div className="text-xs text-slate-400">
-                          {new Date(trade.timestamp).toLocaleTimeString()}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center text-slate-400 py-8">
-                  <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Nenhum trade realizado ainda</p>
-                </div>
+      {/* Container Principal */}
+      <Card className="shadow-2xl border-slate-700 bg-slate-800">
+        <CardContent className="p-2 sm:p-6">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+            <TabsList className="grid w-full grid-cols-3 mb-4 sm:mb-6 h-10 sm:h-12 bg-slate-700">
+              <TabsTrigger 
+                value="trading" 
+                className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 data-[state=active]:bg-blue-600"
+              >
+                <Play className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Trading</span>
+                <span className="sm:hidden">Trade</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="analytics" 
+                className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 data-[state=active]:bg-green-600"
+              >
+                <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4" />
+                Analytics
+              </TabsTrigger>
+              <TabsTrigger 
+                value="settings" 
+                className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 data-[state=active]:bg-purple-600"
+              >
+                <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Configurações</span>
+                <span className="sm:hidden">Config</span>
+              </TabsTrigger>
+            </TabsList>
+            
+            {/* ABA TRADING */}
+            <TabsContent value="trading" className="space-y-4">
+              {!isLicenseValid && !loading && (
+                <Alert className="border-red-400 bg-red-900/20">
+                  <AlertTriangle className="h-4 w-4 text-red-400" />
+                  <AlertDescription className="text-red-200">
+                    {licenseStatus || 'Nenhuma licença válida. Renove sua licença.'}
+                  </AlertDescription>
+                </Alert>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="settings" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Configurações de Trading */}
-            <Card>
-              <CardHeader>
-                <CardTitle>⚙️ Configurações de Trading</CardTitle>
-                <CardDescription>Parâmetros do bot</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="stake">Stake (USD)</Label>
-                  <Input
-                    id="stake"
-                    type="number"
-                    value={settings.stake}
-                    onChange={(e) => setSettings(prev => ({ ...prev, stake: parseFloat(e.target.value) }))}
-                    min="0.5"
-                    step="0.5"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="symbol">Símbolo</Label>
-                  <Select value={settings.symbol} onValueChange={(value) => setSettings(prev => ({ ...prev, symbol: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="R_10">Volatility 10 Index</SelectItem>
-                      <SelectItem value="R_25">Volatility 25 Index</SelectItem>
-                      <SelectItem value="R_50">Volatility 50 Index</SelectItem>
-                      <SelectItem value="CRASH300N">Crash 300 Index</SelectItem>
-                      <SelectItem value="BOOM300N">Boom 300 Index</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="duration">Duração (min)</Label>
-                  <Input
-                    id="duration"
-                    type="number"
-                    value={settings.duration}
-                    onChange={(e) => setSettings(prev => ({ ...prev, duration: parseInt(e.target.value) }))}
-                    min="5"
-                    max="60"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="stopWin">Stop Win (USD)</Label>
-                    <Input
-                      id="stopWin"
-                      type="number"
-                      value={settings.stopWin}
-                      onChange={(e) => setSettings(prev => ({ ...prev, stopWin: parseFloat(e.target.value) }))}
-                    />
+              
+              {/* Seletor de Conta */}
+              <Card className="border-slate-600 bg-slate-750">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg text-blue-400 flex items-center gap-2">
+                    <Key className="h-5 w-5" />
+                    Conta Deriv
+                  </CardTitle>
+                  <CardDescription className="text-gray-400">
+                    Selecione qual conta usar para o trading
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      onClick={() => updateSetting('selectedTokenType', 'demo')}
+                      className={`h-16 transition-all ${
+                        settings.selectedTokenType === 'demo' 
+                          ? 'bg-blue-600 border-blue-400 text-white shadow-lg' 
+                          : 'bg-slate-700 border-slate-500 text-blue-300 hover:bg-blue-600/20'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="font-semibold">💎 Demo</div>
+                        <div className="text-xs opacity-75">
+                          {settings.derivTokenDemo ? '✅ Configurado' : '❌ Não configurado'}
+                        </div>
+                      </div>
+                    </Button>
+                    <Button
+                      onClick={() => updateSetting('selectedTokenType', 'real')}
+                      className={`h-16 transition-all ${
+                        settings.selectedTokenType === 'real' 
+                          ? 'bg-green-600 border-green-400 text-white shadow-lg' 
+                          : 'bg-slate-700 border-slate-500 text-green-300 hover:bg-green-600/20'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="font-semibold">💰 Real</div>
+                        <div className="text-xs opacity-75">
+                          {settings.derivTokenReal ? '✅ Configurado' : '❌ Não configurado'}
+                        </div>
+                      </div>
+                    </Button>
                   </div>
-                  <div>
-                    <Label htmlFor="stopLoss">Stop Loss (USD)</Label>
-                    <Input
-                      id="stopLoss"
-                      type="number"
-                      value={settings.stopLoss}
-                      onChange={(e) => setSettings(prev => ({ ...prev, stopLoss: parseFloat(e.target.value) }))}
-                    />
+                </CardContent>
+              </Card>
+
+              {/* Gráfico em Tempo Real */}
+              <Card className="border-slate-600 bg-slate-750">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg text-white flex items-center gap-2">
+                    <Activity className="h-5 w-5" />
+                    Gráfico em Tempo Real
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64 sm:h-80 bg-slate-900 rounded-lg p-2">
+                    <canvas id="realTimeChart"></canvas>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            {/* Configurações de Conta */}
-            <Card>
-              <CardHeader>
-                <CardTitle>🔑 Configurações de Conta</CardTitle>
-                <CardDescription>Tokens da Deriv</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="accountType">Tipo de Conta</Label>
-                  <Select value={settings.selectedTokenType} onValueChange={(value) => setSettings(prev => ({ ...prev, selectedTokenType: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="demo">🎮 Conta DEMO</SelectItem>
-                      <SelectItem value="real">💰 Conta REAL</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              {/* Bot Original */}
+              <div ref={botContainerRef} className="w-full" />
+            </TabsContent>
 
-                <div>
-                  <Label htmlFor="demoToken">Token DEMO</Label>
-                  <Input
-                    id="demoToken"
-                    type="password"
-                    value={settings.derivTokenDemo}
-                    onChange={(e) => setSettings(prev => ({ ...prev, derivTokenDemo: e.target.value }))}
-                    placeholder="Cole seu token DEMO aqui"
-                  />
-                </div>
+            {/* ABA ANALYTICS */}
+            <TabsContent value="analytics" className="space-y-4">
+              {/* Filtros */}
+              <Card className="border-slate-600 bg-slate-750">
+                <CardContent className="p-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-medium text-white">Filtrar por Tipo de Conta</h3>
+                      <p className="text-xs text-gray-400">Separe análises de contas Real e Demo</p>
+                    </div>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      <Button
+                        variant={analyticsAccountFilter === 'all' ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setAnalyticsAccountFilter('all')}
+                        className="flex-1 sm:flex-none"
+                      >
+                        Todas
+                      </Button>
+                      <Button
+                        variant={analyticsAccountFilter === 'real' ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setAnalyticsAccountFilter('real')}
+                        className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700"
+                      >
+                        Real
+                      </Button>
+                      <Button
+                        variant={analyticsAccountFilter === 'demo' ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setAnalyticsAccountFilter('demo')}
+                        className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700"
+                      >
+                        Demo
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-                <div>
-                  <Label htmlFor="realToken">Token REAL</Label>
-                  <Input
-                    id="realToken"
-                    type="password"
-                    value={settings.derivTokenReal}
-                    onChange={(e) => setSettings(prev => ({ ...prev, derivTokenReal: e.target.value }))}
-                    placeholder="Cole seu token REAL aqui"
-                  />
-                </div>
+              {/* Estatísticas */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <Card className="bg-gradient-to-br from-blue-600 to-blue-700 border-0">
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm opacity-90">Total Trades</p>
+                        <p className="text-2xl sm:text-3xl font-bold text-white" id="analytics-total-trades">0</p>
+                      </div>
+                      <Target className="h-8 w-8 sm:h-10 sm:w-10 opacity-90" />
+                    </div>
+                  </CardContent>
+                </Card>
 
-                <Button 
-                  onClick={() => {
-                    // Salvar configurações no localStorage
-                    const settingsToSave = {
-                      ...settings,
-                      derivTokenDemo: settings.derivTokenDemo,
-                      derivTokenReal: settings.derivTokenReal,
-                      selectedTokenType: settings.selectedTokenType
-                    };
-                    
-                    localStorage.setItem('bot_settings', JSON.stringify(settingsToSave));
-                    
-                    toast({
-                      title: "✅ Configurações salvas",
-                      description: "Suas configurações foram salvas com sucesso!",
-                    });
-                    
-                    console.log('💾 Configurações salvas:', settingsToSave);
-                  }}
-                  className="w-full"
-                >
-                  💾 Salvar Configurações
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
+                <Card className="bg-gradient-to-br from-green-600 to-green-700 border-0">
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm opacity-90">Taxa de Acerto</p>
+                        <p className="text-2xl sm:text-3xl font-bold text-white" id="analytics-win-rate">0%</p>
+                      </div>
+                      <TrendingUp className="h-8 w-8 sm:h-10 sm:w-10 opacity-90" />
+                    </div>
+                  </CardContent>
+                </Card>
 
-        <TabsContent value="telegram" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>📱 Configurações do Telegram</CardTitle>
-              <CardDescription>Configure notificações via Telegram</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="botToken">Token do Bot</Label>
-                <Input
-                  id="botToken"
-                  type="password"
-                  placeholder="Cole o token do seu bot aqui"
-                />
-                <p className="text-xs text-slate-400 mt-1">
-                  Obtenha o token em @BotFather no Telegram
-                </p>
+                <Card className="bg-gradient-to-br from-purple-600 to-purple-700 border-0">
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm opacity-90">Lucro Total</p>
+                        <p className="text-2xl sm:text-3xl font-bold text-white" id="analytics-profit">$0.00</p>
+                      </div>
+                      <DollarSign className="h-8 w-8 sm:h-10 sm:w-10 opacity-90" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gradient-to-br from-orange-600 to-orange-700 border-0">
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm opacity-90">Melhor Sequência</p>
+                        <p className="text-2xl sm:text-3xl font-bold text-white" id="analytics-best-streak">0</p>
+                      </div>
+                      <Zap className="h-8 w-8 sm:h-10 sm:w-10 opacity-90" />
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
-              <div>
-                <Label htmlFor="chatId">Chat ID</Label>
-                <Input
-                  id="chatId"
-                  placeholder="Seu Chat ID do Telegram"
-                />
-                <p className="text-xs text-slate-400 mt-1">
-                  Use /start no bot para obter seu Chat ID
-                </p>
-              </div>
+              {/* Gráfico de Performance */}
+              <Card className="border-slate-600 bg-slate-750">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-white">
+                    <BarChart3 className="h-5 w-5" />
+                    Performance
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64 sm:h-80">
+                    <canvas id="performanceChart"></canvas>
+                  </div>
+                </CardContent>
+              </Card>
 
-              <div className="flex items-center space-x-2">
-                <input type="checkbox" id="notifications" className="rounded" />
-                <Label htmlFor="notifications">Ativar notificações</Label>
-              </div>
+              {/* Histórico */}
+              <Card className="border-slate-600 bg-slate-750">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-white">
+                    <Activity className="h-5 w-5" />
+                    Histórico de Operações
+                  </CardTitle>
+                  <Button 
+                    onClick={loadAnalyticsFromDatabase}
+                    variant="outline" 
+                    size="sm"
+                    className="w-fit"
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Atualizar
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-600">
+                          <th className="text-left py-3 px-4 text-gray-400 font-medium">Data/Hora</th>
+                          <th className="text-left py-3 px-4 text-gray-400 font-medium">Ativo</th>
+                          <th className="text-left py-3 px-4 text-gray-400 font-medium">Direção</th>
+                          <th className="text-left py-3 px-4 text-gray-400 font-medium">Stake</th>
+                          <th className="text-left py-3 px-4 text-gray-400 font-medium">Resultado</th>
+                          <th className="text-left py-3 px-4 text-gray-400 font-medium">Lucro</th>
+                        </tr>
+                      </thead>
+                      <tbody id="analytics-history" className="divide-y divide-slate-700">
+                        <tr>
+                          <td colSpan={6} className="text-center py-8 text-gray-500">
+                            Nenhuma operação encontrada
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-              <Button className="w-full">
-                🔗 Conectar Telegram
-              </Button>
+            {/* ABA CONFIGURAÇÕES */}
+            <TabsContent value="settings" className="space-y-4">
+              {/* Configurações de Trading */}
+              <Card className="border-slate-600 bg-slate-750">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-white">
+                    <Settings className="h-5 w-5" />
+                    Configurações de Trading
+                  </CardTitle>
+                  <CardDescription className="text-gray-400">
+                    Ajuste os parâmetros do seu bot de trading
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="stake" className="text-sm font-medium text-gray-300">
+                        Stake ($)
+                      </Label>
+                      <Input
+                        id="stake"
+                        type="number"
+                        value={settings.stake}
+                        onChange={(e) => updateSetting('stake', parseFloat(e.target.value))}
+                        className="bg-slate-700 border-slate-600 text-white"
+                        min="0.35"
+                        step="0.01"
+                      />
+                    </div>
 
-              <div className="bg-slate-800 p-4 rounded-lg">
-                <h4 className="font-medium text-white mb-2">📋 Como configurar:</h4>
-                <ol className="text-sm text-slate-300 space-y-1">
-                  <li>1. Crie um bot em @BotFather</li>
-                  <li>2. Cole o token acima</li>
-                  <li>3. Use /start no seu bot</li>
-                  <li>4. Cole o Chat ID recebido</li>
-                  <li>5. Clique em "Conectar Telegram"</li>
-                </ol>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                    <div className="space-y-2">
+                      <Label htmlFor="martingale" className="text-sm font-medium text-gray-300">
+                        Multiplicador Martingale
+                      </Label>
+                      <Input
+                        id="martingale"
+                        type="number"
+                        value={settings.martingale}
+                        onChange={(e) => updateSetting('martingale', parseFloat(e.target.value))}
+                        className="bg-slate-700 border-slate-600 text-white"
+                        min="1"
+                        step="0.1"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="duration" className="text-sm font-medium text-gray-300">
+                        Duração (ticks)
+                      </Label>
+                      <Input
+                        id="duration"
+                        type="number"
+                        value={settings.duration}
+                        onChange={(e) => updateSetting('duration', parseInt(e.target.value))}
+                        className="bg-slate-700 border-slate-600 text-white"
+                        min="1"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="stopWin" className="text-sm font-medium text-gray-300">
+                        Stop Win ($)
+                      </Label>
+                      <Input
+                        id="stopWin"
+                        type="number"
+                        value={settings.stopWin}
+                        onChange={(e) => updateSetting('stopWin', parseFloat(e.target.value))}
+                        className="bg-slate-700 border-slate-600 text-white"
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="stopLoss" className="text-sm font-medium text-gray-300">
+                        Stop Loss ($)
+                      </Label>
+                      <Input
+                        id="stopLoss"
+                        type="number"
+                        value={settings.stopLoss}
+                        onChange={(e) => updateSetting('stopLoss', parseFloat(e.target.value))}
+                        className="bg-slate-700 border-slate-600 text-white"
+                        max="0"
+                        step="0.01"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="confidence" className="text-sm font-medium text-gray-300">
+                        Confiança (%)
+                      </Label>
+                      <Input
+                        id="confidence"
+                        type="number"
+                        value={settings.confidence}
+                        onChange={(e) => updateSetting('confidence', parseInt(e.target.value))}
+                        className="bg-slate-700 border-slate-600 text-white"
+                        min="1"
+                        max="100"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="strategy" className="text-sm font-medium text-gray-300">
+                        Estratégia
+                      </Label>
+                      <Select value={settings.strategy} onValueChange={(value) => updateSetting('strategy', value)}>
+                        <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                          <SelectValue placeholder="Selecione a estratégia" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-slate-800 border-slate-600">
+                          <SelectItem value="martingale">Martingale</SelectItem>
+                          <SelectItem value="mhi">MHI</SelectItem>
+                          <SelectItem value="ema">EMA Crossover</SelectItem>
+                          <SelectItem value="rsi">RSI</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="autoCloseTime" className="text-sm font-medium text-gray-300">
+                        Auto Fechar (min)
+                      </Label>
+                      <Input
+                        id="autoCloseTime"
+                        type="number"
+                        value={settings.autoCloseTime}
+                        onChange={(e) => updateSetting('autoCloseTime', parseInt(e.target.value))}
+                        className="bg-slate-700 border-slate-600 text-white"
+                        min="0"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="derivTokenDemo" className="text-sm font-medium text-gray-300">
+                        Token Deriv (Demo)
+                      </Label>
+                      <Input
+                        id="derivTokenDemo"
+                        type="password"
+                        value={settings.derivTokenDemo}
+                        onChange={(e) => updateSetting('derivTokenDemo', e.target.value)}
+                        className="bg-slate-700 border-slate-600 text-white"
+                        placeholder="Cole seu token da conta demo"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="derivTokenReal" className="text-sm font-medium text-gray-300">
+                        Token Deriv (Real)
+                      </Label>
+                      <Input
+                        id="derivTokenReal"
+                        type="password"
+                        value={settings.derivTokenReal}
+                        onChange={(e) => updateSetting('derivTokenReal', e.target.value)}
+                        className="bg-slate-700 border-slate-600 text-white"
+                        placeholder="Cole seu token da conta real"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-4">
+                    <Button onClick={saveSettings} className="bg-blue-600 hover:bg-blue-700">
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Salvar Configurações
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Configurações do Telegram */}
+              <Card className="border-slate-600 bg-slate-750">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-white">
+                    <Bell className="h-5 w-5" />
+                    Notificações Telegram
+                  </CardTitle>
+                  <CardDescription className="text-gray-400">
+                    Receba notificações das operações no seu Telegram
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="userTelegram" className="text-sm font-medium text-gray-300">
+                      Seu Chat ID do Telegram
+                    </Label>
+                    <Input
+                      id="userTelegram"
+                      type="text"
+                      value={telegramSettings.userTelegram}
+                      onChange={(e) => setTelegramSettings(prev => ({ ...prev, userTelegram: e.target.value }))}
+                      className="bg-slate-700 border-slate-600 text-white"
+                      placeholder="123456789"
+                    />
+                    <p className="text-xs text-gray-400">
+                      Para obter seu Chat ID, envie uma mensagem para @userinfobot no Telegram
+                    </p>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="notificationsEnabled"
+                      checked={telegramSettings.notificationsEnabled}
+                      onChange={(e) => setTelegramSettings(prev => ({ ...prev, notificationsEnabled: e.target.checked }))}
+                      className="rounded bg-slate-700 border-slate-600 text-blue-500 focus:ring-blue-500"
+                    />
+                    <Label htmlFor="notificationsEnabled" className="text-sm font-medium text-gray-300">
+                      Ativar notificações
+                    </Label>
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <Button 
+                      onClick={testTelegramNotification} 
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      <Bell className="h-4 w-4 mr-2" />
+                      Testar Notificação
+                    </Button>
+                    <Button 
+                      onClick={saveTelegramSettings}
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Salvar
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+      
+      <ReactToaster />
     </div>
   );
+}
+
+// Função para inicializar o bot original (mantida para compatibilidade)
+function initializeOriginalBot() {
+  // Esta função seria responsável por inicializar o bot de trading original
+  // Mantida para compatibilidade com o código existente
+  console.log('Inicializando bot original...');
 }
