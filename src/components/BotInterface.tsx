@@ -176,12 +176,8 @@ export default function BotInterface() {
 
   // ===== FUNÇÕES UTILITÁRIAS =====
   const checkBotRunning = () => {
-    const statusElement = document.getElementById('status');
-    if (statusElement && statusElement.textContent) {
-      const statusText = statusElement.textContent.trim();
-      return !statusText.includes('⏸️') && !statusText.includes('Bot Parado') && statusText !== '';
-    }
-    return false;
+    // Usar apenas o estado React para consistência
+    return isBotRunning;
   };
 
   const handleTabChange = (newTab: string) => {
@@ -245,6 +241,7 @@ export default function BotInterface() {
         updateRealTimeChart(parseFloat(tick.quote));
         
         // Analisar e executar trades se bot estiver rodando
+        console.log(`🔍 Estado do bot: isBotRunning = ${isBotRunning}`);
         if (isBotRunning) {
           console.log(`🤖 Bot rodando - Analisando tick: $${tick.quote}`);
           analyzeAndExecuteTrade(parseFloat(tick.quote));
@@ -1157,20 +1154,21 @@ export default function BotInterface() {
     }
 
     setIsBotRunning(true);
+    console.log(`🚀 Bot iniciado - isBotRunning definido como: true`);
     
     // Inicializar gráfico se não estiver inicializado
     if (!priceChartRef.current) {
       initializeRealTimeChart();
     }
 
+    // Conectar à Deriv API para dados reais
+    connectToDerivAPI();
+
     // Simular trading automático
     toast({
       title: "🚀 Bot Iniciado",
       description: `Trading automático iniciado na conta ${settings.selectedTokenType}`,
     });
-
-    // Conectar à Deriv API para dados reais
-    connectToDerivAPI();
 
     // Enviar notificação Telegram se configurado
     if (telegramSettings.notificationsEnabled) {
