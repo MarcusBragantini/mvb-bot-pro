@@ -28,7 +28,6 @@ import {
   Bell
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { toast as sonnerToast } from 'sonner';
 import { Toaster as ReactToaster } from '@/components/ui/toaster';
 
 // ===== TIPOS TYPESCRIPT =====
@@ -905,26 +904,19 @@ export default function BotInterface() {
           return; // Se funcionou, não tentar outros métodos
         }
       } catch (error) {
-        // Toast React falhou, tentando Sonner
+        // Toast React falhou, usando alert como fallback
       }
 
       try {
-        // Fallback para Sonner
-        // Tentando Sonner
+        // Fallback: usar alert do navegador
         if (variant === 'destructive') {
-          sonnerToast.error(title, {
-            description: description,
-            duration: 3000,
-          });
+          alert(`❌ ${title}\n${description}`);
         } else {
-          sonnerToast.success(title, {
-            description: description,
-            duration: 3000,
-          });
+          alert(`✅ ${title}\n${description}`);
         }
         return; // Se funcionou, não tentar alert
       } catch (error) {
-        // Sonner falhou
+        console.warn('Erro no alert:', error);
       }
 
       // Último fallback: alert nativo
