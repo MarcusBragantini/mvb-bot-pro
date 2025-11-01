@@ -7,6 +7,7 @@ require('dotenv').config();
 const { initializeDatabase } = require('./config/database');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
+const dataRoutes = require('./routes/data');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -15,7 +16,7 @@ const PORT = process.env.PORT || 3001;
 app.use(helmet());
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://yourdomain.com'] 
+    ? ['http://100.100.48.54', 'http://100.100.48.54:5173'] 
     : ['http://localhost:5173', 'http://localhost:3000'],
   credentials: true
 }));
@@ -35,6 +36,7 @@ app.use(express.urlencoded({ extended: true }));
 // Rotas
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/data', dataRoutes);
 
 // Rota de health check
 app.get('/api/health', (req, res) => {
@@ -78,10 +80,10 @@ async function startServer() {
       console.log(`✅ Admin user created: ${adminEmail}`);
     }
     
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🔗 API URL: http://localhost:${PORT}/api`);
+      console.log(`🔗 API URL: http://100.100.48.54:${PORT}/api`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);

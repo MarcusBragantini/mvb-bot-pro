@@ -58,60 +58,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return `${isMobile ? 'Mobile' : 'Desktop'} - ${platform} - ${browserName} - ${timestamp}`;
   };
 
-  // ✅ CORREÇÃO: Verificar sessão periodicamente (mais tolerante)
-  useEffect(() => {
-    if (!user || !sessionToken) return;
-
-    let isCheckingSession = false; // Flag para evitar verificações simultâneas
-    let consecutiveErrors = 0; // Contador de erros consecutivos
-
-    const checkSession = async () => {
-      // Evitar múltiplas verificações simultâneas
-      if (isCheckingSession) return;
-      
-      isCheckingSession = true;
-
-      try {
-        const response = await fetch(`/api/auth?action=check-session&user_id=${user.id}&session_token=${sessionToken}`, {
-          // Não lançar erro para status 401 no console
-          signal: AbortSignal.timeout(5000), // Timeout de 5 segundos
-        }).catch(() => null); // Silenciar erros de rede
-        
-        // Se não conseguiu conectar ou timeout
-        if (!response) {
-          consecutiveErrors++;
-          if (consecutiveErrors === 1) {
-            console.log('⚠️ Servidor de sessão indisponível - mantendo sessão local');
-          }
-          isCheckingSession = false;
-          return;
-        }
-
-        // ✅ Se resposta OK (200), verificar validade da sessão
-        if (response.ok) {
-          const data = await response.json();
-          consecutiveErrors = 0; // Resetar contador de erros
-
-          // ✅ MÚLTIPLAS ABAS PERMITIDAS: Não desconectar outras sessões
-          // Apenas manter sessão ativa sem verificar exclusividade
-        } else if (response.status === 401) {
-          // ✅ MÚLTIPLAS ABAS PERMITIDAS: Não desconectar
-          // Ignorar 401 de outras abas/dispositivos
-          consecutiveErrors = 0;
-        }
-      } catch (error) {
-        // Silenciar completamente erros de rede
-        consecutiveErrors++;
-      } finally {
-        isCheckingSession = false;
-      }
-    };
-
-    // ✅ Verificar a cada 10 segundos para detectar abas/dispositivos duplicados rapidamente
-    const interval = setInterval(checkSession, 10000);
-    
-    return () => clearInterval(interval);
-  }, [user, sessionToken]);
+  // ✅ Sessão gerenciada apenas via localStorage (sem verificação no servidor)
+  // Para sistema Express tradicional com JWT
 
   useEffect(() => {
     const initAuth = async () => {

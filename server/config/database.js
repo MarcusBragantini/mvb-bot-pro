@@ -3,8 +3,8 @@ require('dotenv').config();
 
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || 'Bragantini',
+  user: process.env.DB_USER || 'zeus_user',
+  password: process.env.DB_PASSWORD || 'Mvb985674',
   database: process.env.DB_NAME || 'bot_mvb_saas',
   waitForConnections: true,
   connectionLimit: 10,
@@ -81,6 +81,8 @@ async function initializeDatabase() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NOT NULL,
         settings JSON,
+        deriv_token_demo TEXT,
+        deriv_token_real TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         UNIQUE KEY unique_user_settings (user_id),
@@ -106,6 +108,75 @@ async function initializeDatabase() {
         UNIQUE KEY unique_user_performance (user_id),
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // ✅ NOVO: Criar tabela de sessões do bot
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS bot_sessions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        telegram_chat_id VARCHAR(255),
+        is_active BOOLEAN DEFAULT TRUE,
+        source VARCHAR(50) DEFAULT 'web',
+        symbol VARCHAR(20) DEFAULT 'R_10',
+        account_type ENUM('demo', 'real') DEFAULT 'demo',
+        stake DECIMAL(10,2) DEFAULT 1.00,
+        martingale DECIMAL(10,2) DEFAULT 2.00,
+        duration INT DEFAULT 15,
+        stop_win DECIMAL(10,2) DEFAULT 3.00,
+        stop_loss DECIMAL(10,2) DEFAULT -5.00,
+        confidence INT DEFAULT 70,
+        strategy VARCHAR(50) DEFAULT 'zeus',
+        current_profit DECIMAL(10,2) DEFAULT 0.00,
+        trades_count INT DEFAULT 0,
+        wins_count INT DEFAULT 0,
+        losses_count INT DEFAULT 0,
+        started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        stopped_at TIMESTAMP NULL,
+        last_trade_at TIMESTAMP NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // ✅ NOVO: Criar tabela de trades do usuário
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS user_trades (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        symbol VARCHAR(20) NOT NULL,
+        trade_signal VARCHAR(50) NOT NULL,
+        trade_type VARCHAR(20) NOT NULL,
+        stake DECIMAL(10,2) NOT NULL,
+        result VARCHAR(20) NOT NULL,
+        profit DECIMAL(10,2) DEFAULT 0.00,
+        confidence INT DEFAULT 0,
+        status VARCHAR(20) DEFAULT 'completed',
+        account_type ENUM('demo', 'real') DEFAULT 'demo',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // ✅ NOVO: Criar tabela de conta Deriv do usuário
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS user_deriv_account (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        deriv_balance DECIMAL(10,2) DEFAULT 0.00,
+        deriv_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_user_deriv (user_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // ✅ NOVO: Adicionar campo telegram_chat_id na tabela users
+    await connection.execute(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(255) NULL,
+      ADD COLUMN IF NOT EXISTS telegram_token VARCHAR(255) NULL
     `);
 
     connection.release();

@@ -115,7 +115,7 @@ class ApiClient {
   }
 
   async login(email: string, password: string): Promise<LoginResponse> {
-    const response = await this.request<LoginResponse>('/auth?action=login', {
+    const response = await this.request<LoginResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
@@ -131,14 +131,14 @@ class ApiClient {
     const data = { name, email, password };
     console.log('Register API called with:', { name, email, password: '***' });
     
-    return this.request<RegisterResponse>('/auth?action=register', {
+    return this.request<RegisterResponse>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
   async validateLicense(license_key: string, device_fingerprint: string): Promise<LicenseValidationResponse> {
-    return this.request<LicenseValidationResponse>('/auth?action=validate-license', {
+    return this.request<LicenseValidationResponse>('/auth/validate-license', {
       method: 'POST',
       body: JSON.stringify({ license_key, device_fingerprint }),
     });

@@ -717,7 +717,7 @@ export default function BotInterface() {
         setLoading(true);
         
         // Buscar licenças reais do banco de dados via API
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://mvb-bot-pro.vercel.app/api';
+        const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'http://100.100.48.54/api' : '/api');
         const response = await fetch(`${API_BASE_URL}/data?action=licenses&user_id=${user.id}`);
         
         if (!response.ok) {

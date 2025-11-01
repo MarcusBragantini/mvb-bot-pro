@@ -1,7 +1,7 @@
 // Configuration file to ensure correct API URL
 export const API_CONFIG = {
-  // Use relative URL to avoid CORS issues
-  BASE_URL: '/api',
+  // Use absolute URL for production server
+  BASE_URL: import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'http://100.100.48.54/api' : '/api'),
   TIMEOUT: 10000,
 };
 

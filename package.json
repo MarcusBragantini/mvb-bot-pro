@@ -8,7 +8,10 @@
     "build": "tsc -b && vite build",
     "lint": "eslint --quiet ./src",
     "preview": "vite preview",
-    "vercel-build": "npm run build"
+    "vercel-build": "npm run build",
+    "deploy": "bash deploy.sh",
+    "sync": "bash sync-to-server.sh",
+    "captain": "bash captain-deploy.sh"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
